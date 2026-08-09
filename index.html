@@ -145,43 +145,59 @@
   }
   .ranking-valor{ font-size:clamp(16.7px,1.08vw,24.0px); font-weight:800; white-space:nowrap; }
 
-  /* 🥇 OURO — preenchimento total com brilho animado */
+  /* 🥇 OURO — preenchimento total com brilho perolado pulsante */
   .ranking-item.ouro{
-    background:linear-gradient(135deg, #FFD700 0%, #FFC107 30%, #FFB300 70%, #FFD700 100%);
+    background:linear-gradient(135deg, #FFE566 0%, #FFD700 25%, #FFC107 50%, #FFB300 75%, #FFD700 100%);
     color:#5c3d00;
-    border:none;
-    box-shadow:0 0 22px 3px rgba(255,215,0,.55), inset 0 1px 0 rgba(255,255,255,.35);
-    animation:shine-ouro 2.4s ease-in-out infinite;
+    border:none; position:relative; overflow:hidden;
+    box-shadow:0 0 22px 3px rgba(255,215,0,.55), inset 0 1px 0 rgba(255,255,255,.4);
+    animation:pearl-ouro 2.2s ease-in-out infinite;
   }
-  .ranking-item.ouro .ranking-nome{ color:#5c3d00; font-weight:800; }
-  .ranking-item.ouro .ranking-pos{ color:#5c3d00; }
-  .ranking-item.ouro .ranking-valor{ color:#5c3d00; text-shadow:none; }
-  .ranking-item.ouro .ranking-medalha{ font-size:clamp(20.0px,1.35vw,29.0px); }
+  .ranking-item.ouro::after{
+    content:''; position:absolute; top:-50%; left:-80%; width:60%; height:200%;
+    background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.35) 50%, transparent 100%);
+    transform:skewX(-25deg); animation:shimmer-ouro 3s ease-in-out infinite;
+  }
+  .ranking-item.ouro .ranking-nome{ color:#5c3d00; font-weight:800; position:relative; z-index:1; }
+  .ranking-item.ouro .ranking-pos{ color:#5c3d00; position:relative; z-index:1; }
+  .ranking-item.ouro .ranking-valor{ color:#5c3d00; text-shadow:none; position:relative; z-index:1; }
+  .ranking-item.ouro .ranking-medalha{ font-size:clamp(20.0px,1.35vw,29.0px); position:relative; z-index:1; }
 
-  /* 🥈 PRATA — preenchimento total metálico */
+  /* 🥈 PRATA — preenchimento total metálico perolado */
   .ranking-item.prata{
-    background:linear-gradient(135deg, #D6D6D6 0%, #C0C0C0 30%, #A8A8A8 70%, #C0C0C0 100%);
+    background:linear-gradient(135deg, #E8E8E8 0%, #D0D0D0 25%, #C0C0C0 50%, #B0B0B0 75%, #C8C8C8 100%);
     color:#2a2a2a;
-    border:none;
-    box-shadow:0 0 16px 2px rgba(192,192,192,.45), inset 0 1px 0 rgba(255,255,255,.3);
-    animation:shine-prata 3.0s ease-in-out infinite;
+    border:none; position:relative; overflow:hidden;
+    box-shadow:0 0 16px 2px rgba(192,192,192,.45), inset 0 1px 0 rgba(255,255,255,.35);
+    animation:pearl-prata 2.8s ease-in-out infinite;
   }
-  .ranking-item.prata .ranking-nome{ color:#2a2a2a; font-weight:800; }
-  .ranking-item.prata .ranking-pos{ color:#2a2a2a; }
-  .ranking-item.prata .ranking-valor{ color:#2a2a2a; text-shadow:none; }
-  .ranking-item.prata .ranking-medalha{ font-size:clamp(19.2px,1.28vw,27.0px); }
+  .ranking-item.prata::after{
+    content:''; position:absolute; top:-50%; left:-80%; width:60%; height:200%;
+    background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.3) 50%, transparent 100%);
+    transform:skewX(-25deg); animation:shimmer-prata 3.5s ease-in-out infinite;
+  }
+  .ranking-item.prata .ranking-nome{ color:#2a2a2a; font-weight:800; position:relative; z-index:1; }
+  .ranking-item.prata .ranking-pos{ color:#2a2a2a; position:relative; z-index:1; }
+  .ranking-item.prata .ranking-valor{ color:#2a2a2a; text-shadow:none; position:relative; z-index:1; }
+  .ranking-item.prata .ranking-medalha{ font-size:clamp(19.2px,1.28vw,27.0px); position:relative; z-index:1; }
 
-  /* 🥉 BRONZE — preenchimento total tom quente */
+  /* 🥉 BRONZE — preenchimento total tom quente perolado */
   .ranking-item.bronze{
-    background:linear-gradient(135deg, #E8A45D 0%, #CD7F32 30%, #B87333 70%, #CD7F32 100%);
+    background:linear-gradient(135deg, #F0B878 0%, #E0A050 25%, #CD7F32 50%, #B87333 75%, #D09050 100%);
     color:#3d1f00;
-    border:none;
-    box-shadow:0 0 14px 2px rgba(205,127,50,.4), inset 0 1px 0 rgba(255,255,255,.25);
+    border:none; position:relative; overflow:hidden;
+    box-shadow:0 0 14px 2px rgba(205,127,50,.4), inset 0 1px 0 rgba(255,255,255,.3);
+    animation:pearl-bronze 3.2s ease-in-out infinite;
   }
-  .ranking-item.bronze .ranking-nome{ color:#3d1f00; font-weight:800; }
-  .ranking-item.bronze .ranking-pos{ color:#3d1f00; }
-  .ranking-item.bronze .ranking-valor{ color:#3d1f00; text-shadow:none; }
-  .ranking-item.bronze .ranking-medalha{ font-size:clamp(18.4px,1.22vw,25.0px); }
+  .ranking-item.bronze::after{
+    content:''; position:absolute; top:-50%; left:-80%; width:60%; height:200%;
+    background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.25) 50%, transparent 100%);
+    transform:skewX(-25deg); animation:shimmer-bronze 4s ease-in-out infinite;
+  }
+  .ranking-item.bronze .ranking-nome{ color:#3d1f00; font-weight:800; position:relative; z-index:1; }
+  .ranking-item.bronze .ranking-pos{ color:#3d1f00; position:relative; z-index:1; }
+  .ranking-item.bronze .ranking-valor{ color:#3d1f00; text-shadow:none; position:relative; z-index:1; }
+  .ranking-item.bronze .ranking-medalha{ font-size:clamp(18.4px,1.22vw,25.0px); position:relative; z-index:1; }
 
   /* Itens #4 e #5 — mantêm aparência discreta padrão */
   .ranking-item:nth-child(4), .ranking-item:nth-child(5){
@@ -190,13 +206,34 @@
     color:var(--text-hi);
   }
 
-  @keyframes shine-ouro{
-    0%,100%{ box-shadow:0 0 22px 3px rgba(255,215,0,.55), inset 0 1px 0 rgba(255,255,255,.35); }
-    50%{ box-shadow:0 0 32px 6px rgba(255,215,0,.70), inset 0 1px 0 rgba(255,255,255,.45); }
+  /* Pulsação perolada + shimmer */
+  @keyframes pearl-ouro{
+    0%,100%{ box-shadow:0 0 18px 2px rgba(255,215,0,.45), 0 0 40px 6px rgba(255,215,0,.15), inset 0 1px 0 rgba(255,255,255,.35); }
+    35%{ box-shadow:0 0 28px 5px rgba(255,215,0,.65), 0 0 55px 10px rgba(255,215,0,.30), inset 0 1px 0 rgba(255,255,255,.50); }
+    70%{ box-shadow:0 0 22px 3px rgba(255,215,0,.50), 0 0 35px 4px rgba(255,215,0,.10), inset 0 1px 0 rgba(255,255,255,.30); }
   }
-  @keyframes shine-prata{
-    0%,100%{ box-shadow:0 0 16px 2px rgba(192,192,192,.45), inset 0 1px 0 rgba(255,255,255,.3); }
-    50%{ box-shadow:0 0 22px 4px rgba(192,192,192,.60), inset 0 1px 0 rgba(255,255,255,.4); }
+  @keyframes pearl-prata{
+    0%,100%{ box-shadow:0 0 12px 2px rgba(192,192,192,.35), 0 0 30px 4px rgba(192,192,192,.10), inset 0 1px 0 rgba(255,255,255,.28); }
+    35%{ box-shadow:0 0 20px 4px rgba(192,192,192,.55), 0 0 42px 8px rgba(192,192,192,.22), inset 0 1px 0 rgba(255,255,255,.42); }
+    70%{ box-shadow:0 0 16px 2px rgba(192,192,192,.40), 0 0 25px 3px rgba(192,192,192,.08), inset 0 1px 0 rgba(255,255,255,.22); }
+  }
+  @keyframes pearl-bronze{
+    0%,100%{ box-shadow:0 0 10px 2px rgba(205,127,50,.30), 0 0 24px 3px rgba(205,127,50,.08), inset 0 1px 0 rgba(255,255,255,.22); }
+    35%{ box-shadow:0 0 18px 4px rgba(205,127,50,.48), 0 0 36px 6px rgba(205,127,50,.18), inset 0 1px 0 rgba(255,255,255,.36); }
+    70%{ box-shadow:0 0 14px 2px rgba(205,127,50,.34), 0 0 20px 2px rgba(205,127,50,.06), inset 0 1px 0 rgba(255,255,255,.18); }
+  }
+  /* Shimmer — faixa de luz que varre a superfície */
+  @keyframes shimmer-ouro{
+    0%,100%{ left:-80%; }
+    50%{ left:120%; }
+  }
+  @keyframes shimmer-prata{
+    0%,100%{ left:-80%; }
+    55%{ left:120%; }
+  }
+  @keyframes shimmer-bronze{
+    0%,100%{ left:-80%; }
+    60%{ left:120%; }
   }
 
   .chart-wrap{ position:relative; flex:1; min-height:0; }
