@@ -143,8 +143,10 @@ export default {
       return data ? json(data) : json({ erro: "cache indisponível" }, 503);
     }
 
-    // Sync manual (síncrono — aguarda completar)
+    // Sync manual (síncrono). ?force=true ignora throttle de 15 min.
     if (url.pathname === "/api/sync" && request.method === "POST") {
+      const force = url.searchParams.get("force") === "true";
+      if (force) await writeJson(env, R2_KEYS.syncMeta, { omie: 0, dashboard: 0 });
       const t0 = Date.now();
       try {
         await runFullSync(env);
