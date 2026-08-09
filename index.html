@@ -249,6 +249,17 @@
     .bottom-pair .panel{ height:260px; padding:1.4vh 3vw; }
     .bottom-pair .panel h2{ font-size:14px; }
   }
+  .cal-erro{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:100%; gap:6px; border:2px dashed #b45309; border-radius:12px;
+    background:rgba(180,83,9,.08); color:#fbbf24; }
+  .cal-erro-icone{ font-size:36px; }
+  .cal-erro-titulo{ font-size:20px; font-weight:700; }
+  .cal-erro-sub{ font-size:14px; opacity:.85; }
+  .cal-erro-detalhe{ font-size:11px; opacity:.6; font-family:monospace; }
+  .frescor-ok{ color:#4ade80; }
+  .frescor-alerta{ color:#fbbf24; }
+  .frescor-critico{ color:#f87171; font-weight:700; }
+  .demo-banner{ background:#b45309; color:#fff; text-align:center; padding:6px; font-weight:700; font-size:14px; }
 </style>
 </head>
 <body>
@@ -320,6 +331,11 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXoo
 const CSV_URL_OMIE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1172546852&single=true&output=csv";
 
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutos
+const MODO_DEMO = new URLSearchParams(location.search).has('demo');
+if (MODO_DEMO) {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div class="demo-banner">⚠️ MODO DEMONSTRAÇÃO — DADOS FICTÍCIOS</div>');
+}
 
 // Busca JSON diretamente (Worker API)
 async function loadFromJson(url){
@@ -733,21 +749,70 @@ function setStatusDot(ok){
   dot.className = 'dot ' + (ok ? 'ok' : 'bad');
 }
 
+// Indicador de frescor por fonte (dashboard / omie)
+function marcarFrescor(geradoEm, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!geradoEm) { el.textContent = 'sem dados'; el.className = 'frescor-critico'; return; }
+  const ts = new Date(geradoEm);
+  if (isNaN(ts)) { el.textContent = 'data inválida'; el.className = 'frescor-critico'; return; }
+  const min = Math.floor((Date.now() - ts) / 60000);
+  const hora = ts.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+  el.textContent = elId === 'frescorOmie' ? '📊 ' : '📅 ';
+  el.textContent += 'atualizado ' + hora + ' (' + min + 'min)';
+  el.className = min <= 45 ? 'frescor-ok' : min <= 90 ? 'frescor-alerta' : 'frescor-critico';
+}
+
+// Estado de erro visível no calendário (não inventa dados)
+function renderizarErroCalendario(motivo) {
+  const panel = document.getElementById('cal');
+  if (!panel) return;
+  panel.innerHTML = '<div class="cal-erro">'
+    + '<div class="cal-erro-icone">⚠️</div>'
+    + '<div class="cal-erro-titulo">Calendário indisponível</div>'
+    + '<div class="cal-erro-sub">Sem conexão com a fonte de dados</div>'
+    + '<div class="cal-erro-detalhe">' + (motivo || 'erro desconhecido') + '</div>'
+    + '</div>';
+}
+
 async function refresh(){
-  // Dashboard (produção + calendário): Worker primeiro, CSV Sheets fallback
-  let producaoOk = false;
+  // Modo demo — desenvolvimento local
+  if (MODO_DEMO) {
+    console.warn('[dashboard] MODO DEMO — dados fictícios');
+    applyData(DEMO);
+    setStatusDot(true);
+    return;
+  }
+
+  // Dashboard (calendário): Worker primeiro, CSV fallback
+  let producaoOk = false, dashErro = null;
   try {
-    const data = await loadFromJson(WORKER_URL + "/api/dashboard");
-    if (data && !data.error) { applyData(data); producaoOk = true; }
+    const data = await loadFromJson(WORKER_URL + "/api/dashboard?_=" + Date.now());
+    if (data && !data.error && data.calGrid) {
+      applyData(data);
+      producaoOk = true;
+      marcarFrescor(data.geradoEm, 'frescorDash');
+    } else {
+      dashErro = 'dados inválidos ou sem calGrid';
+    }
   } catch(e) {
+    dashErro = e.message;
     try {
       const data = await loadFromCsv(CSV_URL);
-      if (data && !data.error) { applyData(data); producaoOk = true; }
-    } catch(e2) { /* fallback demo abaixo */ }
+      if (data && !data.error && data.calGrid) {
+        applyData(data);
+        producaoOk = true;
+        marcarFrescor(data.geradoEm, 'frescorDash');
+      }
+    } catch(e2) { dashErro += ' | CSV: ' + e2.message; }
   }
-  if (!producaoOk) { setStatusDot(false); applyData(DEMO); return; }
+  if (!producaoOk) {
+    setStatusDot(false);
+    renderizarErroCalendario(dashErro);
+  }
 
-  // Omie (KPIs + fila + estoque + ranking + tendência): Worker primeiro, CSV fallback
+  // Omie (KPIs + fila + estoque + ranking + tendência)
+  let omieOk = false;
   const renderOmie = (dataOmie) => {
     renderFila(dataOmie.filaDePedidos);
     renderEstoque(dataOmie.estoque);
@@ -756,9 +821,11 @@ async function refresh(){
     if (dataOmie.kpis && !dataOmie.kpis.erro) {
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
     }
+    marcarFrescor(dataOmie.geradoEm, 'frescorOmie');
+    omieOk = true;
   };
   try {
-    const dataOmie = await loadFromJson(WORKER_URL + "/api/omie");
+    const dataOmie = await loadFromJson(WORKER_URL + "/api/omie?_=" + Date.now());
     if (dataOmie && !dataOmie.error) renderOmie(dataOmie);
     else { renderFila(null); renderEstoque(null); }
   } catch(e) {
@@ -769,11 +836,15 @@ async function refresh(){
     } catch(e2) { renderFila(null); renderEstoque(null); }
   }
 
-  setStatusDot(producaoOk);
+  setStatusDot(producaoOk && omieOk);
 }
 
 refresh();
 setInterval(refresh, REFRESH_MS);
 </script>
+<div id="rodape" style="display:flex; justify-content:center; gap:24px; padding:4px 16px; font-size:11px; opacity:.7;">
+  <span id="frescorOmie">—</span>
+  <span id="frescorDash">—</span>
+</div>
 </body>
 </html>
