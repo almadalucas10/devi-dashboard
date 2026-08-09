@@ -6,7 +6,7 @@ import { readJson, writeJson, writeSyncMeta } from "./r2.js";
 import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
 import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
-import { fetchDashboardCache } from "./dashboard.js";
+import { buildDashboardCache } from "./dashboard.js";
 import { R2_KEYS } from "./constants.js";
 
 // ============================================================================
@@ -17,11 +17,11 @@ async function runFullSync(env) {
   const t0 = Date.now();
   console.log("[sync] iniciando...");
 
-  // Dashboard cache (rápido — 1 chamada HTTP)
+  // Dashboard cache (lê planilha via Sheets API)
   try {
-    const dashData = await fetchDashboardCache();
+    const dashData = await buildDashboardCache(env);
     await writeJson(env, R2_KEYS.dashboard, dashData);
-    console.log(`[sync] ✅ Dashboard: ${dashData.mesLabel || "?"}`);
+    console.log(`[sync] ✅ Dashboard: ${dashData.mesLabel || "?"} | Planejado: ${dashData.planejado}`);
   } catch (e) {
     console.error(`[sync] ⚠️ Dashboard: ${e.message}`);
   }
