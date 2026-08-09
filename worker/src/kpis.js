@@ -257,10 +257,6 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
 
   const abertas = prefetched.abertas || await buscarOPs(env, { cConcluida: "N" });
 
-  if (!prefetched.realizadoMov) await sleep(5000);
-
-  const realizadoMov = prefetched.realizadoMov || await buscarRealizadoProducao(env, cacheProd);
-
   // ============ KPIs ANUAIS ============
 
   // 1. PLANEJADO ANO — nQtde todas OPs (SKUs ativos)
@@ -272,9 +268,13 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
     planejadoAno += ident.nQtde || 0;
   }
 
-  // 2. REALIZADO ANO — OPE/28 real
+  // 2. REALIZADO ANO — nQtde das OPs concluídas (fonte de verdade do Omie)
   let realizadoAno = 0;
-  for (const m of realizadoMov) realizadoAno += m.entradas;
+  for (const op of concluidas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
+    realizadoAno += ident.nQtde || 0;
+  }
 
   // 3. EFICIÊNCIA ANO — realizado / planejado só das concluídas
   let planejadoConcluidasAno = 0;
@@ -338,11 +338,17 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
     }
   }
 
-  // 6. REALIZADO MÊS — OPE/28 no mês
+  // 6. REALIZADO MÊS — nQtde das OPs concluídas no mês
   let realizadoMes = 0;
-  for (const m of realizadoMov) {
-    if (m.data.getMonth() === mesAtual && m.data.getFullYear() === anoAtual) {
-      realizadoMes += m.entradas;
+  for (const op of concluidas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
+    const conclusao = parseDataBr(
+      (op.outrasInf && op.outrasInf.dConclusao) ||
+      (op.infAdicionais && op.infAdicionais.dDtConclusao)
+    );
+    if (conclusao && conclusao.getMonth() === mesAtual && conclusao.getFullYear() === anoAtual) {
+      realizadoMes += ident.nQtde || 0;
     }
   }
 
@@ -353,14 +359,22 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
   let pendentesMes = 0;
   for (const op of abertas) {
     const ident = op.identificacao || {};
-    if (codParaSku[ident.nCodProduto]) pendentesMes++;
+    if (codParaSku[String(ident.nCodProduto)]) pendentesMes++;
   }
 
-  // _opsConcluidas para ranking/tendência (usa dados reais OPE/28)
-  const opsConcluidas = realizadoMov.map((m) => ({
-    codigo: m.codigo,
-    nQtde: m.entradas,
-    dataStr: dataParaStr(m.data),
+  // _opsConcluidas para ranking/tendência (nQtde das OPs concluídas)
+  const opsConcluidas = [];
+  for (const op of concluidas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
+    const dataStr = (op.outrasInf && op.outrasInf.dConclusao) ||
+                    (op.infAdicionais && op.infAdicionais.dDtConclusao);
+    if (!dataStr) continue;
+    opsConcluidas.push({
+      codigo: codParaSku[String(ident.nCodProduto)],
+      nQtde: ident.nQtde || 0,
+      dataStr,
+    });
   }));
 
   return {
