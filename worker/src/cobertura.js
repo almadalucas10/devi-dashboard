@@ -1,13 +1,19 @@
 // ============================================================================
-// Cobertura de Estoque em Dias — substitui Ocupação (Ano)
+// Cobertura de Estoque em Dias
+// Vendas: 1x/dia (ListarPedidos 90d). Cobertura: 30min (saldo fresco).
+//
+// NÃO chamar atualizarAgregadoVendas() de dentro de fetch().
+// Só do scheduled(). 3-4 páginas paginadas na Omie.
 // ============================================================================
 import { chamarOmie } from "./omie.js";
+import { readJson, writeJson } from "./r2.js";
 import { SKUS_ATIVOS, NOME_CURTO } from "./constants.js";
 
 const DIAS_JANELA = 90;
-const LIMIAR_GIRO = 5; // un/dia — abaixo disso, SKU é "sem giro"
+const LIMIAR_GIRO = 5; // un/dia
+const VENDAS_R2_KEY = "vendas-90d.json";
 
-// Lead times em dias — só kombucha definido, resto pendente com PCP
+// Lead times em dias — só kombucha definido
 const LEAD_TIMES = { kombucha: 10, cha: null, refrigerante: null, rtm: null };
 
 function familiaDoSku(sku) {
@@ -17,7 +23,6 @@ function familiaDoSku(sku) {
   return "refrigerante";
 }
 
-// Nome curto: até o primeiro hífen, ou apelido do NOME_CURTO
 function nomeCurtoSku(sku, descricao) {
   if (NOME_CURTO[sku]) return NOME_CURTO[sku];
   if (descricao) {
@@ -33,10 +38,10 @@ function dataParaStr(dt) {
 }
 
 // ============================================================================
-// Busca vendas (saídas) dos últimos 90 dias via ListarPedidos
+// Agregado de vendas — 1x/dia, só do scheduled()
 // ============================================================================
 
-export async function buscarVendasPorSku(env) {
+export async function atualizarAgregadoVendas(env) {
   const hoje = new Date();
   const dataInicial = new Date(hoje.getTime() - DIAS_JANELA * 24 * 60 * 60 * 1000);
   const dDtInicial = dataParaStr(dataInicial);
@@ -71,29 +76,49 @@ export async function buscarVendasPorSku(env) {
     if (pagina <= totalPaginas) await new Promise(r => setTimeout(r, 300));
   } while (pagina <= totalPaginas);
 
-  const total = Object.values(saida).reduce((a,b) => a+b, 0);
-  console.log(`✅ Vendas: ${total.toLocaleString("pt-BR")} un em ${DIAS_JANELA}d`);
-  return saida;
+  // Constrói agregado com diária por SKU
+  const agregado = { geradoEm: new Date().toISOString(), janelaDias: DIAS_JANELA, skus: {} };
+  for (const sku of SKUS_ATIVOS) {
+    const total = saida[sku] || 0;
+    agregado.skus[sku] = { total, diaria: total / DIAS_JANELA };
+  }
+
+  await writeJson(env, VENDAS_R2_KEY, agregado);
+  const totalGeral = Object.values(saida).reduce((a,b) => a+b, 0);
+  console.log(`✅ Vendas 90d: ${totalGeral.toLocaleString("pt-BR")} un, ${pagina-1} páginas`);
+  return agregado;
 }
 
 // ============================================================================
-// Calcula cobertura em dias para cada SKU
+// Recalcula cobertura — a cada 30min, usa saldo fresco + vendas em cache
 // ============================================================================
 
-export function calcularCobertura(estoque, saidaPorSku) {
+export async function recalcularCobertura(env, estoque) {
+  const vendas = await readJson(env, VENDAS_R2_KEY);
+  const saidaPorSku = vendas ? vendas.skus : null;
+
   const todos = [];
   const semGiro = [];
 
   for (const item of estoque) {
     const sku = item.codigo;
-    const saidaTotal = (saidaPorSku && saidaPorSku[sku]) || 0;
-    const diaria = saidaTotal / DIAS_JANELA;
-
+    const skuVendas = (saidaPorSku && saidaPorSku[sku]) || { total: 0, diaria: 0 };
+    const diaria = skuVendas.diaria || 0;
     const nomeCurto = nomeCurtoSku(sku, item.descricao);
     const familia = familiaDoSku(sku);
     const lead = LEAD_TIMES[familia] || null;
 
-    if (diaria * DIAS_JANELA < LIMIAR_GIRO || saidaTotal === 0) {
+    // Sem agregado de vendas → cobertura null (degradação previsível)
+    if (!saidaPorSku) {
+      todos.push({
+        codigo: sku, nome: item.descricao || sku, nomeCurto, familia,
+        saldo: item.saldo, minimo: item.estoqueMinimo || 0,
+        diaria: 0, cobertura: null, minimoEmDias: null, lead, status: "sem_dados",
+      });
+      continue;
+    }
+
+    if (skuVendas.total < LIMIAR_GIRO) {
       semGiro.push(sku);
       todos.push({
         codigo: sku, nome: item.descricao || sku, nomeCurto, familia,
@@ -120,7 +145,6 @@ export function calcularCobertura(estoque, saidaPorSku) {
     });
   }
 
-  // Ordena por cobertura ascendente, semGiro no final
   todos.sort((a, b) => {
     if (a.cobertura === null && b.cobertura === null) return 0;
     if (a.cobertura === null) return 1;
@@ -137,6 +161,7 @@ export function calcularCobertura(estoque, saidaPorSku) {
     todos,
     semGiro,
     janelaDias: DIAS_JANELA,
+    vendasAtualizadasEm: vendas ? vendas.geradoEm : null,
     geradoEm: new Date().toISOString(),
   };
 }
