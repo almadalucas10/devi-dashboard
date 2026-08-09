@@ -129,27 +129,23 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
     const oldCell = novasWeeksData[lote.wi][lote.di];
     if (!oldCell) continue;
 
-    // Mantém compatibilidade: array [sigla, planejada, produzida]
-    // Adiciona campo de execução como propriedade extra
-    const novoCell = [oldCell[0], oldCell[1], oldCell[2]];
+    // Objeto pra preservar estado na serialização JSON
+    const novoCell = { sigla: oldCell[0], planejada: oldCell[1], produzida: oldCell[2] };
     if (lote.execucao) {
       novoCell.execucao = lote.execucao;
-      // Determina estado
       if (lote.execucao.status === "concluida") {
         novoCell.estado = "op_concluida";
-        novoCell[2] = lote.execucao.qtde; // produzida = qtde da OP
+        novoCell.produzida = lote.execucao.qtde;
       } else if (lote.execucao.status === "andamento") {
         novoCell.estado = "op_andamento";
       } else {
         novoCell.estado = "op_aberta";
       }
       if (lote.execucao.confianca === "aproximada") novoCell.confianca = "aproximada";
-      // Divergência de quantidade
       if (lote.planejada > 0 && Math.abs(lote.execucao.qtde - lote.planejada) > lote.planejada * 0.1) {
         novoCell.estado = "divergencia_qtde";
       }
     } else {
-      // Sem OP encontrada
       const sigla = oldCell[0] || "";
       if (/FERIADO|MANUTEN|INVENTÁRIO/i.test(sigla)) {
         novoCell.estado = "nao_produtivo";
@@ -157,6 +153,10 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
         novoCell.estado = "planejado_sem_op";
       }
     }
+    // Compatibilidade: expor como [0],[1],[2] pra quem espera array
+    novoCell[0] = novoCell.sigla;
+    novoCell[1] = novoCell.planejada;
+    novoCell[2] = novoCell.produzida;
     novasWeeksData[lote.wi][lote.di] = novoCell;
   }
 
