@@ -243,8 +243,10 @@
   .cal-head{ display:flex; align-items:center; justify-content:center; font-size:clamp(15.9px,0.95vw,24.6px); color:var(--text-lo); font-weight:700; }
   .cal-cell{ background:rgba(255,255,255,0.02); border:1px solid var(--line); border-radius:9px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:clamp(14.4px,0.9vw,24.6px); color:var(--text-lo); padding:4px; overflow:hidden; transition:background .3s; }
-  .cal-cell .d{ font-size:1.5em; font-weight:800; }
+    font-size:clamp(10.9px,0.68vw,16.9px); color:var(--text-lo); padding:2px; overflow:hidden; transition:background .3s;
+    line-height:1.15; white-space:nowrap; }
+  .cal-cell .d{ font-size:1.3em; font-weight:800; }
+  .cal-cell div{ max-width:100%; overflow:hidden; text-overflow:ellipsis; }
   .cal-cell.planned{ background:rgba(59,130,246,.22); border-color:rgba(59,130,246,.65); color:var(--text-hi); font-weight:700; }
   .cal-cell.eff-alta{ background:rgba(34,197,94,.32); border-color:rgba(34,197,94,.8); color:var(--text-hi); font-weight:700; }
   .cal-cell.eff-media{ background:rgba(234,179,8,.32); border-color:rgba(234,179,8,.8); color:var(--text-hi); font-weight:700; }
