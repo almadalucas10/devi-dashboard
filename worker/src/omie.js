@@ -102,6 +102,16 @@ export async function chamarOmie(env, caminho, metodo, params = {}) {
       continue;
     }
 
+    // Erro 8020 = requisição concorrente. Aguarda e retenta.
+    if (resultado.faultstring && resultado.faultstring.includes("8020")) {
+      console.log(`⏳ Omie 8020 (concorrente), aguardando 3s...`);
+      await sleep(3000);
+      if (tentativa === MAX_TENTATIVAS) {
+        throw new Error(`Omie continuou com 8020 após ${MAX_TENTATIVAS} tentativas.`);
+      }
+      continue;
+    }
+
     if (resultado.faultstring) {
       throw new Error(`Omie API: ${resultado.faultstring}`);
     }

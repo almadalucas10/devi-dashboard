@@ -100,63 +100,75 @@ export async function construirCacheProdutos(env) {
 }
 
 // ============================================================================
-// Realizado: ListarMovimentoEstoque por SKU, filtro OPE/entrada/28.
-// Uma query por SKU com data do ano inteiro (sem janelas — o filtro de data funciona).
+// Realizado: ListarMovimentoEstoque por SKU, janelas bimestrais, filtro OPE/28.
 // ============================================================================
 
 export async function buscarRealizadoProducao(env, cacheProd) {
   const hoje = new Date();
   const anoAtual = hoje.getFullYear();
   const inicioAno = new Date(anoAtual, 0, 1);
-  const dDtInicio = `01/01/${anoAtual}`;
-  const dDtFim = `${("0" + hoje.getDate()).slice(-2)}/${("0" + (hoje.getMonth() + 1)).slice(-2)}/${anoAtual}`;
 
-  const { buscarTodasPaginas } = await import("./omie.js");
+  // Janelas bimestrais (evita truncamento por range grande)
+  const janelas = [];
+  for (let m = 0; m < 12; m += 2) {
+    const iniMes = m;
+    let fimMes = m + 1;
+    if (fimMes > 11) fimMes = 11;
+    const ini = new Date(anoAtual, iniMes, 1);
+    if (ini > hoje) break;
+    let fim = new Date(anoAtual, fimMes + 1, 0);
+    if (fim > hoje) fim = hoje;
+    janelas.push({
+      ini: `01/${("0" + (iniMes + 1)).slice(-2)}/${anoAtual}`,
+      fim: `${("0" + fim.getDate()).slice(-2)}/${("0" + (fim.getMonth() + 1)).slice(-2)}/${anoAtual}`,
+    });
+  }
+
   const realizado = [];
-  let totalPaginas = 0;
+  let totalChamadas = 0;
 
   for (let i = 0; i < SKUS_ATIVOS.length; i++) {
     const sku = SKUS_ATIVOS[i];
     const prod = cacheProd[sku];
-    if (!prod || !prod.codigo_produto) {
-      console.warn(`⚠️ SKU ${sku}: sem codigo_produto no cache`);
-      continue;
-    }
+    if (!prod || !prod.codigo_produto) continue;
     if (i > 0) await sleep(400);
 
-    try {
-      let pagina = 1, nTotPaginas = 1;
-      do {
-        const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarMovimentoEstoque", {
-          nPagina: pagina,
-          nRegPorPagina: 100,
-          idProd: prod.codigo_produto,
-          dDtInicial: dDtInicio,
-          dDtFinal: dDtFim,
-          codigo_local_estoque: 3125334492,
-        });
-        nTotPaginas = resultado.nTotPaginas || 1;
-        totalPaginas++;
+    for (const janela of janelas) {
+      try {
+        let pagina = 1, nTotPaginas = 1;
+        do {
+          const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarMovimentoEstoque", {
+            nPagina: pagina,
+            nRegPorPagina: 100,
+            idProd: prod.codigo_produto,
+            dDtInicial: janela.ini,
+            dDtFinal: janela.fim,
+            codigo_local_estoque: 3125334492,
+          });
+          nTotPaginas = resultado.nTotPaginas || 1;
+          totalChamadas++;
 
-        (resultado.movProdutoListar || []).forEach((mov) => {
-          if (mov.codOrigem !== "OPE") return;
-          if (mov.tipo !== "entrada") return;
-          if (mov.operacao !== "28") return;
-          const data = parseDataBr(mov.dtMov);
-          if (!data || data < inicioAno) return;
-          const qtd = mov.qtde || 0;
-          if (qtd <= 0) return;
-          realizado.push({ codigo: sku, data, entradas: qtd });
-        });
-        pagina++;
-        if (pagina <= nTotPaginas) await sleep(300);
-      } while (pagina <= nTotPaginas);
-    } catch (e) {
-      console.warn(`⚠️ Realizado ${sku}: ${e.message}`);
+          (resultado.movProdutoListar || []).forEach((mov) => {
+            if (mov.codOrigem !== "OPE") return;
+            if (mov.tipo !== "entrada") return;
+            if (mov.operacao !== "28") return;
+            const data = parseDataBr(mov.dtMov);
+            if (!data || data < inicioAno) return;
+            const qtd = mov.qtde || 0;
+            if (qtd <= 0) return;
+            realizado.push({ codigo: sku, data, entradas: qtd });
+          });
+          pagina++;
+          if (pagina <= nTotPaginas) await sleep(200);
+        } while (pagina <= nTotPaginas);
+      } catch (e) {
+        if (e.message.includes("8020")) await sleep(3000);
+        else console.warn(`⚠️ Realizado ${sku}/${janela.ini}: ${e.message}`);
+      }
     }
   }
 
-  console.log(`✅ Realizado OPE/28: ${realizado.length} movimentos, ${totalPaginas} páginas, ${SKUS_ATIVOS.length} SKUs`);
+  console.log(`✅ Realizado OPE/28: ${realizado.length} movimentos, ${totalChamadas} chamadas`);
   return realizado;
 }
 
