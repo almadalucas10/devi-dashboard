@@ -1511,7 +1511,7 @@ function diagnosticarMaio() {
 // 5. PLANEJADO MÊS: nQtde de todas as OPs abertas + concluídas no mês
 // 6. REALIZADO MÊS: soma qtde REAL dos movimentos OPE/28 no mês
 // 7. EFICIÊNCIA MÊS: realizado mês / planejado mês
-// 8. PENDENTES MÊS: nQtde das OPs abertas com dDtPrevisao no mês atual
+// 8. PENDENTES MÊS: nQtde de TODAS as OPs abertas dos SKUs ativos
 //
 // OP ativa = entre infAdicionais.dDtInicio e outrasInf.dConclusao (ou hoje se aberta)
 // Dias úteis = seg a sex (sem feriados — simplificado)
@@ -1668,17 +1668,12 @@ function buscarKPIsOmie(cacheProdExterno) {
   // 7. EFICIÊNCIA MÊS
   var eficienciaMes = planejadoMes > 0 ? realizadoMes / planejadoMes : 0;
 
-  // 8. PENDENTES MÊS = nQtde das OPs abertas (SKUs ativos) com previsão neste mês
+  // 8. PENDENTES MÊS = nQtde de TODAS as OPs abertas dos SKUs ativos
   var pendentesMes = 0;
   abertas.forEach(function (op) {
     var ident = op.identificacao || {};
     if (!codParaSku[ident.nCodProduto]) return;
-    var previsaoStr = ident.dDtPrevisao ||
-                      (op.infAdicionais && op.infAdicionais.dDtPrevisao);
-    var previsao = parseDataBr_(previsaoStr);
-    if (previsao && previsao.getMonth() === mesAtual && previsao.getFullYear() === anoAtual) {
-      pendentesMes += (ident.nQtde || 0);
-    }
+    pendentesMes += (ident.nQtde || 0);
   });
 
   // Converte movimentos reais de produção pro formato que o caller (atualizarCacheOmieAutomatico)
