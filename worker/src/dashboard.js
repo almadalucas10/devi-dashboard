@@ -35,7 +35,7 @@ function dataParaStr(dt) {
 // Casamento plano ↔ OP
 // ============================================================================
 
-function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
+function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
   const TOL = TOLERANCIA_DIAS;
 
   // Extrai todas as OPs com data e SKU
@@ -49,7 +49,7 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
     const data = parseDataBr(dataStr);
     if (!data) continue;
 
-    const sku = codParaSigla[String(ident.nCodProduto)];
+    const sku = codParaSku[String(ident.nCodProduto)];
     if (!sku) continue;
 
     const concluida = !!(outras.dConclusao);
@@ -224,11 +224,11 @@ export async function buildDashboardCache(env) {
   // 2. Execução: busca OPs e casa com o plano
   try {
     const cacheProd = await construirCacheProdutos(env);
-    const codParaSigla = {};
-    for (const [sigla, sku] of Object.entries(SIGLA_PARA_SKU)) {
-      if (!sku) continue;
+    // Mapa: codigo_produto (Omie) → SKU (nosso)
+    const codParaSku = {};
+    for (const sku of Object.keys(cacheProd)) {
       const cp = cacheProd[sku];
-      if (cp && cp.codigo_produto) codParaSigla[String(cp.codigo_produto)] = sigla;
+      if (cp && cp.codigo_produto) codParaSku[String(cp.codigo_produto)] = sku;
     }
 
     const abertas = await buscarOPs(env, { cConcluida: "N" });
@@ -244,28 +244,26 @@ export async function buildDashboardCache(env) {
       const amostra = todas[0];
       const ident = amostra.identificacao || {};
       console.log(`🔍 1ª OP: nCodOP=${ident.nCodOP} nCodProduto=${ident.nCodProduto} nQtde=${ident.nQtde}`);
-      console.log(`🔍 codParaSigla tem ${Object.keys(codParaSigla).length} entradas`);
-      // Mostra algumas chaves
-      const chaves = Object.keys(codParaSigla).slice(0, 5);
+      console.log(`🔍 codParaSku tem ${Object.keys(codParaSku).length} entradas`);
+      const chaves = Object.keys(codParaSku).slice(0, 5);
       console.log(`🔍 chaves exemplo: ${chaves.join(", ")}`);
-      // Verifica se a 1ª OP está no mapa
-      const match = codParaSigla[String(ident.nCodProduto)];
+      const match = codParaSku[String(ident.nCodProduto)];
       console.log(`🔍 1ª OP no mapa? ${match || 'NÃO'}`);
     } else {
       console.log(`🔍 NENHUMA OP retornada! Verificar filtros.`);
     }
 
     const resultado = casarPlanoComOPs(
-      data.calGrid.weeksData, data.calGrid.dayNums, todas, codParaSigla, ano, mes
+      data.calGrid.weeksData, data.calGrid.dayNums, todas, codParaSku, ano, mes
     );
     data.calGrid.weeksData = resultado.weeksData;
     data._debug = {
       opsTotal: todas.length,
       opsNoMapa: todas.filter(op => {
         const id = (op.identificacao || {}).nCodProduto;
-        return codParaSigla[String(id)];
+        return codParaSku[String(id)];
       }).length,
-      chavesNoMapa: Object.keys(codParaSigla).length,
+      chavesNoMapa: Object.keys(codParaSku).length,
       lotesCriados: resultado._lotesCount || 0,
       lotesComExec: resultado._lotesComExec || 0,
       cellsComEstado: resultado.weeksData.flat().filter(c => c && c.estado).length,
