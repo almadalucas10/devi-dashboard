@@ -69,7 +69,15 @@ var DIAG_FUNCTIONS = {
   testarTendenciaMensalProducao: testarTendenciaMensalProducao,
   atualizarRankingAutomatico: atualizarRankingAutomatico,
   atualizarFilaAutomatico: atualizarFilaAutomatico,
-  atualizarEstoqueAutomatico: atualizarEstoqueAutomatico
+  atualizarEstoqueAutomatico: atualizarEstoqueAutomatico,
+  atualizarCacheOmieAutomatico: atualizarCacheOmieAutomatico,
+  testarDatasOPs: testarDatasOPs,
+  testarPlanejadoPorSku: testarPlanejadoPorSku,
+  testarCodigosNaoMapeados: testarCodigosNaoMapeados,
+  testarPlanejadoPlanilha: testarPlanejadoPlanilha,
+  testarMovimentosKeys: testarMovimentosKeys,
+  testarMovimentoEstoqueRealizadoRaw: testarMovimentoEstoqueRealizadoRaw,
+  testarSemIdProd: testarSemIdProd
 };
 
 function doGet(e) {
@@ -1511,7 +1519,7 @@ function diagnosticarMaio() {
 // 5. PLANEJADO MÊS: nQtde de todas as OPs abertas + concluídas no mês
 // 6. REALIZADO MÊS: soma qtde REAL dos movimentos OPE/28 no mês
 // 7. EFICIÊNCIA MÊS: realizado mês / planejado mês
-// 8. PENDENTES MÊS: nQtde de TODAS as OPs abertas dos SKUs ativos
+// 8. PENDENTES MÊS: número de OPs abertas dos SKUs ativos
 //
 // OP ativa = entre infAdicionais.dDtInicio e outrasInf.dConclusao (ou hoje se aberta)
 // Dias úteis = seg a sex (sem feriados — simplificado)
@@ -1668,12 +1676,11 @@ function buscarKPIsOmie(cacheProdExterno) {
   // 7. EFICIÊNCIA MÊS
   var eficienciaMes = planejadoMes > 0 ? realizadoMes / planejadoMes : 0;
 
-  // 8. PENDENTES MÊS = nQtde de TODAS as OPs abertas dos SKUs ativos
+  // 8. PENDENTES MÊS = número de OPs abertas dos SKUs ativos
   var pendentesMes = 0;
   abertas.forEach(function (op) {
     var ident = op.identificacao || {};
-    if (!codParaSku[ident.nCodProduto]) return;
-    pendentesMes += (ident.nQtde || 0);
+    if (codParaSku[ident.nCodProduto]) pendentesMes++;
   });
 
   // Converte movimentos reais de produção pro formato que o caller (atualizarCacheOmieAutomatico)

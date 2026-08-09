@@ -25,24 +25,35 @@ O backend (Apps Script) roda triggers automáticos que puxam dados do Omie e esc
 
 ## Comandos
 
-### Deploy do Apps Script
+### Deploy automatizado (recomendado)
 ```bash
-cd C:\Users\almad\Downloads\dashboard
-npm init -y && npm install @google/clasp
+./deploy.sh "descrição das mudanças"
+```
+Faz tudo: git push, clasp push, wrangler deploy (Worker + Pages), dispara sync.
+
+### Deploy manual por etapa
+```bash
+# Só Apps Script
+cd /home/almadalucas/Área de trabalho/dashboard
 npx clasp push
-npx clasp deploy --description "descrição das mudanças"
-rm -rf node_modules package.json package-lock.json
+
+# Só Cloudflare Worker
+cd worker && npx wrangler deploy
+
+# Só Cloudflare Pages
+cd .. && rm -rf node_modules package.json package-lock.json && npx wrangler pages deploy . --project-name=dashboard
+
+# Disparar sync manual
+curl -X POST https://devi-dashboard-worker.almadalucas.workers.dev/api/sync
 ```
 
-### Deploy do Cloudflare
+### Sync manual (equivale a ?run= do Apps Script)
 ```bash
-cd C:\Users\almad\Downloads\dashboard
-npx wrangler pages deploy . --project-name=dashboard
-```
+# Sync completo
+curl -X POST https://devi-dashboard-worker.almadalucas.workers.dev/api/sync
 
-### Testar função remotamente (se Web App configurado com `doGet`)
-```
-https://script.google.com/macros/s/<deployment-id>/exec?run=testarOPsConcluidas
+# Ver dados
+curl https://devi-dashboard-worker.almadalucas.workers.dev/api/omie
 ```
 
 ## Funções disponíveis no `?run=`

@@ -79,6 +79,18 @@ export async function chamarOmie(env, caminho, metodo, params = {}) {
       throw new Error(`Omie retornou JSON inválido: ${texto.slice(0, 200)}`);
     }
 
+    // Consumo redundante — Omie pede espera explícita
+    if (resultado.faultstring && resultado.faultstring.includes("REDUNDANT")) {
+      const match = resultado.faultstring.match(/Aguarde (\d+) segundos/);
+      const espera = match ? parseInt(match[1], 10) * 1000 : 45000;
+      console.log(`⏳ Omie: Consumo redundante, aguardando ${espera / 1000}s...`);
+      await sleep(espera);
+      if (tentativa === MAX_TENTATIVAS) {
+        throw new Error(`Omie continuou redundante mesmo após ${MAX_TENTATIVAS} tentativas.`);
+      }
+      continue;
+    }
+
     if (resultado.faultstring) {
       throw new Error(`Omie API: ${resultado.faultstring}`);
     }

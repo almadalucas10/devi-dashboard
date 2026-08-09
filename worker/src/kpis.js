@@ -53,35 +53,26 @@ function dataParaStr(data) {
 export async function construirCacheProdutos(env) {
   const cache = {};
 
-  // ListarProdutos paginado
-  const produtos = await buscarProdutos(env);
-  for (const p of produtos) {
-    if (SKUS_ATIVOS.includes(p.codigo)) {
-      cache[p.codigo] = {
-        codigo_produto: p.codigo_produto,
-        descricao: p.descricao || "",
-      };
-    }
-  }
-
-  // Fallback: ConsultarProduto para SKUs não encontrados
+  // ConsultarProduto individual para cada SKU — 17 chamadas, garantido.
+  // ListarProdutos paginaria TODOS os produtos Omie (centenas de páginas).
   for (const sku of SKUS_ATIVOS) {
-    if (!cache[sku]) {
-      try {
-        await sleep(400);
-        const p = await consultarProduto(env, sku);
-        if (p && p.codigo_produto) {
-          cache[sku] = {
-            codigo_produto: p.codigo_produto,
-            descricao: p.descricao || "",
-          };
-        }
-      } catch (e) {
-        console.warn(`⚠️ SKU ${sku} não encontrado na Omie: ${e.message}`);
+    try {
+      await sleep(300);
+      const p = await consultarProduto(env, sku);
+      if (p && p.codigo_produto) {
+        cache[sku] = {
+          codigo_produto: p.codigo_produto,
+          descricao: p.descricao || "",
+        };
+      } else {
+        console.warn(`⚠️ SKU ${sku}: sem codigo_produto na resposta`);
       }
+    } catch (e) {
+      console.warn(`⚠️ SKU ${sku}: ${e.message}`);
     }
   }
 
+  console.log(`✅ CacheProd: ${Object.keys(cache).length}/${SKUS_ATIVOS.length} SKUs`);
   return cache;
 }
 
@@ -104,7 +95,7 @@ export async function buscarRealizadoProducao(env, cacheProd) {
     const ini = new Date(anoAtual, iniMes, 1);
     if (ini > hoje) break;
 
-    const fim = new Date(anoAtual, fimMes + 1, 0);
+    let fim = new Date(anoAtual, fimMes + 1, 0);
     if (fim > hoje) fim = hoje;
 
     janelas.push({
@@ -198,7 +189,15 @@ export function calcularRanking(movimentos, descricoes) {
 // buscarKPIsOmie — os 8 KPIs
 // ============================================================================
 
-export async function buscarKPIsOmie(env, cacheProd) {
+/**
+ * @param {object} env
+ * @param {object} cacheProd — mapa SKU → { codigo_produto, descricao }
+ * @param {object} [prefetched] — dados já buscados (evita dupla chamada no batch-2)
+ * @param {Array} [prefetched.concluidas] — OPs concluídas
+ * @param {Array} [prefetched.abertas] — OPs abertas
+ * @param {Array} [prefetched.realizadoMov] — movimentos OPE/28 já filtrados
+ */
+export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
   const hoje = new Date();
   const anoAtual = hoje.getFullYear();
   const mesAtual = hoje.getMonth();
@@ -213,20 +212,22 @@ export async function buscarKPIsOmie(env, cacheProd) {
     if (cp && cp.codigo_produto) codParaSku[cp.codigo_produto] = sku;
   }
 
-  // --- OPs concluídas este ano ---
-  const concluidas = await buscarOPs(env, {
+  // Usa dados pré-buscados ou busca da Omie
+  const hasPrefetched = prefetched.concluidas && prefetched.abertas;
+
+  const concluidas = prefetched.concluidas || await buscarOPs(env, {
     dDtConclusaoDe: dDtInicioAno,
     dDtConclusaoAte: dDtHoje,
     cConcluida: "S",
   });
 
-  // --- OPs em aberto ---
-  await sleep(3000);
-  const abertas = await buscarOPs(env, { cConcluida: "N" });
+  if (!hasPrefetched) await sleep(3000);
 
-  // --- Realizado: movimentos OPE/28 ---
-  await sleep(5000);
-  const realizadoMov = await buscarRealizadoProducao(env, cacheProd);
+  const abertas = prefetched.abertas || await buscarOPs(env, { cConcluida: "N" });
+
+  if (!prefetched.realizadoMov) await sleep(5000);
+
+  const realizadoMov = prefetched.realizadoMov || await buscarRealizadoProducao(env, cacheProd);
 
   // ============ KPIs ANUAIS ============
 
