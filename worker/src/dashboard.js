@@ -219,10 +219,36 @@ export async function buildDashboardCache(env) {
     const todas = [...abertas, ...concluidas];
     console.log(`🔍 OPs: ${abertas.length} abertas + ${concluidas.length} concluídas = ${todas.length} total`);
 
+    // Debug: mostra primeiras OPs
+    if (todas.length > 0) {
+      const amostra = todas[0];
+      const ident = amostra.identificacao || {};
+      console.log(`🔍 1ª OP: nCodOP=${ident.nCodOP} nCodProduto=${ident.nCodProduto} nQtde=${ident.nQtde}`);
+      console.log(`🔍 codParaSigla tem ${Object.keys(codParaSigla).length} entradas`);
+      // Mostra algumas chaves
+      const chaves = Object.keys(codParaSigla).slice(0, 5);
+      console.log(`🔍 chaves exemplo: ${chaves.join(", ")}`);
+      // Verifica se a 1ª OP está no mapa
+      const match = codParaSigla[String(ident.nCodProduto)];
+      console.log(`🔍 1ª OP no mapa? ${match || 'NÃO'}`);
+    } else {
+      console.log(`🔍 NENHUMA OP retornada! Verificar filtros.`);
+    }
+
     const resultado = casarPlanoComOPs(
       data.calGrid.weeksData, data.calGrid.dayNums, todas, codParaSigla, ano, mes
     );
     data.calGrid.weeksData = resultado.weeksData;
+    data._debug = {
+      opsTotal: todas.length,
+      opsAbertas: abertas.length,
+      opsConcluidas: concluidas.length,
+      opsNoMapa: todas.filter(op => {
+        const id = (op.identificacao || {}).nCodProduto;
+        return codParaSigla[String(id)];
+      }).length,
+      chavesNoMapa: Object.keys(codParaSigla).length,
+    };
 
     // Conta estados
     const estados = {};
