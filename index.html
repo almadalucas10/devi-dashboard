@@ -784,7 +784,8 @@ function renderKPIsOmie(k){
   setKpi('kpiEficiencia', pct(k.eficienciaAno));
   document.getElementById('kpiEficiencia').style.color = effColor(k.eficienciaAno);
   document.getElementById('kpi3Label').textContent = 'EFICIÊNCIA (ANO)';
-  // 4º KPI — Cobertura (renderizada via renderCobertura com dados do /api/omie)
+  document.getElementById('kpi4Label').textContent = 'OCUPAÇÃO (ANO)';
+  setKpi('kpiExtra', pct(k.ocupacaoAno));
   // Linha 2 — Mês
   setKpi('kpiPlanejadoMes', fmt(k.planejadoMes));
   document.getElementById('kpi5Label').textContent = 'PLANEJADO (MÊS)';
@@ -916,9 +917,6 @@ async function refresh(){
     renderRankingChart(dataOmie.rankingProducao);
     if (dataOmie.kpis && !dataOmie.kpis.erro) {
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
-    }
-    if (dataOmie.cobertura) {
-      try { renderCobertura(dataOmie.cobertura); } catch(e) { console.error('Cobertura:', e); }
     }
     marcarFrescor(dataOmie.geradoEm, 'frescorOmie');
     omieOk = true;
