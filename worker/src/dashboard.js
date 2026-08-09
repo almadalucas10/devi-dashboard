@@ -105,12 +105,12 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
     }
   }
 
-  // Passada 2: casamentos aproximados (±TOL dias)
+  // Passada 2: SKU igual, mesma semana (até 7 dias de diferença)
   for (const lote of lotes) {
     if (lote.execucao) continue;
     const candidatas = opsDisponiveis.filter(op =>
       !op.consumida && op.sku === lote.sku &&
-      Math.abs(op.data - lote.data) / 86400000 <= TOL
+      Math.abs(op.data - lote.data) / 86400000 <= 7
     );
     candidatas.sort((a, b) => Math.abs(a.data - lote.data) - Math.abs(b.data - lote.data));
     const match = candidatas[0];
@@ -119,6 +119,19 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
       lote.execucao = {
         nCodOP: match.nCodOP, qtde: match.qtde, status: match.status,
         dataStr: match.dataStr, confianca: "aproximada",
+      };
+    }
+  }
+
+  // Passada 3: SKU igual, qualquer data (OP de outro mês)
+  for (const lote of lotes) {
+    if (lote.execucao) continue;
+    const match = opsDisponiveis.find(op => !op.consumida && op.sku === lote.sku);
+    if (match) {
+      match.consumida = true;
+      lote.execucao = {
+        nCodOP: match.nCodOP, qtde: match.qtde, status: match.status,
+        dataStr: match.dataStr, confianca: "cross_month",
       };
     }
   }
