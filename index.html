@@ -655,7 +655,7 @@ function renderFila(fila){
     el.innerHTML = '<div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">' + msg + '</div>';
     return;
   }
-  const MAX_ITENS = 5; // mesma quantidade do estoque, pra cada item ter espaço de sobra
+  const MAX_ITENS = 8; // mesma quantidade do estoque
   const ordenado = [...fila].sort((a,b) => (b.valorTotal||0) - (a.valorTotal||0)).slice(0, MAX_ITENS);
   el.innerHTML = ordenado.map(function(p, i){
     const etapaLabel = ETAPA_LABELS[p.etapa] || ("Etapa " + p.etapa);
