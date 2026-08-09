@@ -19,20 +19,11 @@ async function runLightSync(env) {
   const t0 = Date.now();
   console.log("[light] iniciando...");
 
-  // Cache de produtos (compartilhado entre dashboard e omie)
-  let cacheProd;
+  // Dashboard (planilha)
   try {
-    cacheProd = await construirCacheProdutos(env);
-  } catch (e) {
-    cacheProd = {};
-    console.error(`[light] ⚠️ CacheProd: ${e.message}`);
-  }
-
-  // Dashboard (usa cacheProd pro calendário)
-  try {
-    const dashData = await buildDashboardCache(env, cacheProd);
+    const dashData = await buildDashboardCache(env);
     await writeJson(env, R2_KEYS.dashboard, dashData);
-    console.log(`[light] ✅ Dashboard: ${dashData.mesLabel || "?"}`);
+    console.log(`[light] ✅ Dashboard: ${dashData.mesLabel || "?"} | Planejado: ${dashData.planejado}`);
   } catch (e) {
     console.error(`[light] ⚠️ Dashboard: ${e.message}`);
   }
@@ -41,6 +32,7 @@ async function runLightSync(env) {
   try {
     const partial = (await readJson(env, R2_KEYS.omie)) || { geradoEm: new Date().toISOString() };
     partial.geradoEm = new Date().toISOString();
+    const cacheProd = await construirCacheProdutos(env);
 
     try {
       partial.filaDePedidos = await buscarFilaDePedidos(env);

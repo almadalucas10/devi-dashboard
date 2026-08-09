@@ -1,88 +1,75 @@
 // ============================================================================
-// Dashboard Cache — calendário via OPs da Omie (adeus Sheets!)
+// Dashboard Cache — lê planilha Google via Sheets API (restaurado)
+// Etapa 0: plano da planilha. Etapa 2: camada de execução (OPs Omie).
 // ============================================================================
-import { buscarOPs } from "./omie.js";
-import { SKUS_ATIVOS, PLANILHA_PARA_SKU } from "./constants.js";
-import { construirCacheProdutos } from "./kpis.js";
-
-function parseDataBr(str) {
-  if (!str || typeof str !== "string") return null;
-  const parts = str.split("/");
-  if (parts.length !== 3) return null;
-  const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, y = parseInt(parts[2], 10);
-  const date = new Date(y, m, d);
-  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) return null;
-  return date;
-}
+import { getAccessToken, getValues } from "./sheets.js";
+import { SHEET_NAMES, PLANILHA_PARA_SKU } from "./constants.js";
 
 // ============================================================================
-// Calendário a partir das OPs (substitui buildCalendarFromLotes)
+// Helpers
 // ============================================================================
 
-async function buildCalendarFromOPs(env, ano, mes, cacheProd) {
-  const primeiroDia = new Date(ano, mes - 1, 1);
-  const ultimoDia = new Date(ano, mes, 0);
-  const daysInMonth = ultimoDia.getDate();
-  const wd = primeiroDia.getDay() === 0 ? 7 : primeiroDia.getDay();
-  const offset = wd - 1;
-
-  // Mapa reverso: codigo_produto (Omie) → sigla da planilha
-  const codParaSigla = {};
-  for (const [sigla, sku] of Object.entries(PLANILHA_PARA_SKU)) {
-    if (!sku) continue;
-    const cp = cacheProd[sku];
-    if (cp && cp.codigo_produto) {
-      codParaSigla[String(cp.codigo_produto)] = sigla;
+function findRow(values, needle, fromRow = 0) {
+  const low = needle.toLowerCase();
+  for (let r = fromRow; r < values.length; r++) {
+    const row = values[r] || [];
+    for (let c = 0; c < row.length; c++) {
+      if (String(row[c] || "").toLowerCase().includes(low)) return r;
     }
   }
+  return -1;
+}
 
-  const dInicio = `01/${String(mes).padStart(2,"0")}/${ano}`;
-  const dFim = `${String(daysInMonth).padStart(2,"0")}/${String(mes).padStart(2,"0")}/${ano}`;
+function findColInRow(row, needle) {
+  const low = needle.toLowerCase();
+  for (let c = 0; c < row.length; c++) {
+    if (String(row[c] || "").toLowerCase().includes(low)) return c;
+  }
+  return -1;
+}
 
-  const abertas = await buscarOPs(env, { cConcluida: "N" });
-  const concluidas = await buscarOPs(env, {
-    dDtConclusaoDe: dInicio, dDtConclusaoAte: dFim, cConcluida: "S",
-  });
+function toNumber(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
 
-  const todas = [...abertas, ...concluidas];
+const MONTH_MAP = {
+  janeiro: 1, fevereiro: 2, março: 3, marco: 3, abril: 4, maio: 5, junho: 6,
+  julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+};
 
-  // Mapa: dia → [{ sigla, planejada, produzida }]
-  const porDia = {};
-  for (let d = 1; d <= daysInMonth; d++) porDia[d] = [];
+// ============================================================================
+// Calendário via planilha "Produção por Lote"
+// ============================================================================
 
-  for (const op of todas) {
-    const ident = op.identificacao || {};
-    const inf = op.infAdicionais || {};
-    const outras = op.outrasInf || {};
+async function buildCalendarFromLotes(env, token, ano, mes) {
+  const vals = await getValues(env, token, `'${SHEET_NAMES.lote}'!A5:H5000`);
+  if (!vals || vals.length === 0) return null;
 
-    const dataStr = inf.dDtInicio || ident.dDtPrevisao || inf.dDtPrevisao;
-    if (!dataStr) continue;
-
-    const data = parseDataBr(dataStr);
-    if (!data || data.getMonth() + 1 !== mes || data.getFullYear() !== ano) continue;
-
-    const dia = data.getDate();
-    if (dia < 1 || dia > daysInMonth) continue;
-
-    // Mapeia nCodProduto → sigla via cache de produtos
-    const nCodProduto = ident.nCodProduto;
-    const sigla = codParaSigla[String(nCodProduto)];
+  const map = {};
+  for (const row of vals) {
+    const d = row[0];
+    if (!d || typeof d !== "string") continue;
+    const parts = d.split("/");
+    if (parts.length !== 3) continue;
+    const key = `${parseInt(parts[2])}-${parseInt(parts[1])}-${parseInt(parts[0])}`;
+    const sigla = String(row[1] || "").trim();
+    const sufixo = String(row[2] || "").trim();
     if (!sigla) continue;
-
-    const nQtde = ident.nQtde || 0;
-    const concluida = outras.dConclusao ? true : false;
-    const produzida = concluida ? nQtde : null;
-
-    // Se já tem OP nesse dia, soma (ou mantém a primeira)
-    porDia[dia].push({
+    map[key] = {
       sigla,
-      planejada: nQtde,
-      produzida,
-      concluida,
-    });
+      sufixo: sufixo.toLowerCase().includes("sem") ? "" : sufixo,
+      planejada: toNumber(row[6]) || 0,
+      produzida: toNumber(row[7]) || 0,
+    };
   }
 
-  // Monta grid 5×7
+  const firstDay = new Date(ano, mes - 1, 1);
+  const wd = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+  const offset = wd - 1;
+  const daysInMonth = new Date(ano, mes, 0).getDate();
+
   const dayNums = [];
   const weeksData = [];
   let day = 1;
@@ -95,12 +82,13 @@ async function buildCalendarFromOPs(env, ano, mes, cacheProd) {
         dnRow.push(null);
         wdRow.push(null);
       } else {
-        dnRow.push(String(day).padStart(2, "0"));
-        const diaOps = porDia[day] || [];
-        if (diaOps.length > 0) {
-          // Pega a primeira OP do dia (mais relevante)
-          const op = diaOps[0];
-          wdRow.push([op.sigla, op.planejada, op.produzida]);
+        const ds = String(day).padStart(2, "0");
+        dnRow.push(ds);
+        const key = `${ano}-${String(mes).padStart(2, "0")}-${ds}`;
+        const info = map[key];
+        if (info && info.sigla) {
+          const siglaCompleta = info.sigla + (info.sufixo || "");
+          wdRow.push([siglaCompleta, info.planejada, info.produzida > 0 ? info.produzida : null]);
         } else {
           wdRow.push(null);
         }
@@ -115,35 +103,134 @@ async function buildCalendarFromOPs(env, ano, mes, cacheProd) {
 }
 
 // ============================================================================
-// Dashboard Cache — só o essencial (calendário + mês)
+// Dashboard Cache completo
 // ============================================================================
 
-export async function buildDashboardCache(env, cacheProd) {
-  // Se não recebeu cache, constrói (custo extra, mas funciona standalone)
-  if (!cacheProd) {
-    cacheProd = await construirCacheProdutos(env);
+export async function buildDashboardCache(env) {
+  const token = await getAccessToken(env);
+
+  // Dashboard sheet
+  const values = await getValues(env, token, `'${SHEET_NAMES.dashboard}'!A1:T150`);
+  if (!values || values.length === 0) {
+    throw new Error("Dashboard sheet vazia");
   }
 
-  const hoje = new Date();
-  const nomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-  const mesLabel = nomes[hoje.getMonth()];
-
   const data = {
-    mesLabel,
-    geradoEm: new Date().toISOString(),
     planejado: null, realizado: null, eficiencia: null,
     extraLabel: null, extraValue: null,
     mes: { planejado: null, realizado: null, eficiencia: null, pendentes: null },
-    familias: [], tendencia: null, skuMensal: null,
+    mesLabel: "",
+    familias: [],
+    tendencia: null,
+    calGrid: null,
+    geradoEm: new Date().toISOString(),
   };
 
-  try {
-    data.calGrid = await buildCalendarFromOPs(env, hoje.getFullYear(), hoje.getMonth() + 1, cacheProd);
-    console.log(`✅ Calendário OPs: ${hoje.getMonth()+1}/${hoje.getFullYear()}`);
-  } catch (e) {
-    console.warn(`⚠️ Calendário OPs: ${e.message}`);
-    data.calGrid = null;
+  // KPIs anuais
+  const labelRow = findRow(values, "planejado");
+  if (labelRow !== -1) {
+    const valueRow = labelRow + 1;
+    const colPlan = findColInRow(values[labelRow], "planejado");
+    const colReal = findColInRow(values[labelRow], "realizado");
+    const colEfic = findColInRow(values[labelRow], "eficiência");
+    if (colPlan !== -1) data.planejado = toNumber(values[valueRow][colPlan]);
+    if (colReal !== -1) data.realizado = toNumber(values[valueRow][colReal]);
+    if (colEfic !== -1) {
+      let ef = toNumber(values[valueRow][colEfic]);
+      if (ef !== null && ef > 1) ef = ef / 100;
+      data.eficiencia = ef;
+    }
+    for (let c = 0; c < (values[valueRow] || []).length; c++) {
+      if (c === colPlan || c === colReal || c === colEfic) continue;
+      const v = toNumber(values[valueRow][c]);
+      if (v !== null) {
+        data.extraLabel = String(values[labelRow][c] || "").trim();
+        data.extraValue = v;
+        break;
+      }
+    }
   }
+
+  // KPIs do mês
+  const labelRow2 = labelRow !== -1 ? findRow(values, "planejado", labelRow + 1) : -1;
+  if (labelRow2 !== -1) {
+    const valueRow2 = labelRow2 + 1;
+    const colPlan2 = findColInRow(values[labelRow2], "planejado");
+    const colReal2 = findColInRow(values[labelRow2], "realizado");
+    const colEfic2 = findColInRow(values[labelRow2], "eficiência");
+    const colPend2 = findColInRow(values[labelRow2], "pendentes");
+    if (colPlan2 !== -1) data.mes.planejado = toNumber(values[valueRow2][colPlan2]);
+    if (colReal2 !== -1) data.mes.realizado = toNumber(values[valueRow2][colReal2]);
+    if (colEfic2 !== -1) {
+      let ef2 = toNumber(values[valueRow2][colEfic2]);
+      if (ef2 !== null && ef2 > 1) ef2 = ef2 / 100;
+      data.mes.eficiencia = ef2;
+    }
+    if (colPend2 !== -1) data.mes.pendentes = toNumber(values[valueRow2][colPend2]);
+  }
+
+  // Famílias
+  const famRow = findRow(values, "família");
+  if (famRow !== -1) {
+    for (let r = famRow + 1; r < values.length; r++) {
+      const row = values[r] || [];
+      if (!row[0] || String(row[0]).toLowerCase().includes("total")) break;
+      const nome = String(row[0]).trim();
+      const nums = [];
+      for (let c = 1; c < row.length && nums.length < 2; c++) {
+        const n = toNumber(row[c]);
+        if (n !== null) nums.push(n);
+      }
+      if (nome && nums.length >= 1) {
+        data.familias.push({ nome, planejado: nums[0] || 0, valor: nums[1] !== undefined ? nums[1] : nums[0] });
+      }
+    }
+  }
+
+  // Mês de referência
+  for (const row of values) {
+    const label = String(row[0] || "").toLowerCase();
+    if (label.includes("mês selecionado")) {
+      const mesNome = String(row[1] || "").toLowerCase().trim();
+      data.mesLabel = mesNome.charAt(0).toUpperCase() + mesNome.slice(1);
+    }
+  }
+  if (!data.mesLabel) {
+    const hoje = new Date();
+    const nomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    data.mesLabel = nomes[hoje.getMonth()];
+  }
+
+  // Tendência + SKU mensal
+  try {
+    const trendVals = await getValues(env, token, `'${SHEET_NAMES.trend}'!A1:Q40`);
+    if (trendVals && trendVals.length > 0) {
+      const totalRow = findRow(trendVals, "total geral");
+      if (totalRow !== -1) {
+        const meses = [], valores = [];
+        for (let c = 2; c < (trendVals[totalRow] || []).length; c++) {
+          const v = toNumber(trendVals[totalRow][c]);
+          if (v !== null) { valores.push(v); if (trendVals[0] && trendVals[0][c]) meses.push(String(trendVals[0][c]).trim()); }
+        }
+        if (meses.length > 0) data.tendencia = { meses, valores };
+        const skuMensal = [];
+        for (let r = 0; r < totalRow; r++) {
+          const row = trendVals[r] || [];
+          const sigla = String(row[2] || "").trim();
+          if (!sigla || sigla.toLowerCase().includes("total")) continue;
+          for (let c = 3; c < row.length; c++) { const vl = toNumber(row[c]); if (vl !== null) { skuMensal.push({ sigla, total: vl }); break; } }
+        }
+        if (skuMensal.length > 0) data.skuMensal = skuMensal;
+      }
+    }
+  } catch (e) { console.warn(`⚠️ Trend: ${e.message}`); }
+
+  // Calendário
+  try {
+    let mesNum = new Date().getMonth() + 1, anoRef = new Date().getFullYear();
+    if (data.mesLabel) { const mn = MONTH_MAP[data.mesLabel.toLowerCase()]; if (mn) mesNum = mn; }
+    data.calGrid = await buildCalendarFromLotes(env, token, anoRef, mesNum);
+  } catch (e) { console.warn(`⚠️ Calendário: ${e.message}`); }
 
   return data;
 }
