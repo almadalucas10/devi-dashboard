@@ -9,6 +9,7 @@ import { getAccessToken, writeToHiddenSheet } from "./sheets.js";
 import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
 import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
+import { fetchDashboardCache } from "./dashboard.js";
 import { R2_KEYS, SHEET_NAMES } from "./constants.js";
 
 // ============================================================================
@@ -19,7 +20,19 @@ async function runFullSync(env) {
   const t0 = Date.now();
   console.log("[sync] iniciando...");
 
-  const meta = (await readJson(env, R2_KEYS.syncMeta)) || { omie: 0 };
+  // Dashboard cache (planilha → R2, 1 chamada HTTP rápida)
+  const meta = (await readJson(env, R2_KEYS.syncMeta)) || { omie: 0, dashboard: 0 };
+  const DASHBOARD_INTERVAL = 5 * 60 * 1000; // 5 min
+  if (Date.now() - (meta.dashboard || 0) > DASHBOARD_INTERVAL) {
+    try {
+      const dashData = await fetchDashboardCache();
+      await writeJson(env, R2_KEYS.dashboard, dashData);
+      await writeSyncMeta(env, { dashboard: Date.now() });
+      console.log(`[sync] ✅ Dashboard cache: ${dashData.mesLabel || "?"}`);
+    } catch (e) {
+      console.error(`[sync] ⚠️ Dashboard: ${e.message}`);
+    }
+  }
   const OMIE_INTERVAL = 15 * 60 * 1000;
 
   if (Date.now() - (meta.omie || 0) < OMIE_INTERVAL) {
