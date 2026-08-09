@@ -53,22 +53,45 @@ function dataParaStr(data) {
 export async function construirCacheProdutos(env) {
   const cache = {};
 
-  // ConsultarProduto individual para cada SKU — 17 chamadas, garantido.
-  // ListarProdutos paginaria TODOS os produtos Omie (centenas de páginas).
-  for (const sku of SKUS_ATIVOS) {
-    try {
-      await sleep(300);
-      const p = await consultarProduto(env, sku);
-      if (p && p.codigo_produto) {
-        cache[sku] = {
+  // ListarProdutos paginado (até 10 pág = 1000 produtos). Plano pago aguenta.
+  const { buscarTodasPaginas } = await import("./omie.js");
+  let paginas = 0;
+  try {
+    const produtos = await buscarTodasPaginas(
+      env,
+      "/geral/produtos/",
+      "ListarProdutos",
+      (pagina) => ({ pagina, registros_por_pagina: 100 }),
+      { maxPages: 10, pageDelay: 500 }
+    );
+    for (const p of produtos) {
+      if (SKUS_ATIVOS.includes(p.codigo)) {
+        cache[p.codigo] = {
           codigo_produto: p.codigo_produto,
           descricao: p.descricao || "",
         };
-      } else {
-        console.warn(`⚠️ SKU ${sku}: sem codigo_produto na resposta`);
       }
-    } catch (e) {
-      console.warn(`⚠️ SKU ${sku}: ${e.message}`);
+    }
+    paginas = Math.ceil(produtos.length / 100);
+  } catch (e) {
+    console.warn(`ListarProdutos: ${e.message}`);
+  }
+
+  // Fallback individual só para SKUs realmente não encontrados
+  for (const sku of SKUS_ATIVOS) {
+    if (!cache[sku]) {
+      try {
+        await sleep(500);
+        const p = await consultarProduto(env, sku);
+        if (p && p.codigo_produto) {
+          cache[sku] = {
+            codigo_produto: p.codigo_produto,
+            descricao: p.descricao || "",
+          };
+        }
+      } catch (e) {
+        console.warn(`⚠️ SKU ${sku}: ${e.message}`);
+      }
     }
   }
 
