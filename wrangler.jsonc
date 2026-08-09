@@ -2,11 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "dashboard",
   "compatibility_date": "2026-08-06",
+  "pages_build_output_dir": ".",
   "observability": {
     "enabled": true
-  },
-  "assets": {
-    "directory": "."
   },
   "compatibility_flags": [
     "nodejs_compat"
