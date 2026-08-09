@@ -766,8 +766,7 @@ function renderKPIsOmie(k){
   setKpi('kpiEficiencia', pct(k.eficienciaAno));
   document.getElementById('kpiEficiencia').style.color = effColor(k.eficienciaAno);
   document.getElementById('kpi3Label').textContent = 'EFICIÊNCIA (ANO)';
-  document.getElementById('kpi4Label').textContent = 'OCUPAÇÃO (ANO)';
-  setKpi('kpiExtra', pct(k.ocupacaoAno));
+  // Cobertura agora substitui Ocupação — renderizada separadamente
   // Linha 2 — Mês
   setKpi('kpiPlanejadoMes', fmt(k.planejadoMes));
   document.getElementById('kpi5Label').textContent = 'PLANEJADO (MÊS)';
@@ -778,6 +777,26 @@ function renderKPIsOmie(k){
   document.getElementById('kpi7Label').textContent = 'EFICIÊNCIA (MÊS)';
   document.getElementById('kpi8Label').textContent = 'PENDENTES (MÊS)';
   setKpi('kpiPendentesMes', fmt(k.pendentesMes));
+}
+
+function renderCobertura(cob){
+  if (!cob || cob.erro || !cob.critico) {
+    document.getElementById('kpi4Label').textContent = 'COBERTURA';
+    setKpi('kpiExtra', '—');
+    return;
+  }
+  var c = cob.critico;
+  var leadStr = c.lead !== null ? ' / lead ' + c.lead + 'd' : '';
+  var valorStr = c.cobertura !== null ? c.cobertura + 'd' + leadStr : 'sem giro';
+
+  document.getElementById('kpi4Label').textContent = 'COBERTURA ' + (c.nome || c.codigo).toUpperCase();
+  setKpi('kpiExtra', valorStr);
+
+  var el = document.getElementById('kpiExtra');
+  if (!el) return;
+  if (c.status === 'critico') el.style.color = '#ef4444';
+  else if (c.status === 'alerta') el.style.color = '#eab308';
+  else el.style.color = '#22c55e';
 }
 
 function setStatusDot(ok){
@@ -857,6 +876,9 @@ async function refresh(){
     renderRankingChart(dataOmie.rankingProducao);
     if (dataOmie.kpis && !dataOmie.kpis.erro) {
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
+    }
+    if (dataOmie.cobertura) {
+      try { renderCobertura(dataOmie.cobertura); } catch(e) { console.error('Cobertura:', e); }
     }
     marcarFrescor(dataOmie.geradoEm, 'frescorOmie');
     omieOk = true;

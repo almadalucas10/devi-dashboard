@@ -7,6 +7,7 @@ import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
 import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
 import { buildDashboardCache } from "./dashboard.js";
+import { buscarVendasPorSku, calcularCobertura } from "./cobertura.js";
 import { R2_KEYS } from "./constants.js";
 
 // ============================================================================
@@ -63,6 +64,16 @@ async function runFullSync(env) {
       data.tendenciaProducao = { erro: e.message };
       data.rankingProducao = { erro: e.message };
       console.error(`[sync] ❌ KPIs: ${e.message}`);
+    }
+
+    // Cobertura de estoque (vendas 90d + cálculo)
+    try {
+      const saidaPorSku = await buscarVendasPorSku(env);
+      data.cobertura = calcularCobertura(data.estoque, saidaPorSku);
+      console.log(`[sync] ✅ Cobertura: ${data.cobertura.critico ? data.cobertura.critico.cobertura + 'd' : 'ok'}`);
+    } catch (e) {
+      data.cobertura = { erro: e.message };
+      console.error(`[sync] ⚠️ Cobertura: ${e.message}`);
     }
 
     await writeJson(env, R2_KEYS.omie, data);
