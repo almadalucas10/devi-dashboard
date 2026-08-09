@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "devi-dashboard-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  "r2_buckets": [
+    { "binding": "CACHE_BUCKET", "bucket_name": "devi-dashboard-cache" }
+  ],
+
+  "vars": {
+    "OMIE_BASE_URL": "https://app.omie.com.br/api/v1",
+    "SPREADSHEET_ID": "1dVTXuNhf9QWrz0kyh7i9S0SNJ43O5GZD",
+    "SKIP_SHEETS_MIRROR": "false"
+  },
+
+  "triggers": {
+    "crons": ["7,37 * * * *"]
+  }
+}

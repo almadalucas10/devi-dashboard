@@ -1,0 +1,387 @@
+// ============================================================================
+// KPIs Omie — 8 indicadores + ranking + tendência
+// Port de buscarKPIsOmie(), calcularTendenciaDeMovimentos_(),
+// calcularRankingDeMovimentos_(), buscarRealizadoProducao_()
+// ============================================================================
+import { chamarOmie, buscarOPs, buscarMovimentoEstoque, buscarProdutos, consultarProduto } from "./omie.js";
+import { SKUS_ATIVOS, NOME_CURTO, MESES_ABREV } from "./constants.js";
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function parseDataBr(str) {
+  if (!str || typeof str !== "string") return null;
+  const parts = str.split("/");
+  if (parts.length !== 3) return null;
+  const d = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const y = parseInt(parts[2], 10);
+  if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+  const date = new Date(y, m, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) return null;
+  return date;
+}
+
+function abreviarDescricao(sku, desc) {
+  if (NOME_CURTO[sku]) return NOME_CURTO[sku];
+  if (!desc) return sku;
+  let d = desc
+    .replace(/Refrigerante Natural/i, "Refri")
+    .replace(/Kombucha[ -]*/i, "Komb ")
+    .replace(/Turma da M[ôo]nica/i, "Mônica")
+    .replace(/D[ÊE]VI[ -]*/i, "")
+    .replace(/269[ -]*m?[Ll]/i, "")
+    .trim();
+  return d || sku;
+}
+
+function dataParaStr(data) {
+  const d = ("0" + data.getDate()).slice(-2);
+  const m = ("0" + (data.getMonth() + 1)).slice(-2);
+  return `${d}/${m}/${data.getFullYear()}`;
+}
+
+// ============================================================================
+// Cache de produtos (codigo_produto → { codigo_produto, descricao, inativo })
+// ============================================================================
+
+export async function construirCacheProdutos(env) {
+  const cache = {};
+
+  // ListarProdutos paginado
+  const produtos = await buscarProdutos(env);
+  for (const p of produtos) {
+    if (SKUS_ATIVOS.includes(p.codigo)) {
+      cache[p.codigo] = {
+        codigo_produto: p.codigo_produto,
+        descricao: p.descricao || "",
+      };
+    }
+  }
+
+  // Fallback: ConsultarProduto para SKUs não encontrados
+  for (const sku of SKUS_ATIVOS) {
+    if (!cache[sku]) {
+      try {
+        await sleep(400);
+        const p = await consultarProduto(env, sku);
+        if (p && p.codigo_produto) {
+          cache[sku] = {
+            codigo_produto: p.codigo_produto,
+            descricao: p.descricao || "",
+          };
+        }
+      } catch (e) {
+        console.warn(`⚠️ SKU ${sku} não encontrado na Omie: ${e.message}`);
+      }
+    }
+  }
+
+  return cache;
+}
+
+// ============================================================================
+// Realizado: ListarMovimentoEstoque OPE/entrada/28, janelas bimestrais
+// ============================================================================
+
+export async function buscarRealizadoProducao(env, cacheProd) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const inicioAno = new Date(anoAtual, 0, 1);
+
+  // Janelas bimestrais
+  const janelas = [];
+  for (let m = 0; m < 12; m += 2) {
+    const iniMes = m;
+    let fimMes = m + 1;
+    if (fimMes > 11) fimMes = 11;
+
+    const ini = new Date(anoAtual, iniMes, 1);
+    if (ini > hoje) break;
+
+    const fim = new Date(anoAtual, fimMes + 1, 0);
+    if (fim > hoje) fim = hoje;
+
+    janelas.push({
+      ini: `01/${("0" + (iniMes + 1)).slice(-2)}/${anoAtual}`,
+      fim: `${("0" + fim.getDate()).slice(-2)}/${("0" + (fim.getMonth() + 1)).slice(-2)}/${anoAtual}`,
+      dataFim: fim,
+    });
+  }
+
+  const realizado = [];
+  let totalChamadas = 0;
+
+  for (let i = 0; i < SKUS_ATIVOS.length; i++) {
+    const sku = SKUS_ATIVOS[i];
+    const prod = cacheProd[sku];
+    if (!prod || !prod.codigo_produto) continue;
+    if (i > 0) await sleep(300);
+
+    try {
+      for (const janela of janelas) {
+        const movimentos = await buscarMovimentoEstoque(env, prod.codigo_produto, janela.ini, janela.fim);
+        totalChamadas += 1; // aproximado — cada janela pode ter múltiplas páginas
+
+        for (const mov of movimentos) {
+          if (mov.codOrigem !== "OPE") continue;
+          if (mov.tipo !== "entrada") continue;
+          if (mov.operacao !== "28") continue;
+
+          const data = parseDataBr(mov.dtMov);
+          if (!data || data < inicioAno || data > janela.dataFim) continue;
+
+          const qtd = mov.qtde || 0;
+          if (qtd <= 0) continue;
+
+          realizado.push({ codigo: sku, data, entradas: qtd });
+        }
+      }
+    } catch (e) {
+      console.warn(`⚠️ Realizado ${sku}: ${e.message}`);
+    }
+  }
+
+  console.log(`✅ Realizado (OPE/28): ${realizado.length} movimentos em ${SKUS_ATIVOS.length} SKUs, ${janelas.length} janelas`);
+  return realizado;
+}
+
+// ============================================================================
+// calcularTendencia / calcularRanking
+// ============================================================================
+
+export function calcularTendencia(movimentos) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const meses = [];
+  const valores = [];
+
+  // Últimos 8 meses (ou até o mês atual)
+  const inicio = new Date(anoAtual, hoje.getMonth() - 7, 1);
+  for (let m = inicio.getMonth(), y = inicio.getFullYear(), i = 0; i < 8; i++) {
+    meses.push(MESES_ABREV[m]);
+    const entradas = movimentos
+      .filter((p) => p.data.getMonth() === m && p.data.getFullYear() === y)
+      .reduce((sum, p) => sum + p.entradas, 0);
+    valores.push(entradas);
+
+    m++;
+    if (m > 11) { m = 0; y++; }
+    if (y > anoAtual || (y === anoAtual && m > hoje.getMonth())) break;
+  }
+
+  return { meses, valores };
+}
+
+export function calcularRanking(movimentos, descricoes) {
+  const porSku = {};
+  for (const m of movimentos) {
+    if (!porSku[m.codigo]) porSku[m.codigo] = 0;
+    porSku[m.codigo] += m.entradas;
+  }
+
+  return Object.entries(porSku)
+    .map(([codigo, total]) => ({
+      codigo,
+      descricao: descricoes[codigo] || abreviarDescricao(codigo),
+      total,
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+// ============================================================================
+// buscarKPIsOmie — os 8 KPIs
+// ============================================================================
+
+export async function buscarKPIsOmie(env, cacheProd) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth();
+  const inicioAno = new Date(anoAtual, 0, 1);
+  const dDtInicioAno = `01/01/${anoAtual}`;
+  const dDtHoje = dataParaStr(hoje);
+
+  // Mapa codigo_produto → SKU
+  const codParaSku = {};
+  for (const sku of Object.keys(cacheProd)) {
+    const cp = cacheProd[sku];
+    if (cp && cp.codigo_produto) codParaSku[cp.codigo_produto] = sku;
+  }
+
+  // --- OPs concluídas este ano ---
+  const concluidas = await buscarOPs(env, {
+    dDtConclusaoDe: dDtInicioAno,
+    dDtConclusaoAte: dDtHoje,
+    cConcluida: "S",
+  });
+
+  // --- OPs em aberto ---
+  await sleep(3000);
+  const abertas = await buscarOPs(env, { cConcluida: "N" });
+
+  // --- Realizado: movimentos OPE/28 ---
+  await sleep(5000);
+  const realizadoMov = await buscarRealizadoProducao(env, cacheProd);
+
+  // ============ KPIs ANUAIS ============
+
+  // 1. PLANEJADO ANO — nQtde todas OPs (SKUs ativos)
+  const todas = [...concluidas, ...abertas];
+  let planejadoAno = 0;
+  for (const op of todas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[ident.nCodProduto]) continue;
+    planejadoAno += ident.nQtde || 0;
+  }
+
+  // 2. REALIZADO ANO — OPE/28 real
+  let realizadoAno = 0;
+  for (const m of realizadoMov) realizadoAno += m.entradas;
+
+  // 3. EFICIÊNCIA ANO — realizado / planejado só das concluídas
+  let planejadoConcluidasAno = 0;
+  for (const op of concluidas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[ident.nCodProduto]) continue;
+    planejadoConcluidasAno += ident.nQtde || 0;
+  }
+  const eficienciaAno = planejadoConcluidasAno > 0 ? realizadoAno / planejadoConcluidasAno : 0;
+
+  // 4. OCUPAÇÃO ANO — dias úteis com ≥ 1 OP ativa
+  const diasAtivos = new Set();
+  for (const op of todas) {
+    const inf = op.infAdicionais || {};
+    const outras = op.outrasInf || {};
+    const inicio = parseDataBr(inf.dDtInicio);
+    if (!inicio || isNaN(inicio.getTime())) continue;
+    const fimStr = outras.dConclusao;
+    let fim = parseDataBr(fimStr);
+    if (!fim || isNaN(fim.getTime())) fim = hoje;
+
+    const cursor = new Date(inicio);
+    while (cursor <= fim && cursor <= hoje) {
+      if (cursor >= inicioAno) {
+        const ds = cursor.getDay();
+        if (ds !== 0 && ds !== 6) {
+          diasAtivos.add(dataParaStr(cursor));
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  let totalDiasUteis = 0;
+  const cursorDU = new Date(inicioAno);
+  while (cursorDU <= hoje) {
+    const ds = cursorDU.getDay();
+    if (ds !== 0 && ds !== 6) totalDiasUteis++;
+    cursorDU.setDate(cursorDU.getDate() + 1);
+  }
+  const ocupacaoAno = totalDiasUteis > 0 ? diasAtivos.size / totalDiasUteis : 0;
+
+  // ============ KPIs MÊS ============
+
+  // 5. PLANEJADO MÊS — abertas (todas) + concluídas no mês
+  let planejadoMes = 0;
+  for (const op of abertas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[ident.nCodProduto]) continue;
+    planejadoMes += ident.nQtde || 0;
+  }
+  for (const op of concluidas) {
+    const ident = op.identificacao || {};
+    if (!codParaSku[ident.nCodProduto]) continue;
+    const conclusao = parseDataBr(
+      (op.outrasInf && op.outrasInf.dConclusao) ||
+      (op.infAdicionais && op.infAdicionais.dDtConclusao)
+    );
+    if (conclusao && conclusao.getMonth() === mesAtual && conclusao.getFullYear() === anoAtual) {
+      planejadoMes += ident.nQtde || 0;
+    }
+  }
+
+  // 6. REALIZADO MÊS — OPE/28 no mês
+  let realizadoMes = 0;
+  for (const m of realizadoMov) {
+    if (m.data.getMonth() === mesAtual && m.data.getFullYear() === anoAtual) {
+      realizadoMes += m.entradas;
+    }
+  }
+
+  // 7. EFICIÊNCIA MÊS
+  const eficienciaMes = planejadoMes > 0 ? realizadoMes / planejadoMes : 0;
+
+  // 8. PENDENTES MÊS — número de OPs abertas (SKUs ativos)
+  let pendentesMes = 0;
+  for (const op of abertas) {
+    const ident = op.identificacao || {};
+    if (codParaSku[ident.nCodProduto]) pendentesMes++;
+  }
+
+  // _opsConcluidas para ranking/tendência (usa dados reais OPE/28)
+  const opsConcluidas = realizadoMov.map((m) => ({
+    codigo: m.codigo,
+    nQtde: m.entradas,
+    dataStr: dataParaStr(m.data),
+  }));
+
+  return {
+    planejadoAno,
+    realizadoAno,
+    eficienciaAno,
+    ocupacaoAno,
+    planejadoMes,
+    realizadoMes,
+    eficienciaMes,
+    pendentesMes,
+    _opsConcluidas: opsConcluidas,
+  };
+}
+
+// ============================================================================
+// Wrapper completo: KPIs + ranking + tendência
+// ============================================================================
+
+export async function calcularIndicadoresOmie(env) {
+  const cacheProd = await construirCacheProdutos(env);
+  const kpisResult = await buscarKPIsOmie(env, cacheProd);
+
+  // Descrições para ranking
+  const descricoes = {};
+  for (const sku of Object.keys(cacheProd)) {
+    descricoes[sku] = abreviarDescricao(sku, cacheProd[sku].descricao);
+  }
+
+  // Tendência/Ranking a partir dos dados reais (_opsConcluidas)
+  const producao = (kpisResult._opsConcluidas || [])
+    .filter((op) => op.codigo)
+    .map((op) => ({
+      codigo: op.codigo,
+      data: parseDataBr(op.dataStr),
+      entradas: op.nQtde,
+    }))
+    .filter((m) => m.data);
+
+  const tendenciaProducao = calcularTendencia(producao);
+  const rankingProducao = calcularRanking(producao, descricoes);
+
+  return {
+    kpis: {
+      planejadoAno: kpisResult.planejadoAno,
+      realizadoAno: kpisResult.realizadoAno,
+      eficienciaAno: kpisResult.eficienciaAno,
+      ocupacaoAno: kpisResult.ocupacaoAno,
+      planejadoMes: kpisResult.planejadoMes,
+      realizadoMes: kpisResult.realizadoMes,
+      eficienciaMes: kpisResult.eficienciaMes,
+      pendentesMes: kpisResult.pendentesMes,
+    },
+    tendenciaProducao,
+    rankingProducao,
+  };
+}
