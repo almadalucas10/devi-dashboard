@@ -176,7 +176,14 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSigla, ano, mes) {
   // Detecta OPs não consumidas (op_sem_plano)
   const opsNaoConsumidas = opsDisponiveis.filter(op => !op.consumida && op.data.getMonth() + 1 === mes);
 
-  return { weeksData: novasWeeksData, opsSemPlano: opsNaoConsumidas };
+  const lotesComExec = lotes.filter(l => l.execucao).length;
+
+  return {
+    weeksData: novasWeeksData,
+    opsSemPlano: opsNaoConsumidas,
+    _lotesCount: lotes.length,
+    _lotesComExec: lotesComExec,
+  };
 }
 
 // ============================================================================
@@ -254,13 +261,14 @@ export async function buildDashboardCache(env) {
     data.calGrid.weeksData = resultado.weeksData;
     data._debug = {
       opsTotal: todas.length,
-      opsAbertas: abertas.length,
-      opsConcluidas: concluidas.length,
       opsNoMapa: todas.filter(op => {
         const id = (op.identificacao || {}).nCodProduto;
         return codParaSigla[String(id)];
       }).length,
       chavesNoMapa: Object.keys(codParaSigla).length,
+      lotesCriados: resultado._lotesCount || 0,
+      lotesComExec: resultado._lotesComExec || 0,
+      cellsComEstado: resultado.weeksData.flat().filter(c => c && c.estado).length,
     };
 
     // Conta estados
