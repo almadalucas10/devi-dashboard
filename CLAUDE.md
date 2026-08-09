@@ -1,5 +1,7 @@
 # Dashboard PCP — Bebidas (TV Dashboard)
 
+> **Repo:** https://github.com/almadalucas10/devi-dashboard
+
 Dashboard de produção para TV, integrando Google Sheets (planejamento PCP) + Omie API (dados reais de produção, estoque e pedidos).
 
 ## Arquitetura
