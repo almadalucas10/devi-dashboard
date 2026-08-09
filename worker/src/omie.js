@@ -68,7 +68,18 @@ export async function chamarOmie(env, caminho, metodo, params = {}) {
       continue;
     }
 
+    // Trata REDUNDANT mesmo em HTTP 500
     if (status !== 200) {
+      if (texto.includes("REDUNDANT") || texto.includes("Consumo redundante")) {
+        const match = texto.match(/Aguarde (\d+) segundos/);
+        const espera = match ? parseInt(match[1], 10) * 1000 : 45000;
+        console.log(`⏳ Omie REDUNDANT (HTTP ${status}), aguardando ${espera / 1000}s...`);
+        await sleep(espera);
+        if (tentativa === MAX_TENTATIVAS) {
+          throw new Error(`Omie continuou redundante mesmo após ${MAX_TENTATIVAS} tentativas.`);
+        }
+        continue;
+      }
       throw new Error(`Omie retornou status ${status}: ${texto.slice(0, 200)}`);
     }
 
