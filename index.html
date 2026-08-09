@@ -78,20 +78,18 @@
   /* Fila de Pedidos — teste substituindo o painel da pizza */
   .fila-lista{ flex:1; display:flex; flex-direction:column; gap:8px; overflow:hidden; justify-content:space-evenly; }
   .fila-item{
-    display:grid; grid-template-columns:30px minmax(0,1fr) auto; align-items:center; gap:12px;
+    display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:8px;
     background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:10px;
-    padding:8px 12px; flex:1; min-height:0;
+    padding:4px 8px; flex:1; min-height:0;
   }
-  .fila-pos{ font-size:clamp(17.2px,1.1vw,26.0px); font-weight:800; color:var(--text-lo); text-align:center; }
+  .fila-pos{ font-size:clamp(14.9px,0.95vw,21.4px); font-weight:800; color:var(--text-lo); text-align:center; }
   .fila-info{ min-width:0; overflow:hidden; }
-  .fila-info .pedido{ font-size:clamp(14.9px,0.95vw,22.1px); font-weight:700; line-height:1.2; margin-bottom:1px;
+  .fila-info .pedido{ font-size:clamp(13.8px,0.88vw,19.5px); font-weight:700; line-height:1.15; margin-bottom:0;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .fila-info .cliente{ font-size:clamp(11.5px,0.70vw,16.9px); color:var(--text-lo); display:flex; align-items:center; gap:4px;
+  .fila-info .cliente{ font-size:clamp(10.9px,0.65vw,14.9px); color:var(--text-lo); display:flex; align-items:center; gap:3px;
       white-space:nowrap; overflow:hidden; }
   .fila-num{ white-space:nowrap; flex-shrink:0; }
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .etapa-badge{ display:inline-block; padding:2px 9px; border-radius:9px; font-size:.92em; font-weight:700; white-space:nowrap; flex-shrink:0; }
+  .etapa-badge{ display:inline-block; padding:1px 6px; border-radius:7px; font-size:.85em; font-weight:700; white-space:nowrap; flex-shrink:0; }
   .fila-item.etapa-carteira{ border-left:4px solid #3b82f6; }
   .fila-item.etapa-carteira .etapa-badge{ background:rgba(59,130,246,.22); color:#93c5fd; }
   .fila-item.etapa-separacao{ border-left:4px solid #e8a33d; }
@@ -101,8 +99,8 @@
   .fila-item.etapa-faturado{ border-left:4px solid #22c55e; opacity:.75; }
   .fila-item.etapa-faturado .etapa-badge{ background:rgba(34,197,94,.22); color:#86efac; }
   .fila-valores{ text-align:right; flex-shrink:0; }
-  .fila-valores .principal{ font-size:clamp(18.4px,1.2vw,27.3px); font-weight:800; color:var(--amber); line-height:1.2; white-space:nowrap; }
-  .fila-valores .secundario{ font-size:clamp(12.6px,0.78vw,18.2px); color:var(--text-lo); white-space:nowrap; }
+  .fila-valores .principal{ font-size:clamp(16.1px,1.05vw,22.1px); font-weight:800; color:var(--amber); line-height:1.15; white-space:nowrap; }
+  .fila-valores .secundario{ font-size:clamp(11.5px,0.70vw,14.9px); color:var(--text-lo); white-space:nowrap; }
 
   /* Lista de Estoque — mesmo modelo visual da Fila de Pedidos (borda + selo coloridos) */
   .estoque-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow:hidden; justify-content:space-evenly; }
