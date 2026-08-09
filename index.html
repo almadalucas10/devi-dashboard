@@ -84,9 +84,12 @@
   }
   .fila-pos{ font-size:clamp(17.2px,1.1vw,26.0px); font-weight:800; color:var(--text-lo); text-align:center; }
   .fila-info{ min-width:0; overflow:hidden; }
-  .fila-info .pedido{ font-size:clamp(16.1px,1.05vw,24.7px); font-weight:700; line-height:1.25; margin-bottom:2px;
+  .fila-info .pedido{ font-size:clamp(14.9px,0.95vw,22.1px); font-weight:700; line-height:1.2; margin-bottom:1px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .fila-info .cliente{ font-size:clamp(12.6px,0.78vw,18.2px); color:var(--text-lo); display:flex; align-items:center; gap:6px;
+  .fila-info .cliente{ font-size:clamp(11.5px,0.70vw,16.9px); color:var(--text-lo); display:flex; align-items:center; gap:4px;
+      white-space:nowrap; overflow:hidden; }
+  .fila-num{ white-space:nowrap; flex-shrink:0; }
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .etapa-badge{ display:inline-block; padding:2px 9px; border-radius:9px; font-size:.92em; font-weight:700; white-space:nowrap; flex-shrink:0; }
   .fila-item.etapa-carteira{ border-left:4px solid #3b82f6; }
@@ -671,8 +674,8 @@ function renderFila(fila){
     } catch(e) { /* fallback: sem degradê, mantém só a classe CSS */ }
     return '<div class="fila-item ' + etapaCls + '" style="' + estilo + '">'
       + '<div class="fila-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="fila-info"><div class="pedido">' + nomePrincipal + '</div><div class="cliente"><span class="etapa-badge">' + etapaLabel + '</span> #' + p.numero + '</div></div>'
-      + '<div class="fila-valores"><div class="principal">' + fmtMoeda(p.valorTotal) + '</div><div class="secundario">' + fmt(p.totalUnidades) + ' un</div></div>'
+      + '<div class="fila-info"><div class="pedido">' + nomePrincipal + '</div><div class="cliente"><span class="etapa-badge">' + etapaLabel + '</span> <span class="fila-num">#' + p.numero + '</span></div></div>'
+      + '<div class="fila-valores"><div class="principal">' + fmt(p.totalUnidades) + ' un</div><div class="secundario">' + fmtMoeda(p.valorTotal) + '</div></div>'
       + '</div>';
   }).join('');
 }
