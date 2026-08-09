@@ -100,52 +100,64 @@ export async function construirCacheProdutos(env) {
 }
 
 // ============================================================================
-// Realizado: ListarMovimentos (todos SKUs de uma vez, endpoint rápido).
-// Mesma abordagem do ranking no Apps Script — comprovadamente funcional.
+// Realizado: ListarMovimentoEstoque por SKU, filtro OPE/entrada/28.
+// Uma query por SKU com data do ano inteiro (sem janelas — o filtro de data funciona).
 // ============================================================================
 
 export async function buscarRealizadoProducao(env, cacheProd) {
   const hoje = new Date();
   const anoAtual = hoje.getFullYear();
-  const dataLimite = new Date(anoAtual, hoje.getMonth() - 7, 1);
+  const inicioAno = new Date(anoAtual, 0, 1);
+  const dDtInicio = `01/01/${anoAtual}`;
+  const dDtFim = `${("0" + hoje.getDate()).slice(-2)}/${("0" + (hoje.getMonth() + 1)).slice(-2)}/${anoAtual}`;
 
   const { buscarTodasPaginas } = await import("./omie.js");
-  const SKUS_SET = new Set(SKUS_ATIVOS);
-  const movimentos = [];
+  const realizado = [];
+  let totalPaginas = 0;
 
-  try {
-    const resultado = await buscarTodasPaginas(
-      env,
-      "/estoque/movestoque/",
-      "ListarMovimentos",
-      (pagina) => ({
-        pagina,
-        registros_por_pagina: 100,
-        codigo_local_estoque: 3125334492,
-      }),
-      { arrayKey: "cadastros", maxPages: 20, pageDelay: 300 }
-    );
-
-    for (const produto of resultado) {
-      if (!SKUS_SET.has(produto.cCodigo)) continue;
-      (produto.movimentos || []).forEach((mov) => {
-        const data = parseDataBr(mov.dDataMovimento);
-        if (!data || data < dataLimite) return;
-        const entradas = mov.nQtdeEntradas || 0;
-        if (entradas <= 0) return;
-        movimentos.push({
-          codigo: produto.cCodigo,
-          data,
-          entradas,
-        });
-      });
+  for (let i = 0; i < SKUS_ATIVOS.length; i++) {
+    const sku = SKUS_ATIVOS[i];
+    const prod = cacheProd[sku];
+    if (!prod || !prod.codigo_produto) {
+      console.warn(`⚠️ SKU ${sku}: sem codigo_produto no cache`);
+      continue;
     }
-  } catch (e) {
-    console.error(`❌ ListarMovimentos: ${e.message}`);
+    if (i > 0) await sleep(400);
+
+    try {
+      let pagina = 1, nTotPaginas = 1;
+      do {
+        const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarMovimentoEstoque", {
+          nPagina: pagina,
+          nRegPorPagina: 100,
+          idProd: prod.codigo_produto,
+          dDtInicial: dDtInicio,
+          dDtFinal: dDtFim,
+          codigo_local_estoque: 3125334492,
+        });
+        nTotPaginas = resultado.nTotPaginas || 1;
+        totalPaginas++;
+
+        (resultado.movProdutoListar || []).forEach((mov) => {
+          if (mov.codOrigem !== "OPE") return;
+          if (mov.tipo !== "entrada") return;
+          if (mov.operacao !== "28") return;
+          const data = parseDataBr(mov.dtMov);
+          if (!data || data < inicioAno) return;
+          const qtd = mov.qtde || 0;
+          if (qtd <= 0) return;
+          realizado.push({ codigo: sku, data, entradas: qtd });
+        });
+        pagina++;
+        if (pagina <= nTotPaginas) await sleep(300);
+      } while (pagina <= nTotPaginas);
+    } catch (e) {
+      console.warn(`⚠️ Realizado ${sku}: ${e.message}`);
+    }
   }
 
-  console.log(`✅ Realizado: ${movimentos.length} movimentos, ${SKUS_ATIVOS.length} SKUs`);
-  return movimentos;
+  console.log(`✅ Realizado OPE/28: ${realizado.length} movimentos, ${totalPaginas} páginas, ${SKUS_ATIVOS.length} SKUs`);
+  return realizado;
 }
 
 // ============================================================================
