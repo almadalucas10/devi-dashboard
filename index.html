@@ -310,24 +310,24 @@
 
 <script>
 // ============================================================================
-// CONFIGURAÇÃO — único trecho que você precisa editar
+// CONFIGURAÇÃO — fonte de dados (Worker primário, CSV Sheets como fallback)
 // ============================================================================
-// Cole aqui o link CSV publicado da aba "_DashboardCache" (Arquivo > Compartilhar
-// > Publicar na Web > escolha a aba _DashboardCache > formato CSV > Publicar).
+const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
+
+// CSV do Google Sheets (fallback — mantidos como backup)
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1158403049&single=true&output=csv";
-
-// Segundo CSV — aba "_IndicadoresOmie" (Fila de Pedidos e Estoque, vindos da
-// integração com o Omie). Cole aqui o link publicado dela, do mesmo jeito
-// que o CSV_URL acima.
 const CSV_URL_OMIE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1172546852&single=true&output=csv";
-// Triggers individuais (opcionais): publique as abas _FilaOmie, _EstoqueOmie, _RankingOmie
-// como CSV e cole os links abaixo. O dashboard tenta cada CSV individual primeiro.
-const CSV_FILA = "";    // gid da aba _FilaOmie
-const CSV_ESTOQUE = ""; // gid da aba _EstoqueOmie
-const CSV_RANKING = ""; // gid da aba _RankingOmie
 
-const REFRESH_MS = 5 * 60 * 1000; // 5 minutos — só busca o CSV de novo, nunca navega
+const REFRESH_MS = 5 * 60 * 1000; // 5 minutos
 
+// Busca JSON diretamente (Worker API)
+async function loadFromJson(url){
+  const res = await fetch(url, {cache:"no-store"});
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+// Busca CSV do Google Sheets (fallback)
 async function loadFromCsv(url){
   if(!url) throw new Error("URL do CSV não configurada.");
   const res = await fetch(url, {cache:"no-store"});
@@ -733,44 +733,39 @@ function setStatusDot(ok){
 }
 
 async function refresh(){
-  if(!CSV_URL){
-    setStatusDot(false);
-    applyData(DEMO);
-    return;
-  }
+  // Dashboard (produção + calendário): Worker primeiro, CSV Sheets fallback
   let producaoOk = false;
-  try{
-    const data = await loadFromCsv(CSV_URL);
-    if(data && !data.error){
-      applyData(data);
-      producaoOk = true;
-    }
-  }catch(err){ /* segue pro indicador de status abaixo */ }
+  try {
+    const data = await loadFromJson(WORKER_URL + "/api/dashboard");
+    if (data && !data.error) { applyData(data); producaoOk = true; }
+  } catch(e) {
+    try {
+      const data = await loadFromCsv(CSV_URL);
+      if (data && !data.error) { applyData(data); producaoOk = true; }
+    } catch(e2) { /* fallback demo abaixo */ }
+  }
+  if (!producaoOk) { setStatusDot(false); applyData(DEMO); return; }
 
-  // O CSV do Omie é opcional/independente — se ele falhar (ou não estiver
-  // configurado ainda), a fila e o estoque só mostram um aviso, sem
-  // atrapalhar o resto do dashboard de produção.
-  try{
-    if(CSV_URL_OMIE){
-      const dataOmie = await loadFromCsv(CSV_URL_OMIE);
-      console.log('Omie CSV loaded:', dataOmie ? Object.keys(dataOmie).join(', ') : 'null');
-      if(dataOmie && !dataOmie.error){
-        renderFila(dataOmie.filaDePedidos);
-        renderEstoque(dataOmie.estoque);
-        renderTrendChart(dataOmie.tendenciaProducao);
-        renderRankingChart(dataOmie.rankingProducao);
-        // KPIs do Omie sobrescrevem os da planilha (se disponíveis)
-        if (dataOmie.kpis && !dataOmie.kpis.erro) {
-          try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
-        }
-      } else {
-        renderFila(null); renderEstoque(null);
-      }
-    } else {
-      renderFila(null); renderEstoque(null);
+  // Omie (KPIs + fila + estoque + ranking + tendência): Worker primeiro, CSV fallback
+  const renderOmie = (dataOmie) => {
+    renderFila(dataOmie.filaDePedidos);
+    renderEstoque(dataOmie.estoque);
+    renderTrendChart(dataOmie.tendenciaProducao);
+    renderRankingChart(dataOmie.rankingProducao);
+    if (dataOmie.kpis && !dataOmie.kpis.erro) {
+      try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
     }
-  }catch(err){
-    renderFila(null); renderEstoque(null);
+  };
+  try {
+    const dataOmie = await loadFromJson(WORKER_URL + "/api/omie");
+    if (dataOmie && !dataOmie.error) renderOmie(dataOmie);
+    else { renderFila(null); renderEstoque(null); }
+  } catch(e) {
+    try {
+      const dataOmie = await loadFromCsv(CSV_URL_OMIE);
+      if (dataOmie && !dataOmie.error) renderOmie(dataOmie);
+      else { renderFila(null); renderEstoque(null); }
+    } catch(e2) { renderFila(null); renderEstoque(null); }
   }
 
   setStatusDot(producaoOk);
