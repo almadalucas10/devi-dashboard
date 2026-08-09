@@ -239,26 +239,55 @@ export async function buildDashboardCache(env) {
     const todas = [...abertas, ...concluidas];
     console.log(`🔍 OPs: ${abertas.length} abertas + ${concluidas.length} concluídas = ${todas.length} total`);
 
-    // Debug: mostra primeiras OPs
+    // Debug: SKUs dos lotes vs SKUs das OPs
     if (todas.length > 0) {
-      const amostra = todas[0];
-      const ident = amostra.identificacao || {};
-      console.log(`🔍 1ª OP: nCodOP=${ident.nCodOP} nCodProduto=${ident.nCodProduto} nQtde=${ident.nQtde}`);
-      console.log(`🔍 codParaSku tem ${Object.keys(codParaSku).length} entradas`);
-      const chaves = Object.keys(codParaSku).slice(0, 5);
-      console.log(`🔍 chaves exemplo: ${chaves.join(", ")}`);
-      const match = codParaSku[String(ident.nCodProduto)];
-      console.log(`🔍 1ª OP no mapa? ${match || 'NÃO'}`);
-    } else {
-      console.log(`🔍 NENHUMA OP retornada! Verificar filtros.`);
+      const opsSkus = new Set();
+      for (const op of todas) {
+        const ident = op.identificacao || {};
+        const s = codParaSku[String(ident.nCodProduto)];
+        if (s) opsSkus.add(s);
+      }
+      console.log(`🔍 SKUs nas OPs: ${[...opsSkus].join(", ")}`);
     }
+    // Depois do matching, loga também os SKUs dos lotes
+    const lotesSkus = new Set();
+    for (const row of data.calGrid.weeksData) {
+      for (const cell of row) {
+        if (!cell || !cell[0]) continue;
+        const siglaCompleta = cell[0];
+        let siglaBase = siglaCompleta.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
+        const sku = SIGLA_PARA_SKU[siglaCompleta] || SIGLA_PARA_SKU[siglaBase];
+        if (sku) lotesSkus.add(sku);
+      }
+    }
+    console.log(`🔍 SKUs no calendário: ${[...lotesSkus].join(", ")}`);
 
     const resultado = casarPlanoComOPs(
       data.calGrid.weeksData, data.calGrid.dayNums, todas, codParaSku, ano, mes
     );
     data.calGrid.weeksData = resultado.weeksData;
+    // Coleta SKUs pra debug
+    const opsSkusSet = new Set();
+    for (const op of todas) {
+      const id = (op.identificacao || {}).nCodProduto;
+      const s = codParaSku[String(id)];
+      if (s) opsSkusSet.add(s);
+    }
+    const lotesSkusSet = new Set();
+    for (const row of data.calGrid.weeksData) {
+      for (const cell of row) {
+        if (!cell || !cell[0]) continue;
+        const siglaCompleta = cell[0];
+        let siglaBase = siglaCompleta.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
+        const sku = SIGLA_PARA_SKU[siglaCompleta] || SIGLA_PARA_SKU[siglaBase];
+        if (sku) lotesSkusSet.add(sku);
+      }
+    }
+
     data._debug = {
       opsTotal: todas.length,
+      opsSkus: [...opsSkusSet],
+      lotesSkus: [...lotesSkusSet],
       opsNoMapa: todas.filter(op => {
         const id = (op.identificacao || {}).nCodProduto;
         return codParaSku[String(id)];
