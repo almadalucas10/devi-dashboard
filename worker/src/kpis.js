@@ -375,7 +375,7 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
       nQtde: ident.nQtde || 0,
       dataStr,
     });
-  }));
+  }
 
   return {
     planejadoAno,
