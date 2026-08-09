@@ -205,11 +205,13 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
   const dDtInicioAno = `01/01/${anoAtual}`;
   const dDtHoje = dataParaStr(hoje);
 
-  // Mapa codigo_produto → SKU
+  // Mapa codigo_produto → SKU (normaliza pra número — Omie às vezes retorna string)
   const codParaSku = {};
   for (const sku of Object.keys(cacheProd)) {
     const cp = cacheProd[sku];
-    if (cp && cp.codigo_produto) codParaSku[cp.codigo_produto] = sku;
+    if (cp && cp.codigo_produto) {
+      codParaSku[String(cp.codigo_produto)] = sku;
+    }
   }
 
   // Usa dados pré-buscados ou busca da Omie
@@ -236,7 +238,7 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
   let planejadoAno = 0;
   for (const op of todas) {
     const ident = op.identificacao || {};
-    if (!codParaSku[ident.nCodProduto]) continue;
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
     planejadoAno += ident.nQtde || 0;
   }
 
@@ -248,7 +250,7 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
   let planejadoConcluidasAno = 0;
   for (const op of concluidas) {
     const ident = op.identificacao || {};
-    if (!codParaSku[ident.nCodProduto]) continue;
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
     planejadoConcluidasAno += ident.nQtde || 0;
   }
   const eficienciaAno = planejadoConcluidasAno > 0 ? realizadoAno / planejadoConcluidasAno : 0;
@@ -291,12 +293,12 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
   let planejadoMes = 0;
   for (const op of abertas) {
     const ident = op.identificacao || {};
-    if (!codParaSku[ident.nCodProduto]) continue;
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
     planejadoMes += ident.nQtde || 0;
   }
   for (const op of concluidas) {
     const ident = op.identificacao || {};
-    if (!codParaSku[ident.nCodProduto]) continue;
+    if (!codParaSku[String(ident.nCodProduto)]) continue;
     const conclusao = parseDataBr(
       (op.outrasInf && op.outrasInf.dConclusao) ||
       (op.infAdicionais && op.infAdicionais.dDtConclusao)
