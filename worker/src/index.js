@@ -8,6 +8,7 @@ import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
 import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
 import { buildDashboardCache } from "./dashboard.js";
+import { debugCalendario } from "./calendario-debug.js";
 import { atualizarAgregadoVendas, recalcularCobertura } from "./cobertura.js";
 import { R2_KEYS } from "./constants.js";
 
@@ -200,6 +201,11 @@ export default {
       } catch (e) {
         return json({ erro: e.message, elapsedMs: Date.now() - t0 }, 500);
       }
+    }
+
+    if (url.pathname === "/api/debug/calendario") {
+      try { await debugCalendario(env); return json({ ok: true }); }
+      catch(e) { return json({ erro: e.message }, 500); }
     }
 
     if (url.pathname === "/api/sync/light" && request.method === "POST") {
