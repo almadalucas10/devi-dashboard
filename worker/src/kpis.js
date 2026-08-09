@@ -100,69 +100,52 @@ export async function construirCacheProdutos(env) {
 }
 
 // ============================================================================
-// Realizado: ListarMovimentoEstoque OPE/entrada/28, janelas bimestrais
+// Realizado: ListarMovimentos (todos SKUs de uma vez, endpoint rápido).
+// Mesma abordagem do ranking no Apps Script — comprovadamente funcional.
 // ============================================================================
 
 export async function buscarRealizadoProducao(env, cacheProd) {
   const hoje = new Date();
   const anoAtual = hoje.getFullYear();
-  const inicioAno = new Date(anoAtual, 0, 1);
+  const dataLimite = new Date(anoAtual, hoje.getMonth() - 7, 1);
 
-  // Janelas bimestrais
-  const janelas = [];
-  for (let m = 0; m < 12; m += 2) {
-    const iniMes = m;
-    let fimMes = m + 1;
-    if (fimMes > 11) fimMes = 11;
+  const { buscarTodasPaginas } = await import("./omie.js");
+  const SKUS_SET = new Set(SKUS_ATIVOS);
+  const movimentos = [];
 
-    const ini = new Date(anoAtual, iniMes, 1);
-    if (ini > hoje) break;
+  try {
+    const resultado = await buscarTodasPaginas(
+      env,
+      "/estoque/movestoque/",
+      "ListarMovimentos",
+      (pagina) => ({
+        pagina,
+        registros_por_pagina: 100,
+        codigo_local_estoque: 3125334492,
+      }),
+      { arrayKey: "cadastros", maxPages: 20, pageDelay: 300 }
+    );
 
-    let fim = new Date(anoAtual, fimMes + 1, 0);
-    if (fim > hoje) fim = hoje;
-
-    janelas.push({
-      ini: `01/${("0" + (iniMes + 1)).slice(-2)}/${anoAtual}`,
-      fim: `${("0" + fim.getDate()).slice(-2)}/${("0" + (fim.getMonth() + 1)).slice(-2)}/${anoAtual}`,
-      dataFim: fim,
-    });
-  }
-
-  const realizado = [];
-  let totalChamadas = 0;
-
-  for (let i = 0; i < SKUS_ATIVOS.length; i++) {
-    const sku = SKUS_ATIVOS[i];
-    const prod = cacheProd[sku];
-    if (!prod || !prod.codigo_produto) continue;
-    if (i > 0) await sleep(300);
-
-    try {
-      for (const janela of janelas) {
-        const movimentos = await buscarMovimentoEstoque(env, prod.codigo_produto, janela.ini, janela.fim);
-        totalChamadas += 1; // aproximado — cada janela pode ter múltiplas páginas
-
-        for (const mov of movimentos) {
-          if (mov.codOrigem !== "OPE") continue;
-          if (mov.tipo !== "entrada") continue;
-          if (mov.operacao !== "28") continue;
-
-          const data = parseDataBr(mov.dtMov);
-          if (!data || data < inicioAno || data > janela.dataFim) continue;
-
-          const qtd = mov.qtde || 0;
-          if (qtd <= 0) continue;
-
-          realizado.push({ codigo: sku, data, entradas: qtd });
-        }
-      }
-    } catch (e) {
-      console.warn(`⚠️ Realizado ${sku}: ${e.message}`);
+    for (const produto of resultado) {
+      if (!SKUS_SET.has(produto.cCodigo)) continue;
+      (produto.movimentos || []).forEach((mov) => {
+        const data = parseDataBr(mov.dDataMovimento);
+        if (!data || data < dataLimite) return;
+        const entradas = mov.nQtdeEntradas || 0;
+        if (entradas <= 0) return;
+        movimentos.push({
+          codigo: produto.cCodigo,
+          data,
+          entradas,
+        });
+      });
     }
+  } catch (e) {
+    console.error(`❌ ListarMovimentos: ${e.message}`);
   }
 
-  console.log(`✅ Realizado (OPE/28): ${realizado.length} movimentos em ${SKUS_ATIVOS.length} SKUs, ${janelas.length} janelas`);
-  return realizado;
+  console.log(`✅ Realizado: ${movimentos.length} movimentos, ${SKUS_ATIVOS.length} SKUs`);
+  return movimentos;
 }
 
 // ============================================================================
