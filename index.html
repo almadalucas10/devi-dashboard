@@ -864,13 +864,13 @@ async function refresh(){
   try {
     const dataOmie = await loadFromJson(WORKER_URL + "/api/omie?_=" + Date.now());
     if (dataOmie && !dataOmie.error) renderOmie(dataOmie);
-    else { renderFila(null); renderEstoque(null); }
+    else { renderFila(null); renderEstoque(null); renderTrendChart(null); renderRankingChart(null); }
   } catch(e) {
     try {
       const dataOmie = await loadFromCsv(CSV_URL_OMIE);
       if (dataOmie && !dataOmie.error) renderOmie(dataOmie);
-      else { renderFila(null); renderEstoque(null); }
-    } catch(e2) { renderFila(null); renderEstoque(null); }
+      else { renderFila(null); renderEstoque(null); renderTrendChart(null); renderRankingChart(null); }
+    } catch(e2) { renderFila(null); renderEstoque(null); renderTrendChart(null); renderRankingChart(null); }
   }
 
   setStatusDot(producaoOk && omieOk);
