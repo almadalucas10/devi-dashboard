@@ -133,6 +133,11 @@ export default {
       return json({ ok: true, dashboard: !!dash, omie: !!omie });
     }
 
+    if (url.pathname === "/api/dashboard") {
+      const data = await readJson(env, R2_KEYS.dashboard);
+      return data ? json(data) : json({ erro: "cache indisponível" }, 503);
+    }
+
     if (url.pathname === "/api/omie") {
       const data = await readJson(env, R2_KEYS.omie);
       return data ? json(data) : json({ erro: "cache indisponível" }, 503);
