@@ -731,9 +731,10 @@ function renderFila(fila){
   }).join('');
 }
 
-function renderEstoque(estoque){
+function renderEstoque(estoque, cobMap){
   const el = document.getElementById('estoqueLista');
   if(!el) return;
+  cobMap = cobMap || {};
   if(!Array.isArray(estoque) || estoque.length === 0){
     var msg = 'Sem dados de estoque';
     if (estoque && estoque.erro) msg += ' — erro Omie: ' + estoque.erro;
@@ -742,15 +743,32 @@ function renderEstoque(estoque){
   }
   const MAX_ITENS = 8;
   const disponiveis = estoque.filter(function(p){ return p.saldo !== null && p.saldo !== undefined; });
-  const ordenado = disponiveis.sort((a,b) => a.saldo - b.saldo).slice(0, MAX_ITENS); // menor estoque primeiro
+  // Já vem ordenado por cobertura do refresh()
+  const ordenado = disponiveis.slice(0, MAX_ITENS);
   const badges = { baixo:"Baixo", alerta:"Alerta", ok:"Saudável", indisponivel:"Indisponível" };
   el.innerHTML = ordenado.map(function(p, i){
     const cls = p.status === "baixo" ? "baixo" : p.status === "alerta" ? "alerta" : "ok";
-    // Descrição do produto como nome principal (vem da planilha/Omie), SKU como subtítulo
     const nomeExibicao = p.descricao || p.codigo;
+
+    // Cobertura no lugar do mínimo
+    var cobInfo = cobMap[p.codigo];
+    var linhaExtra = '';
+    if (cobInfo && cobInfo.cobertura !== null && cobInfo.cobertura !== undefined) {
+      var dias = cobInfo.cobertura.toLocaleString("pt-BR", {maximumFractionDigits:1}) + 'd';
+      // Cor só pra kombucha (lead definido)
+      var corCob = '';
+      if (cobInfo.status === 'critico') corCob = 'style="color:#ef4444;font-weight:700"';
+      else if (cobInfo.status === 'alerta') corCob = 'style="color:#eab308;font-weight:700"';
+      linhaExtra = '<span class="sku-sub">' + p.codigo + '</span> <span class="min-val" ' + corCob + '>' + dias + '</span>';
+    } else if (cobInfo && cobInfo.status === 'sem_giro') {
+      linhaExtra = '<span class="sku-sub">' + p.codigo + '</span> <span class="min-val" style="opacity:.4">sem giro</span>';
+    } else {
+      linhaExtra = '<span class="sku-sub">' + p.codigo + '</span> <span class="min-val">mín: ' + fmt(p.estoqueMinimo) + ' un</span>';
+    }
+
     return '<div class="estoque-item ' + cls + '">'
       + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="estoque-info"><div class="sku">' + nomeExibicao + '</div><div class="minimo"><span class="estoque-badge">' + (badges[p.status]||p.status) + '</span> <span class="sku-sub">' + p.codigo + '</span> <span class="min-val">mín: ' + fmt(p.estoqueMinimo) + ' un</span></div></div>'
+      + '<div class="estoque-info"><div class="sku">' + nomeExibicao + '</div><div class="minimo"><span class="estoque-badge">' + (badges[p.status]||p.status) + '</span> ' + linhaExtra + '</div></div>'
       + '<div class="estoque-valores"><div class="principal">' + fmt(p.saldo) + ' un</div></div>'
       + '</div>';
   }).join('');
@@ -766,8 +784,7 @@ function renderKPIsOmie(k){
   setKpi('kpiEficiencia', pct(k.eficienciaAno));
   document.getElementById('kpiEficiencia').style.color = effColor(k.eficienciaAno);
   document.getElementById('kpi3Label').textContent = 'EFICIÊNCIA (ANO)';
-  document.getElementById('kpi4Label').textContent = 'OCUPAÇÃO (ANO)';
-  setKpi('kpiExtra', pct(k.ocupacaoAno));
+  // 4º KPI — Cobertura (renderizada via renderCobertura com dados do /api/omie)
   // Linha 2 — Mês
   setKpi('kpiPlanejadoMes', fmt(k.planejadoMes));
   document.getElementById('kpi5Label').textContent = 'PLANEJADO (MÊS)';
@@ -778,6 +795,29 @@ function renderKPIsOmie(k){
   document.getElementById('kpi7Label').textContent = 'EFICIÊNCIA (MÊS)';
   document.getElementById('kpi8Label').textContent = 'PENDENTES (MÊS)';
   setKpi('kpiPendentesMes', fmt(k.pendentesMes));
+}
+
+function nfmt(n){ return n.toLocaleString("pt-BR", {maximumFractionDigits:1}); }
+function renderCobertura(cob){
+  var elLabel = document.getElementById('kpi4Label');
+  var elVal = document.getElementById('kpiExtra');
+  if (!cob || cob.erro || !cob.critico) {
+    if (elLabel) elLabel.textContent = 'COBERTURA';
+    setKpi('kpiExtra', '—');
+    return;
+  }
+  var c = cob.critico;
+  var leadStr = c.lead !== null ? ' / lead ' + c.lead + 'd' : '';
+  var valor = c.cobertura !== null ? nfmt(c.cobertura).replace('.',',') + 'd' + leadStr : 'sem giro';
+
+  if (elLabel) elLabel.textContent = 'COBERTURA CRÍTICA';
+  setKpi('kpiExtra', valor);
+
+  if (elVal) {
+    if (c.status === 'critico') elVal.style.color = '#ef4444';
+    else if (c.status === 'alerta') elVal.style.color = '#eab308';
+    else elVal.style.color = '#22c55e';
+  }
 }
 
 function setStatusDot(ok){
@@ -852,11 +892,33 @@ async function refresh(){
   let omieOk = false;
   const renderOmie = (dataOmie) => {
     renderFila(dataOmie.filaDePedidos);
-    renderEstoque(dataOmie.estoque);
+
+    // Injeta cobertura nos itens de estoque e ordena
+    var estoqueComCob = dataOmie.estoque || [];
+    var cobMap = {};
+    if (dataOmie.cobertura && dataOmie.cobertura.todos) {
+      dataOmie.cobertura.todos.forEach(function(c){
+        cobMap[c.codigo] = c;
+      });
+      // Ordena por cobertura ascendente (null/sem giro no final)
+      estoqueComCob = [...estoqueComCob].sort(function(a,b){
+        var ca = cobMap[a.codigo], cb = cobMap[b.codigo];
+        var va = ca ? ca.cobertura : null, vb = cb ? cb.cobertura : null;
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        return va - vb;
+      });
+    }
+    renderEstoque(estoqueComCob, cobMap);
+
     renderTrendChart(dataOmie.tendenciaProducao);
     renderRankingChart(dataOmie.rankingProducao);
     if (dataOmie.kpis && !dataOmie.kpis.erro) {
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
+    }
+    if (dataOmie.cobertura) {
+      try { renderCobertura(dataOmie.cobertura); } catch(e) { console.error('Cobertura:', e); }
     }
     marcarFrescor(dataOmie.geradoEm, 'frescorOmie');
     omieOk = true;
