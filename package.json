@@ -1,0 +1,23 @@
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/almadalucas10/devi-dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/almadalucas10/devi-dashboard/issues"
+  },
+  "homepage": "https://github.com/almadalucas10/devi-dashboard#readme",
+  "dependencies": {
+    "@google/clasp": "^3.3.0"
+  }
+}

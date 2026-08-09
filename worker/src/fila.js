@@ -2,22 +2,9 @@
 // Fila de Pedidos — port de buscarFilaDePedidos()
 // ============================================================================
 import { chamarOmie, buscarTodasPaginas } from "./omie.js";
-import { ETAPA_LABELS } from "./constants.js";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-function parseDataBr(str) {
-  if (!str || typeof str !== "string") return null;
-  const parts = str.split("/");
-  if (parts.length !== 3) return null;
-  const d = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10) - 1;
-  const y = parseInt(parts[2], 10);
-  const date = new Date(y, m, d);
-  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) return null;
-  return date;
 }
 
 function dataParaStr(data) {
@@ -26,10 +13,31 @@ function dataParaStr(data) {
   return `${d}/${m}/${data.getFullYear()}`;
 }
 
-export async function buscarFilaDePedidos(env) {
-  const REGISTROS_POR_PAGINA = 100;
-  const DIAS_PARA_TRAS = 90;
+const REGISTROS_POR_PAGINA = 100;
+const DIAS_PARA_TRAS = 90;
 
+// Cache de clientes: codigo_cliente → nome (nome_fantasia || razao_social)
+async function construirCacheClientes(env, maxPaginas = 10) {
+  const cache = {};
+  try {
+    const clientes = await buscarTodasPaginas(
+      env,
+      "/geral/clientes/",
+      "ListarClientesResumido",
+      (pagina) => ({ pagina, registros_por_pagina: 100 }),
+      { arrayKey: "clientes_cadastro_resumido", maxPages: maxPaginas, pageDelay: 200 }
+    );
+    for (const c of clientes) {
+      cache[c.codigo_cliente] = c.nome_fantasia || c.razao_social || null;
+    }
+    console.log(`✅ Cache clientes: ${Object.keys(cache).length}`);
+  } catch (e) {
+    console.warn(`⚠️ Cache clientes: ${e.message}`);
+  }
+  return cache;
+}
+
+export async function buscarFilaDePedidos(env) {
   const hoje = new Date();
   const dataInicial = new Date(hoje.getTime() - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000);
   const dDtInicial = dataParaStr(dataInicial);
@@ -98,31 +106,91 @@ export async function buscarFilaDePedidos(env) {
     const cab = pv.cabecalho || {};
     const cod = cab.codigo_pedido;
     if (!cod) continue;
+
+    // Omie: itens[i].produto.quantidade, itens[i].produto.valor_total
     const itens = pv.det || [];
-    let totalUnidades = 0;
-    let valorTotal = 0;
-    for (const item of itens) {
-      totalUnidades += item.quantidade || 0;
-      valorTotal += item.valor_total || 0;
+    let totalUnidades = 0, valorTotal = 0;
+    for (const det of itens) {
+      const pr = det.produto || {};
+      totalUnidades += pr.quantidade || 0;
+      valorTotal += pr.valor_total || 0;
     }
     detalhesPorPedido[cod] = {
-      cliente: cab.nome_cliente || "",
+      codigoCliente: cab.codigo_cliente,
       valorTotal,
       totalUnidades,
     };
   }
 
-  // 3º: Monta resultado final
+  // 3º passo: Cache de nomes de clientes (nome_fantasia || razao_social)
+  const nomesClientesCache = await construirCacheClientes(env);
+
+  // 4º passo: Montar resultado final
   const resultado = [];
   for (const item of filaBasica) {
-    const detalhes = detalhesPorPedido[item.codigoPedido] || {};
+    const detalhe = detalhesPorPedido[item.codigoPedido];
+
+    if (detalhe) {
+      item.valorTotal = detalhe.valorTotal;
+      item.totalUnidades = detalhe.totalUnidades;
+
+      if (detalhe.codigoCliente) {
+        let nome = nomesClientesCache[detalhe.codigoCliente];
+        if (!nome) {
+          try {
+            const cinfo = await chamarOmie(env, "/geral/clientes/", "ConsultarCliente", {
+              codigo_cliente_omie: detalhe.codigoCliente,
+            });
+            nome = cinfo.nome_fantasia || cinfo.razao_social || null;
+            nomesClientesCache[detalhe.codigoCliente] = nome;
+          } catch (e) { nome = null; }
+        }
+        item.cliente = nome;
+      }
+    } else {
+      // Fallback: ConsultarPedido individual
+      try {
+        const detalheFb = await chamarOmie(env, "/produtos/pedido/", "ConsultarPedido", {
+          codigo_pedido: item.codigoPedido,
+        });
+        const pedido = detalheFb.pedido_venda_produto || {};
+        const itens = pedido.det || [];
+        let totalUnidades = 0, valorTotal = 0;
+        for (const det of itens) {
+          const pr = det.produto || {};
+          totalUnidades += pr.quantidade || 0;
+          valorTotal += pr.valor_total || 0;
+        }
+        item.valorTotal = valorTotal;
+        item.totalUnidades = totalUnidades;
+
+        const codigoCliente = pedido.cabecalho && pedido.cabecalho.codigo_cliente;
+        if (codigoCliente) {
+          let nomeFb = nomesClientesCache[codigoCliente];
+          if (!nomeFb) {
+            try {
+              const cinfoFb = await chamarOmie(env, "/geral/clientes/", "ConsultarCliente", {
+                codigo_cliente_omie: codigoCliente,
+              });
+              nomeFb = cinfoFb.nome_fantasia || cinfoFb.razao_social || null;
+              nomesClientesCache[codigoCliente] = nomeFb;
+            } catch (e) { nomeFb = null; }
+          }
+          item.cliente = nomeFb;
+        }
+      } catch (e) {
+        item.valorTotal = 0;
+        item.totalUnidades = 0;
+      }
+    }
+
     resultado.push({
       codigoPedido: item.codigoPedido,
       numero: item.numero,
       etapa: item.etapa,
-      valorTotal: detalhes.valorTotal || 0,
-      totalUnidades: detalhes.totalUnidades || 0,
-      cliente: detalhes.cliente || `Pedido #${item.numero}`,
+      valorTotal: item.valorTotal || 0,
+      totalUnidades: item.totalUnidades || 0,
+      cliente: item.cliente || `Pedido #${item.numero}`,
       dataInclusao: item.dataInclusao,
     });
   }
