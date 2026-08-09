@@ -255,6 +255,16 @@
   .cal-cell.feriado{ background:rgba(217,70,239,.30); border-color:rgba(217,70,239,.75); color:var(--text-hi); font-weight:700; }
   .cal-cell.manutencao{ background:rgba(249,115,22,.32); border-color:rgba(249,115,22,.75); color:var(--text-hi); font-weight:700; }
   .cal-cell.inventario{ background:rgba(139,92,246,.32); border-color:rgba(139,92,246,.75); color:var(--text-hi); font-weight:700; }
+  /* Marcadores de execução */
+  .cal-cell.sem-op{ border-style:dashed; border-color:#f87171; box-shadow:inset 0 0 0 2px rgba(248,113,113,.25); }
+  .cal-cell.sem-op::after{ content:'!'; position:absolute; top:2px; right:4px; font-size:10px; color:#f87171; font-weight:900; }
+  .cal-cell.op-aberta{ box-shadow:inset 0 0 0 2px rgba(250,204,21,.40); }
+  .cal-cell.op-aberta::after{ content:''; position:absolute; top:3px; right:3px; width:6px; height:6px; border-radius:50%; background:#eab308; }
+  .cal-cell.op-andamento{ box-shadow:inset 0 0 0 2px rgba(59,130,246,.40); }
+  .cal-cell.op-andamento::after{ content:''; position:absolute; top:3px; right:3px; width:6px; height:6px; border-radius:50%; background:#3b82f6; }
+  .cal-cell.divergencia{ box-shadow:inset 0 0 0 2px rgba(239,68,68,.45); }
+  .cal-cell.confianca-aproximada{ opacity:.85; }
+  .cal-cell.confianca-aproximada .sigla::before{ content:'~'; }
 
 
   /* ==========================================================================
@@ -329,7 +339,7 @@
     </div>
 
     <div class="panel cal-panel">
-      <h2>📅 Calendário — <span id="calMonthLabel">—</span>
+      <h2>📅 Calendário — <span id="calMonthLabel">—</span> <span id="calStatus" style="font-size:.7em;opacity:.7;"></span>
         <span style="font-size:.5em; font-weight:600; color:var(--text-lo); margin-left:10px;">
           🟢 ≥93% &nbsp; 🟡 90-93% &nbsp; 🔴 &lt;90% &nbsp; 🔵 programado &nbsp; 🟠 manutenção &nbsp; 🟣 inventário &nbsp; 🟪 feriado
         </span>
@@ -607,31 +617,69 @@ function renderCalendar(calGrid){
   DAYS.forEach(d=>{ const h=document.createElement('div'); h.className='cal-head'; h.textContent=d; calEl.appendChild(h); });
   const dayNums = (calGrid && calGrid.dayNums) || [];
   const weeksData = (calGrid && calGrid.weeksData) || [];
+
+  let semOP = 0, divergencias = 0;
   weeksData.forEach((week,wi)=>week.forEach((cell,di)=>{
     const dayNum = dayNums[wi] ? dayNums[wi][di] : null;
     const c = document.createElement('div');
+    c.style.position = 'relative';
     if(!dayNum || !cell){
       c.className = 'cal-cell';
       c.innerHTML = `<div class="d">${dayNum||'·'}</div>`;
       calEl.appendChild(c); return;
     }
+
+    // Compatibilidade: cell pode ser array [sigla, planejada, produzida] ou ter .estado
     const sigla = cell[0], planejado = cell[1], produzido = cell[2];
-    let statusClass = "", extraLines = [sigla];
-    if(/FERIADO/i.test(sigla)) statusClass = "feriado";
-    else if(/MANUTEN/i.test(sigla)) statusClass = "manutencao";
-    else if(/INVENTÁRIO/i.test(sigla)) statusClass = "inventario";
-    else if(produzido !== null && produzido !== undefined && planejado){
-      const eff = produzido/planejado;
-      statusClass = effClass(eff);
-      extraLines.push(produzido.toLocaleString('pt-BR')+' un');
-      extraLines.push(`<span class="eff">${(eff*100).toFixed(0)}%</span>`);
-    } else if(planejado !== null && planejado !== undefined){
-      statusClass = "planned";
+    const estado = cell.estado || null;
+    const confianca = cell.confianca || null;
+    const execucao = cell.execucao || null;
+
+    let classes = ['cal-cell'];
+    let extraLines = [`<span class="sigla">${sigla}</span>`];
+
+    // Estados não produtivos
+    if(/FERIADO/i.test(sigla)) classes.push("feriado");
+    else if(/MANUTEN/i.test(sigla)) classes.push("manutencao");
+    else if(/INVENTÁRIO/i.test(sigla)) classes.push("inventario");
+    // Estados de execução
+    else if(estado === 'planejado_sem_op') { classes.push("planned","sem-op"); semOP++; }
+    else if(estado === 'op_sem_plano') classes.push("sem-op");
+    else if(estado === 'op_aberta') classes.push("planned","op-aberta");
+    else if(estado === 'op_andamento') classes.push("planned","op-andamento");
+    else if(estado === 'op_concluida'){
+      if(produzido !== null && produzido !== undefined && planejado){
+        const eff = produzido/planejado;
+        classes.push(effClass(eff));
+        extraLines.push(produzido.toLocaleString('pt-BR')+' un');
+        extraLines.push(`<span class="eff">${(eff*100).toFixed(0)}%</span>`);
+      } else { classes.push("eff-alta"); }
     }
-    c.className = 'cal-cell' + (statusClass ? ' '+statusClass : '');
+    else if(estado === 'divergencia_qtde') {
+      classes.push("planned","divergencia");
+      if(execucao) extraLines.push(`<span>OP: ${execucao.qtde} un</span>`);
+      divergencias++;
+    }
+    else if(planejado !== null && planejado !== undefined){
+      classes.push("planned");
+    }
+
+    // Confiança aproximada
+    if(confianca === 'aproximada') classes.push("confianca-aproximada");
+
+    c.className = classes.join(' ');
     c.innerHTML = `<div class="d">${dayNum}</div>${extraLines.map(l=>`<div>${l}</div>`).join('')}`;
     calEl.appendChild(c);
   }));
+
+  // Atualiza contador no cabeçalho
+  var st = document.getElementById('calStatus');
+  if(st){
+    var parts = [];
+    if(semOP > 0) parts.push(semOP+' sem OP');
+    if(divergencias > 0) parts.push(divergencias+' diverg');
+    st.textContent = parts.length > 0 ? '· '+parts.join(' · ') : '';
+  }
 }
 
 // Atualiza o texto de um elemento e reaplica a animação de destaque (só quando
