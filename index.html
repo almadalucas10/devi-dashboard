@@ -651,22 +651,28 @@ function renderCalendar(calGrid){
     else if(estado === 'op_aberta') {
       classes.push("planned","op-aberta");
       if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
+      if(execucao && execucao.nCodOP) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">OP ${execucao.nCodOP}</span>`);
     }
     else if(estado === 'op_andamento') {
       classes.push("planned","op-andamento");
       if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
+      if(execucao && execucao.nCodOP) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">OP ${execucao.nCodOP}</span>`);
     }
     else if(estado === 'op_concluida'){
       if(produzido !== null && produzido !== undefined && planejado){
         const eff = produzido/planejado;
         classes.push(effClass(eff));
-        extraLines.push(produzido.toLocaleString('pt-BR')+' un');
+        extraLines.push(`${produzido.toLocaleString('pt-BR')} un`);
         extraLines.push(`<span class="eff">${(eff*100).toFixed(0)}%</span>`);
       } else { classes.push("eff-alta"); }
+      if(execucao && execucao.nCodOP) extraLines.push(`<span style="font-size:.65em;opacity:.5;\">OP ${execucao.nCodOP}</span>`);
     }
     else if(estado === 'divergencia_qtde') {
       classes.push("planned","divergencia");
-      if(execucao) extraLines.push(`<span>OP: ${execucao.qtde} un</span>`);
+      if(execucao) {
+        extraLines.push(`<span style="font-size:.75em;\">OP: ${execucao.qtde} un</span>`);
+        extraLines.push(`<span style="font-size:.6em;opacity:.5;\">#${execucao.nCodOP}</span>`);
+      }
       divergencias++;
     }
     else if(planejado !== null && planejado !== undefined){
