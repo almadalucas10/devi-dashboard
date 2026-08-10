@@ -46,7 +46,7 @@ async function buildCalendarFromCSV(ano, mes) {
   const text = await res.text();
 
   // Parse CSV manual (simples — sem lib)
-  const rows = text.split("\n").map(line => {
+  const rows = text.replace(/\r/g,"").split("\n").map(line => {
     const cols = [];
     let inQuotes = false, col = "";
     for (const ch of line) {
