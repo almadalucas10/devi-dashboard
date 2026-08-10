@@ -71,7 +71,7 @@ async function runLightSync(env) {
         Object.assign(partial.kpis, {
           planejadoMes: kcal.planejadoMes,
           realizadoMes: kcal.realizadoMes,
-          eficienciaMes: kcal.planejadoMes > 0 ? kcal.realizadoMes / kcal.planejadoMes : 0,
+          eficienciaMes: kcal.eficienciaMes,
           pendentesMes: kcal.pendentesMes,
         });
       }
@@ -158,7 +158,7 @@ async function runHeavySync(env) {
         if (data.kpis && !data.kpis.erro) {
           data.kpis.planejadoMes = kcal.planejadoMes;
           data.kpis.realizadoMes = kcal.realizadoMes;
-          data.kpis.eficienciaMes = kcal.planejadoMes > 0 ? kcal.realizadoMes / kcal.planejadoMes : 0;
+          data.kpis.eficienciaMes = kcal.eficienciaMes;
           data.kpis.pendentesMes = kcal.pendentesMes;
         }
       }

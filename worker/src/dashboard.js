@@ -309,7 +309,7 @@ async function enriquecerComRealizado(weeksData, dayNums, env, cacheProd, ano, m
 // ============================================================================
 
 export function extrairKPIsDoCalendario(calGrid, ano, mes) {
-  let planejadoMes = 0, realizadoMes = 0, pendentesMes = 0;
+  let planejadoMes = 0, planejadoConcluidasMes = 0, realizadoMes = 0, pendentesMes = 0;
   const produzidoPorSku = {};
   const wd = calGrid.weeksData;
 
@@ -327,6 +327,7 @@ export function extrairKPIsDoCalendario(calGrid, ano, mes) {
       const produzida = cell.produzida || cell[2];
 
       if (estado === 'op_concluida' || estado === 'divergencia_qtde') {
+        planejadoConcluidasMes += planejada;
         if (ex && ex.dataStr) {
           const parts = ex.dataStr.split("/");
           const opMes = parseInt(parts[1], 10), opAno = parseInt(parts[2], 10);
@@ -343,7 +344,8 @@ export function extrairKPIsDoCalendario(calGrid, ano, mes) {
       }
     }
   }
-  return { planejadoMes, realizadoMes, pendentesMes, produzidoPorSku };
+  const eficienciaMes = planejadoConcluidasMes > 0 ? realizadoMes / planejadoConcluidasMes : 0;
+  return { planejadoMes, planejadoConcluidasMes, realizadoMes, eficienciaMes, pendentesMes, produzidoPorSku };
 }
 
 // ============================================================================
