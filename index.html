@@ -239,10 +239,10 @@
   .chart-wrap{ position:relative; flex:1; min-height:0; }
 
   .calendar{ display:grid; grid-template-columns:repeat(7, var(--cell-size, 60px));
-    grid-template-rows: var(--head-size, 28px) repeat(5, var(--cell-size, 60px)); gap:6px; justify-content:center; align-content:center; margin:0 auto; }
+    grid-template-rows: var(--head-size, 28px) repeat(5, var(--cell-size, 60px)); gap:8px; justify-content:center; align-content:center; margin:0 auto; }
   .cal-head{ display:flex; align-items:center; justify-content:center; font-size:clamp(15.9px,0.95vw,24.6px); color:var(--text-lo); font-weight:700; }
   /* Célula do calendário — layout novo (faixa lateral + dia no canto) */
-  .cal-cell{ background:#16202b; border-left:5px solid transparent; border-radius:0 8px 8px 0;
+  .cal-cell{ background:#16202b; border-left:5px solid transparent; border-radius:8px;
     display:flex; flex-direction:column; padding:6px 8px; min-height:0;
     position:relative; overflow:hidden; }
   .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(18px,1.05vw,22px); font-weight:500; line-height:1; }
