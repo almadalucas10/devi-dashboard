@@ -3,7 +3,7 @@
 // Sem dependência do Apps Script (_DashboardCache). Sem Sheets API.
 // ============================================================================
 import { construirCacheProdutos } from "./kpis.js";
-import { buscarOPs } from "./omie.js";
+import { buscarOPs, chamarOmie } from "./omie.js";
 
 const LOTE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1841448781&single=true&output=csv";
 
@@ -234,6 +234,80 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
 }
 
 // ============================================================================
+// Enriquece células com OPE/28 (quantidade REAL produzida)
+// Cruza numPedido do movimento OPE/28 com cNumOP da OP
+// ============================================================================
+
+async function enriquecerComRealizado(weeksData, dayNums, env, cacheProd, ano, mes) {
+  const dInicio = `01/${String(mes).padStart(2,"0")}/${ano}`;
+  const dFim = `${String(new Date(ano, mes, 0).getDate()).padStart(2,"0")}/${String(mes).padStart(2,"0")}/${ano}`;
+
+  // Busca movimentos OPE/28 do mês para todos os SKUs ativos
+  const realizados = [];
+  for (const sku of Object.keys(cacheProd)) {
+    const prod = cacheProd[sku];
+    if (!prod || !prod.codigo_produto) continue;
+    try {
+      let pagina = 1, nTotPaginas = 1;
+      do {
+        const res = await chamarOmie(env, "/estoque/consulta/", "ListarMovimentoEstoque", {
+          nPagina: pagina, nRegPorPagina: 100, idProd: prod.codigo_produto,
+          dDtInicial: dInicio, dDtFinal: dFim,
+          codigo_local_estoque: 3125334492,
+        });
+        nTotPaginas = res.nTotPaginas || 1;
+        (res.movProdutoListar || []).forEach(mov => {
+          if (mov.codOrigem !== "OPE" || mov.tipo !== "entrada" || mov.operacao !== "28") return;
+          realizados.push({
+            numPedido: mov.numPedido || "",
+            qtde: mov.qtde || 0,
+            dtMov: mov.dtMov,
+            sku,
+          });
+        });
+        pagina++;
+        if (pagina <= nTotPaginas) await new Promise(r => setTimeout(r, 200));
+      } while (pagina <= nTotPaginas);
+    } catch (e) {
+      // SKU sem movimentos — ok
+    }
+  }
+
+  if (realizados.length === 0) return;
+
+  // Cruza com células: procura cNumOP dentro do numPedido do movimento
+  for (let wi = 0; wi < weeksData.length; wi++) {
+    for (let di = 0; di < 7; di++) {
+      const cell = weeksData[wi] && weeksData[wi][di];
+      if (!cell || !cell.execucao) continue;
+      const cNumOP = cell.execucao.cNumero;
+      if (!cNumOP) continue;
+
+      // Extrai o número do lote (ex: "2026/00498" → "00498")
+      const partes = String(cNumOP).split("/");
+      const lote = partes[partes.length - 1]; // "00498"
+
+      // Procura movimento que referencia esse lote
+      const match = realizados.find(r => {
+        const np = r.numPedido || "";
+        // numPedido ex: "Ordem de Produção 2026/00498"
+        return np.includes(lote) || np.includes(cNumOP) || np.includes(String(cell.execucao.nCodOP));
+      });
+
+      if (match) {
+        cell.produzida = match.qtde;
+        // Se a OP tá concluída e temos quantidade real, atualiza estado
+        if (cell.estado === "op_concluida" && cell.planejada > 0 && Math.abs(match.qtde - cell.planejada) > cell.planejada * 0.1) {
+          cell.estado = "divergencia_qtde";
+        }
+      }
+    }
+  }
+
+  console.log(`✅ OPE/28: ${realizados.length} movimentos cruzados`);
+}
+
+// ============================================================================
 // Dashboard Cache
 // ============================================================================
 
@@ -292,11 +366,19 @@ export async function buildDashboardCache(env) {
     const concluidas = await buscarOPs(env, { dDtConclusaoDe: dInicio, dDtConclusaoAte: dFim, cConcluida: "S" });
     for (const op of concluidas) op._concluida = true;
 
+    const todas = [...abertas, ...concluidas];
     const resultado = casarPlanoComOPs(
       data.calGrid.weeksData, data.calGrid.dayNums,
-      [...abertas, ...concluidas], codParaSku, ano, mes
+      todas, codParaSku, ano, mes
     );
     data.calGrid.weeksData = resultado.weeksData;
+
+    // Enriquece com OPE/28 (quantidade real produzida, cruza numPedido com lote)
+    await enriquecerComRealizado(data.calGrid.weeksData, data.calGrid.dayNums, env, cacheProd, ano, mes);
+    // Recalcula contagem
+    const _celdas = data.calGrid.weeksData.flat().filter(Boolean).length;
+    console.log(`✅ Plano CSV: ${_celdas} células`);
+
     console.log(`✅ Execução: ${resultado._lotesComExec} matches, ${resultado._lotesCount} lotes`);
   } catch (e) {
     console.warn(`⚠️ Execução: ${e.message}`);
