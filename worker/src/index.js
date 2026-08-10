@@ -61,16 +61,19 @@ async function runLightSync(env) {
       }
     }
 
-    // KPIs do calendário
+    // KPIs do calendário (fonte única)
     try {
       const dashData = await readJson(env, R2_KEYS.dashboard);
-      if (dashData && dashData.calGrid && partial.kpis && !partial.kpis.erro) {
+      if (dashData && dashData.calGrid) {
         const hoje = new Date();
         const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
-        partial.kpis.planejadoMes = kcal.planejadoMes;
-        partial.kpis.realizadoMes = kcal.realizadoMes;
-        partial.kpis.eficienciaMes = kcal.planejadoMes > 0 ? kcal.realizadoMes / kcal.planejadoMes : 0;
-        partial.kpis.pendentesMes = kcal.pendentesMes;
+        if (!partial.kpis || partial.kpis.erro) partial.kpis = {};
+        Object.assign(partial.kpis, {
+          planejadoMes: kcal.planejadoMes,
+          realizadoMes: kcal.realizadoMes,
+          eficienciaMes: kcal.planejadoMes > 0 ? kcal.realizadoMes / kcal.planejadoMes : 0,
+          pendentesMes: kcal.pendentesMes,
+        });
       }
     } catch (e) { console.error(`[light] ⚠️ KPIs calendário: ${e.message}`); }
 
