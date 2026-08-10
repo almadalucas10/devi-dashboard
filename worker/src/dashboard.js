@@ -1,21 +1,22 @@
 // ============================================================================
-// Dashboard Cache — calendário de duas camadas (plano CSV + execução Omie)
+// Dashboard Cache — calendário via CSV publicado da "Produção por Lote"
+// Sem dependência do Apps Script (_DashboardCache). Sem Sheets API.
 // ============================================================================
-import { buscarOPs } from "./omie.js";
 import { construirCacheProdutos } from "./kpis.js";
+import { buscarOPs } from "./omie.js";
 
-const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1158403049&single=true&output=csv";
+const LOTE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1841448781&single=true&output=csv";
 
-const TOLERANCIA_DIAS = 3;
-
-// Mapa sigla → SKU (extraído de constants mas duplicado pra evitar import circular)
+// ============================================================================
+// Mapa sigla → SKU (do Cadastro de SKU)
+// ============================================================================
 const SIGLA_PARA_SKU = {
-  CVP:"CH001",CHM:"CH002",CCM:"CH003",CML:"CH004",       // Chás
-  KFV:"FX001",KABX:"FX002","KMÇ":"FX003",KMC:"FX003",    // Kombuchas (KMÇ e KMC = Maçã)
-  KMIR:"FX006",KPL:"FX007",                               // Mirtilo, Pink Lemonade
-  RLS:"RF001",RFV:"RF002",RGA:"RF003",RUV:"RF004",RLA:"RF005", // Refris
-  RTMLS:"RTM001",RTMUV:"RTM002",RTMLA:"RTM003",          // Mônica
-  CVPSAMS:null,CMLSAMS:null,CHMSAMS:null,                // Packs (sem OP)
+  CVP:"CH001",CHM:"CH002",CCM:"CH003",CML:"CH004",
+  KFV:"FX001",KABX:"FX002","KMÇ":"FX003",KMC:"FX003",
+  KMIR:"FX006",KPL:"FX007",
+  RLS:"RF001",RFV:"RF002",RGA:"RF003",RUV:"RF004",RLA:"RF005",
+  RTMLS:"RTM001",RTMUV:"RTM002",RTMLA:"RTM003",
+  CVPSAMS:null,CMLSAMS:null,CHMSAMS:null,
   RLSSAMS:null,"RFV/RGASAMS":null,RTMSAMS:null,
 };
 
@@ -23,24 +24,100 @@ function parseDataBr(str) {
   if (!str || typeof str !== "string") return null;
   const parts = str.split("/");
   if (parts.length !== 3) return null;
-  const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, y = parseInt(parts[2], 10);
-  const date = new Date(y, m, d);
-  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) return null;
+  const d = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, y = parseInt(parts[2],10);
+  const date = new Date(y,m,d);
+  if (date.getFullYear()!==y || date.getMonth()!==m || date.getDate()!==d) return null;
   return date;
 }
 
-function dataParaStr(dt) {
-  return `${("0"+dt.getDate()).slice(-2)}/${("0"+(dt.getMonth()+1)).slice(-2)}/${dt.getFullYear()}`;
+function parseNum(str) {
+  if (!str || str.trim() === "") return null;
+  const n = Number(String(str).replace(",","."));
+  return isNaN(n) ? null : n;
 }
 
 // ============================================================================
-// Casamento plano ↔ OP
+// Calendário direto do CSV da Produção por Lote
+// ============================================================================
+
+async function buildCalendarFromCSV(ano, mes) {
+  const res = await fetch(LOTE_CSV_URL, { cf: { cacheTtl: 0 } });
+  if (!res.ok) throw new Error(`CSV Lote HTTP ${res.status}`);
+  const text = await res.text();
+
+  // Parse CSV manual (simples — sem lib)
+  const rows = text.split("\n").map(line => {
+    const cols = [];
+    let inQuotes = false, col = "";
+    for (const ch of line) {
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === ',' && !inQuotes) { cols.push(col); col = ""; continue; }
+      col += ch;
+    }
+    cols.push(col);
+    return cols;
+  });
+
+  // Mapa: chave "YYYY-M-D" → { sigla, planejada, produzida }
+  const map = {};
+  for (let i = 4; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row[0] || !row[0].includes("/")) continue;
+    const data = parseDataBr(row[0]);
+    if (!data) continue;
+    const sigla = String(row[1] || "").trim();
+    if (!sigla) continue;
+    const sufixo = String(row[2] || "").trim();
+    const sufixoLimpo = sufixo.toLowerCase().includes("sem") ? "" : sufixo;
+    const planejada = parseNum(row[6]) || 0;
+    const produzida = parseNum(row[7]) || 0;
+    const key = `${data.getFullYear()}-${data.getMonth()+1}-${data.getDate()}`;
+    map[key] = { sigla, sufixo: sufixoLimpo, planejada, produzida };
+  }
+
+  // Monta grid 5×7
+  const firstDay = new Date(ano, mes-1, 1);
+  const wd = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+  const offset = wd - 1;
+  const daysInMonth = new Date(ano, mes, 0).getDate();
+
+  const dayNums = [];
+  const weeksData = [];
+  let day = 1;
+
+  for (let w = 0; w < 5; w++) {
+    const dnRow = [];
+    const wdRow = [];
+    for (let d = 0; d < 7; d++) {
+      if ((w === 0 && d < offset) || day > daysInMonth) {
+        dnRow.push(null);
+        wdRow.push(null);
+      } else {
+        const ds = String(day).padStart(2,"0");
+        dnRow.push(ds);
+        const key = `${ano}-${mes}-${day}`;
+        const info = map[key];
+        if (info && info.sigla) {
+          const siglaCompleta = info.sigla + (info.sufixo || "");
+          wdRow.push([siglaCompleta, info.planejada, info.produzida > 0 ? info.produzida : null]);
+        } else {
+          wdRow.push(null);
+        }
+        day++;
+      }
+    }
+    dayNums.push(dnRow);
+    weeksData.push(wdRow);
+  }
+
+  return { dayNums, weeksData };
+}
+
+// ============================================================================
+// Casamento plano ↔ OP (mesma lógica de antes)
 // ============================================================================
 
 function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
-  const TOL = TOLERANCIA_DIAS;
-
-  // Extrai todas as OPs com data e SKU
   const opsDisponiveis = [];
   for (const op of ops) {
     const ident = op.identificacao || {};
@@ -50,25 +127,19 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
     if (!dataStr) continue;
     const data = parseDataBr(dataStr);
     if (!data) continue;
-
     const sku = codParaSku[String(ident.nCodProduto)];
     if (!sku) continue;
-
-    const concluida = !!(outras.dConclusao);
     opsDisponiveis.push({
       nCodOP: ident.nCodOP,
-      cNumero: ident.cNumOP || ident.cNumero || ident.lote || `OP ${ident.nCodOP}`,
-      sku,
-      data,
-      dataStr,
+      cNumero: ident.cNumOP || ident.cNumero || `OP ${ident.nCodOP}`,
+      sku, data, dataStr,
       qtde: ident.nQtde || 0,
-      concluida,
-      status: concluida ? "concluida" : (inf.dDtInicio ? "andamento" : "aberta"),
+      concluida: !!(outras.dConclusao),
+      status: outras.dConclusao ? "concluida" : (inf.dDtInicio ? "andamento" : "aberta"),
       consumida: false,
     });
   }
 
-  // Constrói lotes planejados a partir do calendário
   const lotes = [];
   for (let wi = 0; wi < weeksData.length; wi++) {
     for (let di = 0; di < 7; di++) {
@@ -76,79 +147,49 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
       if (!cell) continue;
       const siglaCompleta = cell[0];
       if (!siglaCompleta) continue;
-
-      // Extrai sigla base (sem sufixo como "2K", "/3")
       let siglaBase = siglaCompleta.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
-      // Tenta sigla completa primeiro, depois base
       let sku = SIGLA_PARA_SKU[siglaCompleta] || SIGLA_PARA_SKU[siglaBase];
       if (!sku) continue;
-
       const planejada = cell[1] || 0;
       const dayNum = dayNums[wi] && dayNums[wi][di];
       if (!dayNum) continue;
       const dataStr = `${dayNum}/${String(mes).padStart(2,"0")}/${ano}`;
       const data = parseDataBr(dataStr);
       if (!data) continue;
-
       lotes.push({ wi, di, sigla: siglaCompleta, sku, planejada, data, dataStr, cell });
     }
   }
 
-  // Passada 1: casamentos exatos
+  // 3 passadas de matching
   for (const lote of lotes) {
-    const match = opsDisponiveis.find(op =>
-      !op.consumida && op.sku === lote.sku && op.dataStr === lote.dataStr
-    );
+    const match = opsDisponiveis.find(op => !op.consumida && op.sku === lote.sku && op.dataStr === lote.dataStr);
     if (match) {
       match.consumida = true;
-      lote.execucao = {
-        nCodOP: match.nCodOP, cNumero: match.cNumero,
-        qtde: match.qtde, status: match.status,
-        dataStr: match.dataStr, confianca: "exata",
-      };
+      lote.execucao = { nCodOP: match.nCodOP, cNumero: match.cNumero, qtde: match.qtde, status: match.status, dataStr: match.dataStr, confianca: "exata" };
     }
   }
-
-  // Passada 2: SKU igual, mesma semana (até 7 dias de diferença)
   for (const lote of lotes) {
     if (lote.execucao) continue;
-    const candidatas = opsDisponiveis.filter(op =>
-      !op.consumida && op.sku === lote.sku &&
-      Math.abs(op.data - lote.data) / 86400000 <= 7
-    );
-    candidatas.sort((a, b) => Math.abs(a.data - lote.data) - Math.abs(b.data - lote.data));
-    const match = candidatas[0];
-    if (match) {
-      match.consumida = true;
-      lote.execucao = {
-        nCodOP: match.nCodOP, cNumero: match.cNumero,
-        qtde: match.qtde, status: match.status,
-        dataStr: match.dataStr, confianca: "aproximada",
-      };
+    const candidatas = opsDisponiveis.filter(op => !op.consumida && op.sku === lote.sku && Math.abs(op.data - lote.data)/86400000 <= 7);
+    candidatas.sort((a,b) => Math.abs(a.data-lote.data) - Math.abs(b.data-lote.data));
+    if (candidatas[0]) {
+      candidatas[0].consumida = true;
+      lote.execucao = { nCodOP: candidatas[0].nCodOP, cNumero: candidatas[0].cNumero, qtde: candidatas[0].qtde, status: candidatas[0].status, dataStr: candidatas[0].dataStr, confianca: "aproximada" };
     }
   }
-
-  // Passada 3: SKU igual, qualquer data (OP de outro mês)
   for (const lote of lotes) {
     if (lote.execucao) continue;
     const match = opsDisponiveis.find(op => !op.consumida && op.sku === lote.sku);
     if (match) {
       match.consumida = true;
-      lote.execucao = {
-        nCodOP: match.nCodOP, cNumero: match.cNumero,
-        qtde: match.qtde, status: match.status,
-        dataStr: match.dataStr, confianca: "cross_month",
-      };
+      lote.execucao = { nCodOP: match.nCodOP, cNumero: match.cNumero, qtde: match.qtde, status: match.status, dataStr: match.dataStr, confianca: "cross_month" };
     }
   }
 
-  // Atualiza weeksData com execução
   const novasWeeksData = weeksData.map(row => [...row]);
   for (const lote of lotes) {
     const oldCell = novasWeeksData[lote.wi][lote.di];
     if (!oldCell) continue;
-
-    // Objeto pra preservar estado na serialização JSON
     const novoCell = { sigla: oldCell[0], planejada: oldCell[1], produzida: oldCell[2] };
     if (lote.execucao) {
       novoCell.execucao = lote.execucao;
@@ -160,36 +201,26 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
       } else {
         novoCell.estado = "op_aberta";
       }
-      if (lote.execucao.confianca === "aproximada") novoCell.confianca = "aproximada";
+      if (lote.execucao.confianca !== "exata") novoCell.confianca = lote.execucao.confianca;
       if (lote.planejada > 0 && Math.abs(lote.execucao.qtde - lote.planejada) > lote.planejada * 0.1) {
         novoCell.estado = "divergencia_qtde";
       }
     } else {
-      const sigla = oldCell[0] || "";
-      if (/FERIADO|MANUTEN|INVENTÁRIO/i.test(sigla)) {
+      if (/FERIADO|MANUTEN|INVENTÁRIO/i.test(oldCell[0]||"")) {
         novoCell.estado = "nao_produtivo";
       } else {
         novoCell.estado = "planejado_sem_op";
       }
     }
-    // Compatibilidade: expor como [0],[1],[2] pra quem espera array
     novoCell[0] = novoCell.sigla;
     novoCell[1] = novoCell.planejada;
     novoCell[2] = novoCell.produzida;
     novasWeeksData[lote.wi][lote.di] = novoCell;
   }
 
-  // Detecta OPs não consumidas (op_sem_plano)
-  const opsNaoConsumidas = opsDisponiveis.filter(op => !op.consumida && op.data.getMonth() + 1 === mes);
-
+  const opsNaoConsumidas = opsDisponiveis.filter(op => !op.consumida && op.data.getMonth()+1 === mes);
   const lotesComExec = lotes.filter(l => l.execucao).length;
-
-  return {
-    weeksData: novasWeeksData,
-    opsSemPlano: opsNaoConsumidas,
-    _lotesCount: lotes.length,
-    _lotesComExec: lotesComExec,
-  };
+  return { weeksData: novasWeeksData, opsSemPlano: opsNaoConsumidas, _lotesCount: lotes.length, _lotesComExec: lotesComExec };
 }
 
 // ============================================================================
@@ -211,26 +242,19 @@ export async function buildDashboardCache(env) {
     calGrid: null,
   };
 
-  // 1. Plano: lê CSV publicado
+  // 1. Plano: CSV da Produção por Lote
   try {
-    const res = await fetch(SHEETS_CSV_URL, { cf: { cacheTtl: 0 } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let raw = (await res.text()).trim();
-    if (raw.startsWith('"') && raw.endsWith('"')) raw = raw.slice(1, -1).replace(/""/g, '"');
-    const dashData = JSON.parse(raw);
-    if (dashData.calGrid) {
-      data.calGrid = dashData.calGrid;
-      console.log(`✅ Plano: ${dashData.calGrid.weeksData.flat().filter(Boolean).length} células`);
-    }
+    data.calGrid = await buildCalendarFromCSV(ano, mes);
+    const celdas = data.calGrid.weeksData.flat().filter(Boolean).length;
+    console.log(`✅ Plano CSV: ${celdas} células`);
   } catch (e) {
     console.warn(`⚠️ Plano CSV: ${e.message}`);
     return data;
   }
 
-  // 2. Execução: busca OPs e casa com o plano
+  // 2. Execução: OPs Omie
   try {
     const cacheProd = await construirCacheProdutos(env);
-    // Mapa: codigo_produto (Omie) → SKU (nosso)
     const codParaSku = {};
     for (const sku of Object.keys(cacheProd)) {
       const cp = cacheProd[sku];
@@ -242,92 +266,14 @@ export async function buildDashboardCache(env) {
     const dFim = `${String(new Date(ano, mes, 0).getDate()).padStart(2,"0")}/${String(mes).padStart(2,"0")}/${ano}`;
     const concluidas = await buscarOPs(env, { dDtConclusaoDe: dInicio, dDtConclusaoAte: dFim, cConcluida: "S" });
 
-    const todas = [...abertas, ...concluidas];
-    console.log(`🔍 OPs: ${abertas.length} abertas + ${concluidas.length} concluídas = ${todas.length} total`);
-
-    // Debug: mostra campos da 1ª OP pra achar o número do lote
-    if (todas.length > 0) {
-      const amostra = todas.find(op => {
-        const id = (op.identificacao || {}).nCodProduto;
-        return codParaSku[String(id)];
-      });
-      if (amostra) {
-        const ident = amostra.identificacao || {};
-        console.log(`🔍 Campos ident: ${JSON.stringify(Object.keys(ident))}`);
-        console.log(`🔍 Valores ident: ${JSON.stringify(ident)}`);
-      }
-
-      const opsSkus = new Set();
-      for (const op of todas) {
-        const ident = op.identificacao || {};
-        const s = codParaSku[String(ident.nCodProduto)];
-        if (s) opsSkus.add(s);
-      }
-      console.log(`🔍 SKUs nas OPs: ${[...opsSkus].join(", ")}`);
-    }
-    // Depois do matching, loga também os SKUs dos lotes
-    const lotesSkus = new Set();
-    for (const row of data.calGrid.weeksData) {
-      for (const cell of row) {
-        if (!cell || !cell[0]) continue;
-        const siglaCompleta = cell[0];
-        let siglaBase = siglaCompleta.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
-        const sku = SIGLA_PARA_SKU[siglaCompleta] || SIGLA_PARA_SKU[siglaBase];
-        if (sku) lotesSkus.add(sku);
-      }
-    }
-    console.log(`🔍 SKUs no calendário: ${[...lotesSkus].join(", ")}`);
-
     const resultado = casarPlanoComOPs(
-      data.calGrid.weeksData, data.calGrid.dayNums, todas, codParaSku, ano, mes
+      data.calGrid.weeksData, data.calGrid.dayNums,
+      [...abertas, ...concluidas], codParaSku, ano, mes
     );
     data.calGrid.weeksData = resultado.weeksData;
-    // Coleta SKUs pra debug
-    const opsSkusSet = new Set();
-    for (const op of todas) {
-      const id = (op.identificacao || {}).nCodProduto;
-      const s = codParaSku[String(id)];
-      if (s) opsSkusSet.add(s);
-    }
-    const lotesSkusSet = new Set();
-    for (const row of data.calGrid.weeksData) {
-      for (const cell of row) {
-        if (!cell || !cell[0]) continue;
-        const siglaCompleta = cell[0];
-        let siglaBase = siglaCompleta.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
-        const sku = SIGLA_PARA_SKU[siglaCompleta] || SIGLA_PARA_SKU[siglaBase];
-        if (sku) lotesSkusSet.add(sku);
-      }
-    }
-
-    data._debug = {
-      opsTotal: todas.length,
-      opsSkus: [...opsSkusSet],
-      lotesSkus: [...lotesSkusSet],
-      opsNoMapa: todas.filter(op => {
-        const id = (op.identificacao || {}).nCodProduto;
-        return codParaSku[String(id)];
-      }).length,
-      chavesNoMapa: Object.keys(codParaSku).length,
-      lotesCriados: resultado._lotesCount || 0,
-      lotesComExec: resultado._lotesComExec || 0,
-      cellsComEstado: resultado.weeksData.flat().filter(c => c && c.estado).length,
-    };
-
-    // Conta estados
-    const estados = {};
-    for (const row of resultado.weeksData) {
-      for (const cell of row) {
-        if (cell && cell.estado) estados[cell.estado] = (estados[cell.estado] || 0) + 1;
-      }
-    }
-    const semOP = estados["planejado_sem_op"] || 0;
-    const semPlano = resultado.opsSemPlano.length;
-    console.log(`✅ Execução: ${Object.entries(estados).map(([k,v])=>`${k}=${v}`).join(", ")}`);
-    if (semOP > 0) console.log(`⚠️  ${semOP} célula(s) sem OP`);
-    if (semPlano > 0) console.log(`⚠️  ${semPlano} OP(s) sem plano`);
+    console.log(`✅ Execução: ${resultado._lotesComExec} matches, ${resultado._lotesCount} lotes`);
   } catch (e) {
-    console.warn(`⚠️ Execução Omie: ${e.message}`);
+    console.warn(`⚠️ Execução: ${e.message}`);
   }
 
   return data;
