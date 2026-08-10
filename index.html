@@ -651,12 +651,14 @@ function renderCalendar(calGrid){
     else if(estado === 'op_aberta') {
       classes.push("planned","op-aberta");
       if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
-      if(execucao && execucao.cNumero) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">${execucao.cNumero}</span>`);
+      var num = execucao && (execucao.cNumero || `OP ${execucao.nCodOP}`);
+      if(num) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">${num}</span>`);
     }
     else if(estado === 'op_andamento') {
       classes.push("planned","op-andamento");
       if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
-      if(execucao && execucao.cNumero) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">${execucao.cNumero}</span>`);
+      var num = execucao && (execucao.cNumero || `OP ${execucao.nCodOP}`);
+      if(num) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">${num}</span>`);
     }
     else if(estado === 'op_concluida'){
       if(produzido !== null && produzido !== undefined && planejado){
@@ -665,13 +667,15 @@ function renderCalendar(calGrid){
         extraLines.push(`${produzido.toLocaleString('pt-BR')} un`);
         extraLines.push(`<span class="eff">${(eff*100).toFixed(0)}%</span>`);
       } else { classes.push("eff-alta"); }
-      if(execucao && execucao.cNumero) extraLines.push(`<span style="font-size:.65em;opacity:.5;\">${execucao.cNumero}</span>`);
+      var num = execucao && (execucao.cNumero || `OP ${execucao.nCodOP}`);
+      if(num) extraLines.push(`<span style="font-size:.65em;opacity:.5;\">${num}</span>`);
     }
     else if(estado === 'divergencia_qtde') {
       classes.push("planned","divergencia");
       if(execucao) {
         extraLines.push(`<span style="font-size:.75em;\">OP: ${execucao.qtde} un</span>`);
-        extraLines.push(`<span style="font-size:.6em;opacity:.5;\">${execucao.cNumero || ''}</span>`);
+        var num = execucao.cNumero || `OP ${execucao.nCodOP}`;
+        extraLines.push(`<span style="font-size:.6em;opacity:.5;\">${num}</span>`);
       }
       divergencias++;
     }
