@@ -305,6 +305,48 @@ async function enriquecerComRealizado(weeksData, dayNums, env, cacheProd, ano, m
 }
 
 // ============================================================================
+// KPIs extraídos do calendário enriquecido (fonte única)
+// ============================================================================
+
+export function extrairKPIsDoCalendario(calGrid, ano, mes) {
+  let planejadoMes = 0, realizadoMes = 0, pendentesMes = 0;
+  const produzidoPorSku = {};
+  const wd = calGrid.weeksData;
+
+  for (const row of wd) {
+    for (const cell of row) {
+      if (!cell) continue;
+      const sigla = cell.sigla || cell[0] || "";
+      const planejada = cell.planejada || cell[1] || 0;
+      if (/FERIADO|MANUTEN|INVENTÁRIO/i.test(sigla)) continue;
+
+      planejadoMes += planejada;
+
+      const ex = cell.execucao;
+      const estado = cell.estado;
+      const produzida = cell.produzida || cell[2];
+
+      if (estado === 'op_concluida' || estado === 'divergencia_qtde') {
+        if (ex && ex.dataStr) {
+          const parts = ex.dataStr.split("/");
+          const opMes = parseInt(parts[1], 10), opAno = parseInt(parts[2], 10);
+          if (opMes === mes && opAno === ano) realizadoMes += produzida || ex.qtde || 0;
+        } else {
+          realizadoMes += produzida || ex.qtde || 0;
+        }
+      }
+      if (estado === 'planejado_sem_op') pendentesMes++;
+
+      if (produzida && (estado === 'op_concluida' || estado === 'divergencia_qtde')) {
+        const sku = SIGLA_PARA_SKU[sigla] || SIGLA_PARA_SKU[sigla.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"")];
+        if (sku) produzidoPorSku[sku] = (produzidoPorSku[sku] || 0) + produzida;
+      }
+    }
+  }
+  return { planejadoMes, realizadoMes, pendentesMes, produzidoPorSku };
+}
+
+// ============================================================================
 // Dashboard Cache
 // ============================================================================
 

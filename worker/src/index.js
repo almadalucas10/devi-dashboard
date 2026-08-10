@@ -7,7 +7,7 @@ import { readJson, writeJson, writeSyncMeta } from "./r2.js";
 import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
 import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
-import { buildDashboardCache } from "./dashboard.js";
+import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
 import { atualizarAgregadoVendas, recalcularCobertura } from "./cobertura.js";
 import { R2_KEYS } from "./constants.js";
 
@@ -60,6 +60,19 @@ async function runLightSync(env) {
         console.error(`[light] ⚠️ Cobertura: ${e.message}`);
       }
     }
+
+    // KPIs do calendário
+    try {
+      const dashData = await readJson(env, R2_KEYS.dashboard);
+      if (dashData && dashData.calGrid && partial.kpis && !partial.kpis.erro) {
+        const hoje = new Date();
+        const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
+        partial.kpis.planejadoMes = kcal.planejadoMes;
+        partial.kpis.realizadoMes = kcal.realizadoMes;
+        partial.kpis.eficienciaMes = kcal.planejadoMes > 0 ? kcal.realizadoMes / kcal.planejadoMes : 0;
+        partial.kpis.pendentesMes = kcal.pendentesMes;
+      }
+    } catch (e) { console.error(`[light] ⚠️ KPIs calendário: ${e.message}`); }
 
     await writeJson(env, R2_KEYS.omie, partial);
   } catch (e) {
@@ -132,6 +145,21 @@ async function runHeavySync(env) {
         console.error(`[heavy] ⚠️ Cobertura: ${e.message}`);
       }
     }
+
+    // KPIs do calendário (fonte única: plano + executado)
+    try {
+      const dashData = await readJson(env, R2_KEYS.dashboard);
+      if (dashData && dashData.calGrid) {
+        const hoje = new Date();
+        const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
+        if (data.kpis && !data.kpis.erro) {
+          data.kpis.planejadoMes = kcal.planejadoMes;
+          data.kpis.realizadoMes = kcal.realizadoMes;
+          data.kpis.eficienciaMes = kcal.planejadoMes > 0 ? kcal.realizadoMes / kcal.planejadoMes : 0;
+          data.kpis.pendentesMes = kcal.pendentesMes;
+        }
+      }
+    } catch (e) { console.error(`[heavy] ⚠️ KPIs calendário: ${e.message}`); }
 
     await writeJson(env, R2_KEYS.omie, data);
     await writeSyncMeta(env, { omie: Date.now() });
