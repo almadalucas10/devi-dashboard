@@ -110,15 +110,18 @@ export async function buscarFilaDePedidos(env) {
     // Omie: itens[i].produto.quantidade, itens[i].produto.valor_total
     const itens = pv.det || [];
     let totalUnidades = 0, valorTotal = 0;
+    const skus = new Set();
     for (const det of itens) {
       const pr = det.produto || {};
       totalUnidades += pr.quantidade || 0;
       valorTotal += pr.valor_total || 0;
+      if (pr.codigo) skus.add(pr.codigo);
     }
     detalhesPorPedido[cod] = {
       codigoCliente: cab.codigo_cliente,
       valorTotal,
       totalUnidades,
+      quantidadeSkus: skus.size,
     };
   }
 
@@ -133,6 +136,7 @@ export async function buscarFilaDePedidos(env) {
     if (detalhe) {
       item.valorTotal = detalhe.valorTotal;
       item.totalUnidades = detalhe.totalUnidades;
+      item.quantidadeSkus = detalhe.quantidadeSkus;
 
       if (detalhe.codigoCliente) {
         let nome = nomesClientesCache[detalhe.codigoCliente];
@@ -156,13 +160,16 @@ export async function buscarFilaDePedidos(env) {
         const pedido = detalheFb.pedido_venda_produto || {};
         const itens = pedido.det || [];
         let totalUnidades = 0, valorTotal = 0;
+        const skusFb = new Set();
         for (const det of itens) {
           const pr = det.produto || {};
           totalUnidades += pr.quantidade || 0;
           valorTotal += pr.valor_total || 0;
+          if (pr.codigo) skusFb.add(pr.codigo);
         }
         item.valorTotal = valorTotal;
         item.totalUnidades = totalUnidades;
+        item.quantidadeSkus = skusFb.size;
 
         const codigoCliente = pedido.cabecalho && pedido.cabecalho.codigo_cliente;
         if (codigoCliente) {
@@ -190,6 +197,7 @@ export async function buscarFilaDePedidos(env) {
       etapa: item.etapa,
       valorTotal: item.valorTotal || 0,
       totalUnidades: item.totalUnidades || 0,
+      quantidadeSkus: item.quantidadeSkus || 0,
       cliente: item.cliente || `Pedido #${item.numero}`,
       dataInclusao: item.dataInclusao,
     });

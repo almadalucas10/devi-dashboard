@@ -89,6 +89,7 @@
   .fila-info .cliente{ font-size:clamp(10.9px,0.65vw,14.9px); color:var(--text-lo); display:flex; align-items:center; gap:3px;
       white-space:nowrap; overflow:hidden; }
   .fila-num{ white-space:nowrap; flex-shrink:0; }
+  .fila-skus{ font-size:.85em; opacity:.5; white-space:nowrap; }
   .etapa-badge{ display:inline-block; padding:1px 6px; border-radius:7px; font-size:.85em; font-weight:700; white-space:nowrap; flex-shrink:0; }
   .fila-item.etapa-carteira{ border-left:4px solid #3b82f6; }
   .fila-item.etapa-carteira .etapa-badge{ background:rgba(59,130,246,.22); color:#93c5fd; }
@@ -904,8 +905,8 @@ function renderFila(fila){
     } catch(e) { /* fallback: sem degradê, mantém só a classe CSS */ }
     return '<div class="fila-item ' + etapaCls + '" style="' + estilo + '">'
       + '<div class="fila-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="fila-info"><div class="pedido">' + nomePrincipal + '</div><div class="cliente"><span class="etapa-badge">' + etapaLabel + '</span> <span class="fila-num">#' + p.numero + '</span></div></div>'
-      + '<div class="fila-valores"><div class="principal">' + fmt(p.totalUnidades) + ' un</div><div class="secundario">' + fmtMoeda(p.valorTotal) + '</div></div>'
+      + '<div class="fila-info"><div class="pedido">' + nomePrincipal + '</div><div class="cliente"><span class="etapa-badge">' + etapaLabel + '</span> <span class="fila-num">#' + p.numero + '</span>' + ((p.quantidadeSkus > 0) ? ' <span class="fila-skus">· ' + p.quantidadeSkus + ' SKU' + (p.quantidadeSkus > 1 ? 's' : '') + '</span>' : '') + '</div></div>'
+      + '<div class="fila-valores"><div class="principal">' + fmt(p.totalUnidades) + ' un</div></div>'
       + '</div>';
   }).join('');
 }
