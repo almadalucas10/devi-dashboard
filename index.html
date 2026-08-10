@@ -654,7 +654,8 @@ function renderCalendar(calGrid){
       calEl.appendChild(c); return;
     }
 
-    const sigla = cell[0], planejado = cell[1], produzido = cell[2];
+    const sigla = cell[0], planejado = cell[1];
+    const produzido = (cell.produzida !== undefined) ? cell.produzida : cell[2];
     const estado = cell.estado || null;
     const confianca = cell.confianca || null;
     const execucao = cell.execucao || null;
