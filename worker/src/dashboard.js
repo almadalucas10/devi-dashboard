@@ -296,6 +296,7 @@ async function enriquecerComRealizado(weeksData, dayNums, env, cacheProd, ano, m
 
       if (match) {
         cell.produzida = match.qtde;
+        cell[2] = match.qtde; // frontend lê cell[2]
         // Se a OP tá concluída e temos quantidade real, atualiza estado
         if (cell.estado === "op_concluida" && cell.planejada > 0 && Math.abs(match.qtde - cell.planejada) > cell.planejada * 0.1) {
           cell.estado = "divergencia_qtde";
