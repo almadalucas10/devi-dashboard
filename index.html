@@ -246,6 +246,7 @@
     display:flex; flex-direction:column; padding:6px 8px; min-height:0;
     position:relative; overflow:hidden; }
   .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(18px,1.05vw,22px); font-weight:500; line-height:1; }
+  .cal-cell .cal-dow{ display:none; } /* visível só no mobile */
   .cal-cell .cal-sku{ color:#e8eef4; font-size:clamp(25px,1.5vw,33px); font-weight:500; letter-spacing:-0.3px; line-height:1.1; margin-top:2px; }
   .cal-cell .cal-qtde{ color:#cfe0ee; font-size:clamp(20px,1.15vw,26px); line-height:1.2; }
   .cal-cell .cal-op{ position:absolute; right:8px; bottom:6px; font-size:clamp(16px,1.0vw,22px); font-family:ui-monospace,monospace; }
@@ -318,6 +319,49 @@
   .frescor-alerta{ color:#fbbf24; }
   .frescor-critico{ color:#f87171; font-weight:700; }
   .demo-banner{ background:#b45309; color:#fff; text-align:center; padding:6px; font-weight:700; font-size:14px; }
+
+  /* ======================================================================== */
+  /* RESPONSIVO — Tablet (≤900px) */
+  /* ======================================================================== */
+  @media (max-width: 900px) {
+    .kpi .value{ font-size:clamp(22px,3vw,32px); }
+    .kpi .label{ font-size:clamp(9px,1.2vw,11px); }
+    .cal-cell .cal-sku{ font-size:clamp(16px,2vw,20px); }
+    .cal-cell .cal-qtde{ font-size:clamp(13px,1.5vw,16px); }
+    .cal-cell .cal-op{ font-size:clamp(11px,1.3vw,14px); }
+  }
+
+  /* ======================================================================== */
+  /* RESPONSIVO — Celular (≤640px) */
+  /* ======================================================================== */
+  @media (max-width: 640px) {
+    /* Calendário vira lista */
+    .calendar{ display:flex; flex-direction:column; gap:4px; }
+    .cal-head{ display:none; }
+    .cal-cell.t-vazio{ display:none; }
+    .cal-cell{
+      display:flex; align-items:center; gap:10px;
+      padding:8px 10px; min-height:0; height:auto; border-radius:8px;
+    }
+    .cal-cell .cal-op{ position:static; }
+    .cal-cell .cal-dia{ min-width:42px; font-size:18px; }
+    .cal-cell .cal-dow{ display:block; font-size:11px; color:#5a6a7a; }
+    .cal-cell .cal-sku{ flex:1; min-width:0; font-size:16px; }
+    .cal-cell .cal-qtde{ font-size:13px; }
+
+    /* KPIs 2 colunas */
+    .kpi-grid{ grid-template-columns:repeat(2,1fr); gap:6px; }
+
+    /* Painéis sem altura fixa */
+    .fila-lista, .estoque-lista, .ranking-lista{ max-height:none; overflow:visible; }
+    .panel{ max-height:none; }
+
+    /* Fila — nome com ellipsis */
+    .fila-info .pedido{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* Legenda compacta */
+    .legend{ font-size:10px; flex-wrap:wrap; }
+  }
 </style>
 </head>
 <body>
@@ -677,8 +721,10 @@ function renderCalendar(calGrid){
 
     c.className = 'cal-cell ' + tipoDia + (stCls ? ' ' + stCls : '');
 
-    // Conteúdo
-    let html = `<div class="cal-dia">${dayNum}</div>`;
+    // Conteúdo — dia da semana no mobile
+    const dowShort = ['dom','seg','ter','qua','qui','sex','sab'];
+    const dIdx = (new Date(2026,7,parseInt(dayNum))).getDay(); // Agosto 2026
+    let html = `<div class="cal-dia">${dayNum}<span class="cal-dow"> ${dowShort[dIdx]}</span></div>`;
 
     // Não produtivo: só dia + rótulo
     if(tipoDia !== 't-producao') {
