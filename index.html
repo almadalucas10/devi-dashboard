@@ -662,8 +662,9 @@ function sizeCalendar(){
   const calEl = document.getElementById('cal');
   if(!panel || !calEl) return;
 
-  // Número de semanas do mês (dinâmico)
-  const weeks = calEl.children.length > 7 ? Math.floor((calEl.children.length - 7) / 7) : 5;
+  // Número de semanas do mês (dinâmico: 5 ou 6)
+  const totalKids = calEl.children.length;
+  const weeks = totalKids > 7 ? Math.ceil((totalKids - 7) / 7) : 5;
   calEl.style.setProperty('--weeks', weeks);
 
   const h2 = panel.querySelector('h2');
@@ -696,21 +697,19 @@ function renderCalendar(calGrid){
   const DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
   const calEl = document.getElementById('cal');
   calEl.innerHTML = "";
+  calEl.className = 'calendar';
 
-  // Container zoom (mobile)
+  // Container zoom (mobile) — envolve #cal
   let mundo = document.getElementById('calMundo');
   if (!mundo) {
     mundo = document.createElement('div');
     mundo.id = 'calMundo';
     mundo.className = 'cal-mundo';
     calEl.parentNode.insertBefore(mundo, calEl);
+    mundo.appendChild(calEl);
   }
-  mundo.innerHTML = "";
-  const grade = document.createElement('div');
-  grade.className = 'calendar';
-  mundo.appendChild(grade);
 
-  DAYS.forEach(d=>{ const h=document.createElement('div'); h.className='cal-head'; h.textContent=d; grade.appendChild(h); });
+  DAYS.forEach(d=>{ const h=document.createElement('div'); h.className='cal-head'; h.textContent=d; calEl.appendChild(h); });
   const dayNums = (calGrid && calGrid.dayNums) || [];
   const weeksData = (calGrid && calGrid.weeksData) || [];
 
@@ -790,7 +789,7 @@ function renderCalendar(calGrid){
     }
 
     c.innerHTML = html;
-    grade.appendChild(c);
+    calEl.appendChild(c);
   }));
 
   // Zoom mobile
@@ -799,6 +798,8 @@ function renderCalendar(calGrid){
   } else {
     desativarZoom(mundo);
   }
+  // Atualiza semanas e redimensiona
+  setTimeout(sizeCalendar, 10);
 
   // Contador no cabeçalho
   var st = document.getElementById('calStatus');
