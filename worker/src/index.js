@@ -73,7 +73,10 @@ async function runLightSync(env) {
           realizadoMes: kcal.realizadoMes,
           eficienciaMes: kcal.eficienciaMes,
           pendentesMes: kcal.pendentesMes,
+          realizadoAno: kcal.realizadoAno,
         });
+        partial.tendenciaProducao = kcal.tendencia;
+        partial.rankingProducao = kcal.rankingProducao;
       }
     } catch (e) { console.error(`[light] ⚠️ KPIs calendário: ${e.message}`); }
 
@@ -160,6 +163,9 @@ async function runHeavySync(env) {
           data.kpis.realizadoMes = kcal.realizadoMes;
           data.kpis.eficienciaMes = kcal.eficienciaMes;
           data.kpis.pendentesMes = kcal.pendentesMes;
+          data.kpis.realizadoAno = kcal.realizadoAno;
+          data.tendenciaProducao = kcal.tendencia;
+          data.rankingProducao = kcal.rankingProducao;
         }
       }
     } catch (e) { console.error(`[heavy] ⚠️ KPIs calendário: ${e.message}`); }

@@ -342,8 +342,37 @@ export function extrairKPIsDoCalendario(calGrid, ano, mes) {
       }
     }
   }
-  const eficienciaMes = planejadoConcluidasMes > 0 ? realizadoMes / planejadoConcluidasMes : 0;
-  return { planejadoMes, planejadoConcluidasMes, realizadoMes, eficienciaMes, pendentesMes, produzidoPorSku };
+  const eficienciaMes = planejadoMes > 0 ? realizadoMes / planejadoMes : 0;
+  // Tendência e ranking via produzido por SKU (fonte única)
+  const tendenciaMeses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const tendencia = tendenciaMeses.map((_, i) => 0);
+
+  // Soma produzida por mês (data da OP)
+  const wd2 = calGrid.weeksData;
+  for (const row of wd2) {
+    for (const cell of row) {
+      if (!cell) continue;
+      const ex = cell.execucao;
+      const estado = cell.estado;
+      const produzida = cell.produzida || cell[2];
+      if (!produzida || (estado !== 'op_concluida' && estado !== 'divergencia_qtde')) continue;
+      if (ex && ex.dataStr) {
+        const parts = ex.dataStr.split("/");
+        const opMes = parseInt(parts[1], 10) - 1; // 0-index
+        if (opMes >= 0 && opMes < 12) tendencia[opMes] += produzida;
+      }
+    }
+  }
+  const realizadoAno = tendencia.reduce((a, v) => a + v, 0);
+
+  // Ranking por SKU
+  const rankingProducao = Object.entries(produzidoPorSku)
+    .map(([codigo, total]) => ({ codigo, descricao: codigo, total }))
+    .sort((a, b) => b.total - a.total);
+
+  return { planejadoMes, realizadoMes, eficienciaMes, pendentesMes,
+    tendencia: { meses: tendenciaMeses, valores: tendencia },
+    realizadoAno, rankingProducao, produzidoPorSku };
 }
 
 // ============================================================================
