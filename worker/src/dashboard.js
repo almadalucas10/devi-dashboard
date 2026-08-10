@@ -57,6 +57,7 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
     const concluida = !!(outras.dConclusao);
     opsDisponiveis.push({
       nCodOP: ident.nCodOP,
+      cNumero: ident.cNumero || ident.lote || `#${ident.nCodOP}`,
       sku,
       data,
       dataStr,
@@ -101,7 +102,8 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
     if (match) {
       match.consumida = true;
       lote.execucao = {
-        nCodOP: match.nCodOP, qtde: match.qtde, status: match.status,
+        nCodOP: match.nCodOP, cNumero: match.cNumero,
+        qtde: match.qtde, status: match.status,
         dataStr: match.dataStr, confianca: "exata",
       };
     }
@@ -119,7 +121,8 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
     if (match) {
       match.consumida = true;
       lote.execucao = {
-        nCodOP: match.nCodOP, qtde: match.qtde, status: match.status,
+        nCodOP: match.nCodOP, cNumero: match.cNumero,
+        qtde: match.qtde, status: match.status,
         dataStr: match.dataStr, confianca: "aproximada",
       };
     }
@@ -132,7 +135,8 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
     if (match) {
       match.consumida = true;
       lote.execucao = {
-        nCodOP: match.nCodOP, qtde: match.qtde, status: match.status,
+        nCodOP: match.nCodOP, cNumero: match.cNumero,
+        qtde: match.qtde, status: match.status,
         dataStr: match.dataStr, confianca: "cross_month",
       };
     }
