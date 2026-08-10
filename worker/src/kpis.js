@@ -217,13 +217,23 @@ export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
 
   let realizadoMes = 0;
   for (const m of realizadoMov) { if (m.data.getMonth() === mesAtual && m.data.getFullYear() === anoAtual) realizadoMes += m.entradas; }
-  // Fallback: se OPE/28 vazio no mês, usa nQtde das OPs concluídas no mês
+  // Fallback: se OPE/28 vazio no mês, usa nQtde das OPs concluídas
+  // (considera tanto as com data de conclusão no mês quanto as sem data)
   if (realizadoMes === 0) {
     for (const op of concluidas) {
       const ident = op.identificacao || {};
       if (!codParaSku[String(ident.nCodProduto)]) continue;
       const c = parseDataBr((op.outrasInf && op.outrasInf.dConclusao) || (op.infAdicionais && op.infAdicionais.dDtConclusao));
-      if (c && c.getMonth() === mesAtual && c.getFullYear() === anoAtual) realizadoMes += ident.nQtde || 0;
+      if (c && c.getMonth() === mesAtual && c.getFullYear() === anoAtual) {
+        realizadoMes += ident.nQtde || 0;
+      }
+    }
+    // Se ainda zero, soma TODAS as concluídas (sem filtro de data)
+    if (realizadoMes === 0) {
+      for (const op of concluidas) {
+        const ident = op.identificacao || {};
+        if (codParaSku[String(ident.nCodProduto)]) realizadoMes += ident.nQtde || 0;
+      }
     }
   }
   const eficienciaMes = planejadoMes > 0 ? realizadoMes / planejadoMes : 0;
