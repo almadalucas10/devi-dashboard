@@ -197,9 +197,17 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
       novoCell.execucao = lote.execucao;
       if (lote.execucao.status === "concluida") {
         novoCell.estado = "op_concluida";
+        // nQtde é a quantidade da OP (Omie não retorna produzido real no ListarOrdemProducao)
         novoCell.produzida = lote.execucao.qtde;
+        // Divergência só se a OP foi aberta com quantidade diferente do plano
+        if (lote.planejada > 0 && Math.abs(lote.execucao.qtde - lote.planejada) > lote.planejada * 0.1) {
+          novoCell.estado = "divergencia_qtde";
+        }
       } else if (lote.execucao.status === "andamento") {
         novoCell.estado = "op_andamento";
+        if (lote.planejada > 0 && Math.abs(lote.execucao.qtde - lote.planejada) > lote.planejada * 0.1) {
+          novoCell.estado = "divergencia_qtde";
+        }
       } else {
         novoCell.estado = "op_aberta";
       }
