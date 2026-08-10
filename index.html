@@ -643,10 +643,19 @@ function renderCalendar(calGrid){
     else if(/MANUTEN/i.test(sigla)) classes.push("manutencao");
     else if(/INVENTÁRIO/i.test(sigla)) classes.push("inventario");
     // Estados de execução
-    else if(estado === 'planejado_sem_op') { classes.push("planned","sem-op"); semOP++; }
+    else if(estado === 'planejado_sem_op') {
+      classes.push("planned","sem-op"); semOP++;
+      if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
+    }
     else if(estado === 'op_sem_plano') classes.push("sem-op");
-    else if(estado === 'op_aberta') classes.push("planned","op-aberta");
-    else if(estado === 'op_andamento') classes.push("planned","op-andamento");
+    else if(estado === 'op_aberta') {
+      classes.push("planned","op-aberta");
+      if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
+    }
+    else if(estado === 'op_andamento') {
+      classes.push("planned","op-andamento");
+      if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
+    }
     else if(estado === 'op_concluida'){
       if(produzido !== null && produzido !== undefined && planejado){
         const eff = produzido/planejado;
