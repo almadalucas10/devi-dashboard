@@ -239,7 +239,7 @@
   .chart-wrap{ position:relative; flex:1; min-height:0; }
 
   .calendar{ display:grid; grid-template-columns:repeat(7, var(--cell-size, 60px));
-    grid-template-rows: var(--head-size, 28px) repeat(5, var(--cell-size, 60px)); gap:8px; justify-content:center; align-content:center; margin:0 auto; }
+    grid-template-rows: var(--head-size, 28px) repeat(var(--weeks, 5), var(--cell-size, 60px)); gap:8px; justify-content:center; align-content:center; margin:0 auto; }
   .cal-head{ display:flex; align-items:center; justify-content:center; font-size:clamp(15.9px,0.95vw,24.6px); color:var(--text-lo); font-weight:700; }
   /* Célula do calendário — layout novo (faixa lateral + dia no canto) */
   .cal-cell{ background:#16202b; border-left:5px solid transparent; border-radius:8px;
@@ -319,6 +319,15 @@
   .frescor-alerta{ color:#fbbf24; }
   .frescor-critico{ color:#f87171; font-weight:700; }
   .demo-banner{ background:#b45309; color:#fff; text-align:center; padding:6px; font-weight:700; font-size:14px; }
+
+  /* Zoom mobile */
+  .cal-mundo{ transform-origin:0 0; will-change:transform; }
+  .cal-zoom-btns{ display:none; position:fixed; bottom:12px; right:12px; z-index:100; gap:6px; }
+  .cal-zoom-btns button{ width:40px; height:40px; border-radius:50%; border:1px solid #444; background:#1a2430; color:#fff; font-size:20px; cursor:pointer; }
+  @media (max-width: 640px) {
+    .cal-zoom-btns{ display:flex; flex-direction:column; }
+    .cal-mundo{ touch-action:none; }
+  }
 
   /* ======================================================================== */
   /* RESPONSIVO — Tablet (≤900px) */
@@ -652,6 +661,11 @@ function sizeCalendar(){
   const panel = document.querySelector('.cal-panel');
   const calEl = document.getElementById('cal');
   if(!panel || !calEl) return;
+
+  // Número de semanas do mês (dinâmico)
+  const weeks = calEl.children.length > 7 ? Math.floor((calEl.children.length - 7) / 7) : 5;
+  calEl.style.setProperty('--weeks', weeks);
+
   const h2 = panel.querySelector('h2');
   const panelStyle = getComputedStyle(panel);
   const padX = parseFloat(panelStyle.paddingLeft||0) + parseFloat(panelStyle.paddingRight||0);
@@ -682,7 +696,21 @@ function renderCalendar(calGrid){
   const DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
   const calEl = document.getElementById('cal');
   calEl.innerHTML = "";
-  DAYS.forEach(d=>{ const h=document.createElement('div'); h.className='cal-head'; h.textContent=d; calEl.appendChild(h); });
+
+  // Container zoom (mobile)
+  let mundo = document.getElementById('calMundo');
+  if (!mundo) {
+    mundo = document.createElement('div');
+    mundo.id = 'calMundo';
+    mundo.className = 'cal-mundo';
+    calEl.parentNode.insertBefore(mundo, calEl);
+  }
+  mundo.innerHTML = "";
+  const grade = document.createElement('div');
+  grade.className = 'calendar';
+  mundo.appendChild(grade);
+
+  DAYS.forEach(d=>{ const h=document.createElement('div'); h.className='cal-head'; h.textContent=d; grade.appendChild(h); });
   const dayNums = (calGrid && calGrid.dayNums) || [];
   const weeksData = (calGrid && calGrid.weeksData) || [];
 
@@ -762,8 +790,15 @@ function renderCalendar(calGrid){
     }
 
     c.innerHTML = html;
-    calEl.appendChild(c);
+    grade.appendChild(c);
   }));
+
+  // Zoom mobile
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    ativarZoom(mundo);
+  } else {
+    desativarZoom(mundo);
+  }
 
   // Contador no cabeçalho
   var st = document.getElementById('calStatus');
@@ -1081,6 +1116,115 @@ async function refresh(){
 
 refresh();
 setInterval(refresh, REFRESH_MS);
+
+// ========================================================================
+// Zoom mobile — calendário com pinch e arraste
+// ========================================================================
+let zoomState = { escala:1, x:0, y:0, ativo:false, el:null };
+const ZOOM_MIN = 0.5, ZOOM_MAX = 3;
+
+function ativarZoom(mundo) {
+  if (zoomState.ativo && zoomState.el === mundo) return;
+  desativarZoom(zoomState.el);
+  zoomState = { escala:1, x:0, y:0, ativo:true, el:mundo };
+  const cx = mundo.parentElement.clientWidth;
+
+  // Ajusta escala inicial pra caber na tela
+  const lw = mundo.scrollWidth || 760;
+  if (lw > cx) zoomState.escala = cx / lw;
+  aplicarZoom();
+
+  mundo.addEventListener('touchstart', onTouchStart, {passive:false});
+  mundo.addEventListener('touchmove', onTouchMove, {passive:false});
+  mundo.addEventListener('touchend', onTouchEnd);
+  mundo.addEventListener('dblclick', onDblClick);
+  mundo.addEventListener('wheel', onWheel, {passive:false});
+
+  // Botões
+  let btns = document.getElementById('calZoomBtns');
+  if (!btns) {
+    btns = document.createElement('div');
+    btns.id = 'calZoomBtns';
+    btns.className = 'cal-zoom-btns';
+    btns.innerHTML = '<button aria-label="Reduzir">−</button><button aria-label="Ajustar">⤢</button><button aria-label="Ampliar">+</button>';
+    document.body.appendChild(btns);
+    btns.children[0].onclick = ()=>zoomEm(Math.max(ZOOM_MIN, zoomState.escala - 0.3), 0, 0);
+    btns.children[1].onclick = ()=>{ zoomState.escala = 1; zoomState.x = 0; zoomState.y = 0; aplicarZoom(); };
+    btns.children[2].onclick = ()=>zoomEm(Math.min(ZOOM_MAX, zoomState.escala + 0.3), 0, 0);
+  }
+}
+
+function desativarZoom(mundo) {
+  if (!mundo) return;
+  mundo.removeEventListener('touchstart', onTouchStart);
+  mundo.removeEventListener('touchmove', onTouchMove);
+  mundo.removeEventListener('touchend', onTouchEnd);
+  mundo.removeEventListener('dblclick', onDblClick);
+  mundo.removeEventListener('wheel', onWheel);
+  mundo.style.transform = '';
+  const btns = document.getElementById('calZoomBtns');
+  if (btns) btns.remove();
+  zoomState = { escala:1, x:0, y:0, ativo:false, el:null };
+}
+
+function aplicarZoom() {
+  const { el, escala, x, y } = zoomState;
+  if (!el) return;
+  const cx = el.parentElement.clientWidth, cy = el.parentElement.clientHeight;
+  const lw = el.scrollWidth * escala, lh = el.scrollHeight * escala;
+  // Limita arraste
+  const mx = lw <= cx ? (cx - lw) / 2 : Math.min(0, Math.max(cx - lw, x));
+  const my = lh <= cy ? (cy - lh) / 2 : Math.min(0, Math.max(cy - lh, y));
+  zoomState.x = mx; zoomState.y = my;
+  el.style.transform = `translate(${mx}px, ${my}px) scale(${escala})`;
+}
+
+function zoomEm(novaEscala, px, py) {
+  const antes = zoomState.escala;
+  zoomState.escala = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, novaEscala));
+  const k = zoomState.escala / antes;
+  zoomState.x = px - (px - zoomState.x) * k;
+  zoomState.y = py - (py - zoomState.y) * k;
+  aplicarZoom();
+}
+
+let touchData = null;
+function onTouchStart(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    touchData = { dist: dist(e.touches), cx:(e.touches[0].clientX+e.touches[1].clientX)/2, cy:(e.touches[0].clientY+e.touches[1].clientY)/2 };
+  } else if (e.touches.length === 1) {
+    touchData = { sx:e.touches[0].clientX - zoomState.x, sy:e.touches[0].clientY - zoomState.y };
+  }
+}
+function onTouchMove(e) {
+  if (!touchData) return;
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const d = dist(e.touches);
+    const cx = (e.touches[0].clientX+e.touches[1].clientX)/2;
+    const cy = (e.touches[0].clientY+e.touches[1].clientY)/2;
+    zoomEm(zoomState.escala * d / touchData.dist, cx, cy);
+    touchData = { dist:d, cx, cy };
+  } else if (e.touches.length === 1) {
+    zoomState.x = e.touches[0].clientX - touchData.sx;
+    zoomState.y = e.touches[0].clientY - touchData.sy;
+    aplicarZoom();
+  }
+}
+function onTouchEnd(e) { if (e.touches.length === 0) touchData = null; }
+function onDblClick(e) {
+  e.preventDefault();
+  if (zoomState.escala > 1.1) { zoomState.escala = 1; zoomState.x = 0; zoomState.y = 0; }
+  else zoomEm(2, e.clientX, e.clientY);
+  aplicarZoom();
+}
+function onWheel(e) {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  zoomEm(zoomState.escala * (1 - e.deltaY * 0.001), e.clientX, e.clientY);
+}
+function dist(t) { const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
 </script>
 <div id="rodape" style="display:flex; justify-content:center; gap:24px; padding:4px 16px; font-size:11px; opacity:.7;">
   <span id="frescorOmie">—</span>

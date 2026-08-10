@@ -77,17 +77,18 @@ async function buildCalendarFromCSV(ano, mes) {
     map[key] = { sigla, sufixo: sufixoLimpo, planejada, produzida };
   }
 
-  // Monta grid 5×7
+  // Monta grid (5 ou 6 semanas conforme o mês)
   const firstDay = new Date(ano, mes-1, 1);
   const wd = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
   const offset = wd - 1;
   const daysInMonth = new Date(ano, mes, 0).getDate();
+  const numWeeks = Math.ceil((offset + daysInMonth) / 7);
 
   const dayNums = [];
   const weeksData = [];
   let day = 1;
 
-  for (let w = 0; w < 5; w++) {
+  for (let w = 0; w < numWeeks; w++) {
     const dnRow = [];
     const wdRow = [];
     for (let d = 0; d < 7; d++) {
