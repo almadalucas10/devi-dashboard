@@ -32,8 +32,10 @@ function parseDataBr(str) {
 
 function parseNum(str) {
   if (!str || str.trim() === "") return null;
-  const n = Number(String(str).replace(",","."));
-  return isNaN(n) ? null : n;
+  // Separador de milhar BR: "4.464" → 4464, "3.000" → 3000
+  const limpo = String(str).trim().replace(/\./g, "").replace(",", ".");
+  const n = Number(limpo);
+  return Number.isFinite(n) ? n : null;
 }
 
 // ============================================================================
