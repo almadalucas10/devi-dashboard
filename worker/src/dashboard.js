@@ -10,11 +10,13 @@ const TOLERANCIA_DIAS = 3;
 
 // Mapa sigla → SKU (extraído de constants mas duplicado pra evitar import circular)
 const SIGLA_PARA_SKU = {
-  CVP:"CH001",CML:"CH002",CCM:"CH003",CHM:"CH004",
-  KFV:"FX001",KABX:"FX002",KMIR:"FX003",KPL:"FX006",KMC:"FX007",
-  RLS:"RF001",RFV:"RF002",RGA:"RF003",RLA:"RF004",RUV:"RF005",
-  RTMLA:"RTM001",RTMLS:"RTM002",RTMUV:"RTM003",
-  CHMSAMS:null,CMLSAMS:null,CVPSAMS:null,RLSSAMS:null,RTMSAMS:null,"RFV/RGASAMS":null,
+  CVP:"CH001",CHM:"CH002",CCM:"CH003",CML:"CH004",       // Chás
+  KFV:"FX001",KABX:"FX002","KMÇ":"FX003",KMC:"FX003",    // Kombuchas (KMÇ e KMC = Maçã)
+  KMIR:"FX006",KPL:"FX007",                               // Mirtilo, Pink Lemonade
+  RLS:"RF001",RFV:"RF002",RGA:"RF003",RUV:"RF004",RLA:"RF005", // Refris
+  RTMLS:"RTM001",RTMUV:"RTM002",RTMLA:"RTM003",          // Mônica
+  CVPSAMS:null,CMLSAMS:null,CHMSAMS:null,                // Packs (sem OP)
+  RLSSAMS:null,"RFV/RGASAMS":null,RTMSAMS:null,
 };
 
 function parseDataBr(str) {

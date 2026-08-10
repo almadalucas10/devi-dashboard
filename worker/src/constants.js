@@ -54,11 +54,11 @@ export const NOME_CURTO = {
 
 // Sigla da planilha "Produção por Lote" → SKU Omie
 export const PLANILHA_PARA_SKU = {
-  CVP: "CH001", CML: "CH002", CCM: "CH003", CHM: "CH004",
-  KFV: "FX001", KABX: "FX002", KMIR: "FX003", KPL: "FX006", KMC: "FX007",
-  RLS: "RF001", RFV: "RF002", RGA: "RF003", RLA: "RF004", RUV: "RF005",
-  RTMLA: "RTM001", RTMLS: "RTM002", RTMUV: "RTM003",
-  // Kits / SAMS (sem SKU próprio no Omie — são combinações)
+  CVP: "CH001", CHM: "CH002", CCM: "CH003", CML: "CH004",
+  KFV: "FX001", KABX: "FX002", "KMÇ": "FX003", KMC: "FX003",
+  KMIR: "FX006", KPL: "FX007",
+  RLS: "RF001", RFV: "RF002", RGA: "RF003", RUV: "RF004", RLA: "RF005",
+  RTMLS: "RTM001", RTMUV: "RTM002", RTMLA: "RTM003",
   CHMSAMS: null, CMLSAMS: null, CVPSAMS: null, RLSSAMS: null, RTMSAMS: null,
   "RFV/RGASAMS": null,
 };
