@@ -327,12 +327,10 @@ export function extrairKPIsDoCalendario(calGrid, ano, mes) {
       const produzida = cell.produzida || cell[2];
 
       if (estado === 'op_concluida' || estado === 'divergencia_qtde') {
-        planejadoConcluidasMes += planejada;
-        if (ex && ex.dataStr) {
-          const parts = ex.dataStr.split("/");
-          const opMes = parseInt(parts[1], 10), opAno = parseInt(parts[2], 10);
-          if (opMes === mes && opAno === ano) realizadoMes += produzida || ex.qtde || 0;
-        } else {
+        const opMes = ex && ex.dataStr ? parseInt(ex.dataStr.split("/")[1], 10) : mes;
+        const opAno = ex && ex.dataStr ? parseInt(ex.dataStr.split("/")[2], 10) : ano;
+        if (opMes === mes && opAno === ano) {
+          planejadoConcluidasMes += planejada;
           realizadoMes += produzida || ex.qtde || 0;
         }
       }
