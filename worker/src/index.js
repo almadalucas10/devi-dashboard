@@ -74,15 +74,6 @@ async function runLightSync(env) {
           eficienciaMes: kcal.eficienciaMes,
           pendentesMes: kcal.pendentesMes,
         });
-        // Injeta agosto na tendência (mantém histórico Jan-Jul do OPE/28)
-        if (partial.tendenciaProducao && partial.tendenciaProducao.valores) {
-          const mesIdx = new Date().getMonth(); // 0-indexed
-          partial.tendenciaProducao.valores[mesIdx] = kcal.realizadoMes;
-          // Atualiza realizadoAno
-          if (partial.kpis && !partial.kpis.erro) {
-            partial.kpis.realizadoAno = partial.tendenciaProducao.valores.reduce((a,v)=>a+v,0);
-          }
-        }
       }
     } catch (e) { console.error(`[light] ⚠️ KPIs calendário: ${e.message}`); }
 
