@@ -246,6 +246,18 @@ export async function buildDashboardCache(env) {
   try {
     data.calGrid = await buildCalendarFromCSV(ano, mes);
     const celdas = data.calGrid.weeksData.flat().filter(Boolean).length;
+    // Debug: mostra dias 6 e 10
+    const wd = data.calGrid.weeksData;
+    const dn = data.calGrid.dayNums;
+    for (let wi=0; wi<wd.length; wi++) {
+      for (let di=0; di<7; di++) {
+        const day = dn[wi] && dn[wi][di];
+        if (day === '06' || day === '10') {
+          const cell = wd[wi] && wd[wi][di];
+          console.log(`🔍 Dia ${day}: cell=${JSON.stringify(cell ? cell[0] : null)}`);
+        }
+      }
+    }
     console.log(`✅ Plano CSV: ${celdas} células`);
   } catch (e) {
     console.warn(`⚠️ Plano CSV: ${e.message}`);
