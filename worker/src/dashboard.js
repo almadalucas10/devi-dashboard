@@ -57,7 +57,7 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
     const concluida = !!(outras.dConclusao);
     opsDisponiveis.push({
       nCodOP: ident.nCodOP,
-      cNumero: ident.cNumero || ident.lote || `#${ident.nCodOP}`,
+      cNumero: ident.cNumOP || ident.cNumero || ident.lote || `OP ${ident.nCodOP}`,
       sku,
       data,
       dataStr,
