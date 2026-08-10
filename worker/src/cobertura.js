@@ -9,7 +9,7 @@ import { chamarOmie } from "./omie.js";
 import { readJson, writeJson } from "./r2.js";
 import { SKUS_ATIVOS, NOME_CURTO } from "./constants.js";
 
-const DIAS_JANELA = 90;
+const DIAS_JANELA = 365;
 const LIMIAR_GIRO = 5; // un/dia
 const VENDAS_R2_KEY = "vendas-90d.json";
 
