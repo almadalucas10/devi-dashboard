@@ -241,30 +241,39 @@
   .calendar{ display:grid; grid-template-columns:repeat(7, var(--cell-size, 60px));
     grid-template-rows: var(--head-size, 28px) repeat(5, var(--cell-size, 60px)); gap:6px; justify-content:center; align-content:center; margin:0 auto; }
   .cal-head{ display:flex; align-items:center; justify-content:center; font-size:clamp(15.9px,0.95vw,24.6px); color:var(--text-lo); font-weight:700; }
-  .cal-cell{ background:rgba(255,255,255,0.02); border:1px solid var(--line); border-radius:9px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:clamp(10.9px,0.68vw,16.9px); color:var(--text-lo); padding:2px; overflow:hidden; transition:background .3s;
-    line-height:1.15; white-space:nowrap; }
-  .cal-cell .d{ font-size:1.3em; font-weight:800; }
-  .cal-cell div{ max-width:100%; overflow:hidden; text-overflow:ellipsis; }
-  .cal-cell.planned{ background:rgba(59,130,246,.22); border-color:rgba(59,130,246,.65); color:var(--text-hi); font-weight:700; }
-  .cal-cell.eff-alta{ background:rgba(34,197,94,.32); border-color:rgba(34,197,94,.8); color:var(--text-hi); font-weight:700; }
-  .cal-cell.eff-media{ background:rgba(234,179,8,.32); border-color:rgba(234,179,8,.8); color:var(--text-hi); font-weight:700; }
-  .cal-cell.eff-baixa{ background:rgba(239,68,68,.32); border-color:rgba(239,68,68,.8); color:var(--text-hi); font-weight:700; }
-  .cal-cell .eff{ font-size:.78em; font-weight:800; margin-top:1px; }
-  .cal-cell.feriado{ background:rgba(217,70,239,.30); border-color:rgba(217,70,239,.75); color:var(--text-hi); font-weight:700; }
-  .cal-cell.manutencao{ background:rgba(249,115,22,.32); border-color:rgba(249,115,22,.75); color:var(--text-hi); font-weight:700; }
-  .cal-cell.inventario{ background:rgba(139,92,246,.32); border-color:rgba(139,92,246,.75); color:var(--text-hi); font-weight:700; }
-  /* Marcadores de execução */
-  .cal-cell.sem-op{ border-style:dashed; border-color:#f87171; box-shadow:inset 0 0 0 2px rgba(248,113,113,.25); }
-  .cal-cell.sem-op::after{ content:'!'; position:absolute; top:2px; right:4px; font-size:10px; color:#f87171; font-weight:900; }
-  .cal-cell.op-aberta{ box-shadow:inset 0 0 0 2px rgba(250,204,21,.40); }
-  .cal-cell.op-aberta::after{ content:''; position:absolute; top:3px; right:3px; width:6px; height:6px; border-radius:50%; background:#eab308; }
-  .cal-cell.op-andamento{ box-shadow:inset 0 0 0 2px rgba(59,130,246,.40); }
-  .cal-cell.op-andamento::after{ content:''; position:absolute; top:3px; right:3px; width:6px; height:6px; border-radius:50%; background:#3b82f6; }
-  .cal-cell.divergencia{ box-shadow:inset 0 0 0 2px rgba(239,68,68,.45); }
-  .cal-cell.confianca-aproximada{ opacity:.85; }
-  .cal-cell.confianca-aproximada .sigla::before{ content:'~'; }
+  /* Célula do calendário — layout novo (faixa lateral + dia no canto) */
+  .cal-cell{ background:#16202b; border-left:5px solid transparent; border-radius:0 8px 8px 0;
+    display:flex; flex-direction:column; padding:6px 8px; min-height:0;
+    position:relative; overflow:hidden; }
+  .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(12px,0.75vw,15px); font-weight:500; line-height:1; }
+  .cal-cell .cal-sku{ color:#e8eef4; font-size:clamp(18px,1.1vw,24px); font-weight:500; letter-spacing:-0.3px; line-height:1.1; margin-top:1px; }
+  .cal-cell .cal-qtde{ color:#cfe0ee; font-size:clamp(14px,0.85vw,19px); line-height:1.2; }
+  .cal-cell .cal-op{ position:absolute; right:8px; bottom:6px; font-size:clamp(12px,0.75vw,16px); font-family:ui-monospace,monospace; }
+
+  /* Tipos de dia (fundo + cor do texto) */
+  .cal-cell.t-producao{ background:#16202b; }
+  .cal-cell.t-manutencao{ background:#3a2a12; }
+  .cal-cell.t-manutencao .cal-dia{ color:#b89a66; }
+  .cal-cell.t-manutencao .cal-sku{ color:#f0c987; font-size:clamp(15px,0.9vw,20px); }
+  .cal-cell.t-inventario{ background:#241a3a; }
+  .cal-cell.t-inventario .cal-dia{ color:#b097d8; }
+  .cal-cell.t-inventario .cal-sku{ color:#c4aef0; font-size:clamp(15px,0.9vw,20px); }
+  .cal-cell.t-feriado{ background:#3a1a2a; }
+  .cal-cell.t-feriado .cal-dia{ color:#d890a8; }
+  .cal-cell.t-feriado .cal-sku{ color:#f0aec9; font-size:clamp(15px,0.9vw,20px); }
+  .cal-cell.t-vazio{ background:#111820; }
+
+  /* Faixa lateral — estado da OP (único canal de status) */
+  .st-concluida{ border-left-color:#22c55e; }
+  .st-andamento,.st-aberta{ border-left-color:#3b82f6; }
+  .st-divergencia{ border-left-color:#f59e0b; }
+  .st-sem-op{ border-left-color:#ef4444; }
+  .st-sem-plano{ border-left-color:#a855f7; }
+
+  /* Cor do número da OP */
+  .op-normal{ color:#6fa8e8; }
+  .op-sem{ color:#ef8080; font-family:inherit; font-weight:600; }
+  .op-aprox{ color:#f59e0b; }
 
 
   /* ==========================================================================
@@ -341,7 +350,7 @@
     <div class="panel cal-panel">
       <h2>📅 Calendário — <span id="calMonthLabel">—</span> <span id="calStatus" style="font-size:.7em;opacity:.7;"></span>
         <span style="font-size:.5em; font-weight:600; color:var(--text-lo); margin-left:10px;">
-          🟢 ≥93% &nbsp; 🟡 90-93% &nbsp; 🔴 &lt;90% &nbsp; 🔵 programado &nbsp; 🟠 manutenção &nbsp; 🟣 inventário &nbsp; 🟪 feriado
+          Tipo: ■ produção &nbsp; ■ manutenção &nbsp; ■ inventário &nbsp; ■ feriado &nbsp; | &nbsp; Situação: ▌concluída &nbsp; ▌andamento &nbsp; ▌sem OP &nbsp; ▌divergência
         </span>
       </h2>
       <div class="calendar" id="cal"></div>
@@ -610,6 +619,13 @@ function sizeCalendar(){
 }
 window.addEventListener('resize', sizeCalendar);
 
+function formatarOP(cNumOP) {
+  if (!cNumOP) return null;
+  const partes = String(cNumOP).split('/');
+  const sufixo = partes[partes.length - 1].replace(/^0+/, '');
+  return '#' + sufixo;
+}
+
 function renderCalendar(calGrid){
   const DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
   const calEl = document.getElementById('cal');
@@ -622,82 +638,77 @@ function renderCalendar(calGrid){
   weeksData.forEach((week,wi)=>week.forEach((cell,di)=>{
     const dayNum = dayNums[wi] ? dayNums[wi][di] : null;
     const c = document.createElement('div');
-    c.style.position = 'relative';
+
+    // Célula vazia
     if(!dayNum || !cell){
-      c.className = 'cal-cell';
-      c.innerHTML = `<div class="d">${dayNum||'·'}</div>`;
+      c.className = 'cal-cell t-vazio';
+      c.innerHTML = `<div class="cal-dia">${dayNum||'·'}</div>`;
       calEl.appendChild(c); return;
     }
 
-    // Compatibilidade: cell pode ser array [sigla, planejada, produzida] ou ter .estado
     const sigla = cell[0], planejado = cell[1], produzido = cell[2];
     const estado = cell.estado || null;
     const confianca = cell.confianca || null;
     const execucao = cell.execucao || null;
 
-    let classes = ['cal-cell'];
-    let extraLines = [`<span class="sigla">${sigla}</span>`];
+    // Tipo de dia (fundo)
+    let tipoDia = 't-producao';
+    if(/FERIADO/i.test(sigla)) tipoDia = 't-feriado';
+    else if(/MANUTEN/i.test(sigla)) tipoDia = 't-manutencao';
+    else if(/INVENTÁRIO/i.test(sigla)) tipoDia = 't-inventario';
 
-    // Estados não produtivos
-    if(/FERIADO/i.test(sigla)) classes.push("feriado");
-    else if(/MANUTEN/i.test(sigla)) classes.push("manutencao");
-    else if(/INVENTÁRIO/i.test(sigla)) classes.push("inventario");
-    // Estados de execução
-    else if(estado === 'planejado_sem_op') {
-      classes.push("planned","sem-op"); semOP++;
-      if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
-    }
-    else if(estado === 'op_sem_plano') classes.push("sem-op");
-    else if(estado === 'op_aberta') {
-      classes.push("planned","op-aberta");
-      if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
-      var num = execucao && (execucao.cNumero || `OP ${execucao.nCodOP}`);
-      if(num) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">${num}</span>`);
-    }
-    else if(estado === 'op_andamento') {
-      classes.push("planned","op-andamento");
-      if(planejado) extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
-      var num = execucao && (execucao.cNumero || `OP ${execucao.nCodOP}`);
-      if(num) extraLines.push(`<span style=\"font-size:.65em;opacity:.6;\">${num}</span>`);
-    }
-    else if(estado === 'op_concluida'){
-      if(produzido !== null && produzido !== undefined && planejado){
-        const eff = produzido/planejado;
-        classes.push(effClass(eff));
-        extraLines.push(`${produzido.toLocaleString('pt-BR')} un`);
-        extraLines.push(`<span class="eff">${(eff*100).toFixed(0)}%</span>`);
-      } else { classes.push("eff-alta"); }
-      var num = execucao && (execucao.cNumero || `OP ${execucao.nCodOP}`);
-      if(num) extraLines.push(`<span style="font-size:.65em;opacity:.5;\">${num}</span>`);
-    }
-    else if(estado === 'divergencia_qtde') {
-      classes.push("planned","divergencia");
-      if(execucao) {
-        extraLines.push(`<span style="font-size:.75em;\">OP: ${execucao.qtde} un</span>`);
-        var num = execucao.cNumero || `OP ${execucao.nCodOP}`;
-        extraLines.push(`<span style="font-size:.6em;opacity:.5;\">${num}</span>`);
+    // Estado da OP (faixa lateral)
+    let stCls = '';
+    if(estado === 'planejado_sem_op') { stCls = 'st-sem-op'; semOP++; }
+    else if(estado === 'op_sem_plano') stCls = 'st-sem-plano';
+    else if(estado === 'op_aberta') stCls = 'st-aberta';
+    else if(estado === 'op_andamento') stCls = 'st-andamento';
+    else if(estado === 'op_concluida') stCls = 'st-concluida';
+    else if(estado === 'divergencia_qtde') { stCls = 'st-divergencia'; divergencias++; }
+
+    c.className = 'cal-cell ' + tipoDia + (stCls ? ' ' + stCls : '');
+
+    // Conteúdo
+    let html = `<div class="cal-dia">${dayNum}</div>`;
+
+    // Não produtivo: só dia + rótulo
+    if(tipoDia !== 't-producao') {
+      let corSku = tipoDia === 't-manutencao' ? '#f0c987' : tipoDia === 't-inventario' ? '#c4aef0' : '#f0aec9';
+      html += `<div class="cal-sku" style="color:${corSku}">${sigla}</div>`;
+    } else {
+      // SKU (fonte menor se muito longo)
+      const skuSize = sigla.length > 9 ? ' style="font-size:clamp(15px,0.9vw,21px)"' : '';
+      html += `<div class="cal-sku"${skuSize}>${sigla}</div>`;
+
+      // Quantidade
+      if(planejado !== null && planejado !== undefined) {
+        const qtde = (estado === 'op_concluida' && produzido) ? produzido : planejado;
+        html += `<div class="cal-qtde">${qtde.toLocaleString('pt-BR')}</div>`;
       }
-      divergencias++;
-    }
-    else if(planejado !== null && planejado !== undefined){
-      classes.push("planned");
-      extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
+
+      // OP no canto inferior direito
+      let opCls = 'op-normal', opText = '';
+      if(estado === 'planejado_sem_op') {
+        opCls = 'op-sem'; opText = 'sem OP';
+      } else if(execucao) {
+        opText = formatarOP(execucao.cNumero) || `OP ${execucao.nCodOP}`;
+        if(confianca === 'aproximada' || confianca === 'cross_month') { opText += ' ~'; opCls = 'op-aprox'; }
+      }
+      if(opText) {
+        html += `<div class="cal-op ${opCls}" title="${execucao ? execucao.cNumero || execucao.nCodOP : ''}">${opText}</div>`;
+      }
     }
 
-    // Confiança aproximada
-    if(confianca === 'aproximada') classes.push("confianca-aproximada");
-
-    c.className = classes.join(' ');
-    c.innerHTML = `<div class="d">${dayNum}</div>${extraLines.map(l=>`<div>${l}</div>`).join('')}`;
+    c.innerHTML = html;
     calEl.appendChild(c);
   }));
 
-  // Atualiza contador no cabeçalho
+  // Contador no cabeçalho
   var st = document.getElementById('calStatus');
   if(st){
     var parts = [];
     if(semOP > 0) parts.push(semOP+' sem OP');
-    if(divergencias > 0) parts.push(divergencias+' diverg');
+    if(divergencias > 0) parts.push(divergencias+' divergências');
     st.textContent = parts.length > 0 ? '· '+parts.join(' · ') : '';
   }
 }
