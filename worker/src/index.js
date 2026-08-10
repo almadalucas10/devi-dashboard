@@ -73,10 +73,16 @@ async function runLightSync(env) {
           realizadoMes: kcal.realizadoMes,
           eficienciaMes: kcal.eficienciaMes,
           pendentesMes: kcal.pendentesMes,
-          realizadoAno: kcal.realizadoAno,
         });
-        partial.tendenciaProducao = kcal.tendencia;
-        partial.rankingProducao = kcal.rankingProducao;
+        // Injeta agosto na tendência (mantém histórico Jan-Jul do OPE/28)
+        if (partial.tendenciaProducao && partial.tendenciaProducao.valores) {
+          const mesIdx = new Date().getMonth(); // 0-indexed
+          partial.tendenciaProducao.valores[mesIdx] = kcal.realizadoMes;
+          // Atualiza realizadoAno
+          if (partial.kpis && !partial.kpis.erro) {
+            partial.kpis.realizadoAno = partial.tendenciaProducao.valores.reduce((a,v)=>a+v,0);
+          }
+        }
       }
     } catch (e) { console.error(`[light] ⚠️ KPIs calendário: ${e.message}`); }
 
@@ -163,9 +169,11 @@ async function runHeavySync(env) {
           data.kpis.realizadoMes = kcal.realizadoMes;
           data.kpis.eficienciaMes = kcal.eficienciaMes;
           data.kpis.pendentesMes = kcal.pendentesMes;
-          data.kpis.realizadoAno = kcal.realizadoAno;
-          data.tendenciaProducao = kcal.tendencia;
-          data.rankingProducao = kcal.rankingProducao;
+          if (data.tendenciaProducao && data.tendenciaProducao.valores) {
+            const mesIdx = new Date().getMonth();
+            data.tendenciaProducao.valores[mesIdx] = kcal.realizadoMes;
+            data.kpis.realizadoAno = data.tendenciaProducao.valores.reduce((a,v)=>a+v,0);
+          }
         }
       }
     } catch (e) { console.error(`[heavy] ⚠️ KPIs calendário: ${e.message}`); }
