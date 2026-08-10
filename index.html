@@ -681,6 +681,7 @@ function renderCalendar(calGrid){
     }
     else if(planejado !== null && planejado !== undefined){
       classes.push("planned");
+      extraLines.push(`${planejado.toLocaleString('pt-BR')} un`);
     }
 
     // Confiança aproximada
