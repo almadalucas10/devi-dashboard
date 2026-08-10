@@ -245,8 +245,18 @@ export async function buildDashboardCache(env) {
     const todas = [...abertas, ...concluidas];
     console.log(`🔍 OPs: ${abertas.length} abertas + ${concluidas.length} concluídas = ${todas.length} total`);
 
-    // Debug: SKUs dos lotes vs SKUs das OPs
+    // Debug: mostra campos da 1ª OP pra achar o número do lote
     if (todas.length > 0) {
+      const amostra = todas.find(op => {
+        const id = (op.identificacao || {}).nCodProduto;
+        return codParaSku[String(id)];
+      });
+      if (amostra) {
+        const ident = amostra.identificacao || {};
+        console.log(`🔍 Campos ident: ${JSON.stringify(Object.keys(ident))}`);
+        console.log(`🔍 Valores ident: ${JSON.stringify(ident)}`);
+      }
+
       const opsSkus = new Set();
       for (const op of todas) {
         const ident = op.identificacao || {};
