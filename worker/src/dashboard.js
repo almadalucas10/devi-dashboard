@@ -136,8 +136,8 @@ function casarPlanoComOPs(weeksData, dayNums, ops, codParaSku, ano, mes) {
       cNumero: ident.cNumOP || ident.cNumero || `OP ${ident.nCodOP}`,
       sku, data, dataStr,
       qtde: ident.nQtde || 0,
-      concluida: !!(outras.dConclusao),
-      status: outras.dConclusao ? "concluida" : (inf.dDtInicio ? "andamento" : "aberta"),
+      concluida: !!(op._concluida || outras.dConclusao),
+      status: (op._concluida || outras.dConclusao) ? "concluida" : (inf.dDtInicio ? "andamento" : "aberta"),
       consumida: false,
     });
   }
@@ -284,9 +284,13 @@ export async function buildDashboardCache(env) {
     }
 
     const abertas = await buscarOPs(env, { cConcluida: "N" });
+    // Marca explicitamente como concluídas (ListarOrdemProducao pode não retornar outrasInf.dConclusao)
+    for (const op of abertas) op._concluida = false;
+
     const dInicio = `01/${String(mes).padStart(2,"0")}/${ano}`;
     const dFim = `${String(new Date(ano, mes, 0).getDate()).padStart(2,"0")}/${String(mes).padStart(2,"0")}/${ano}`;
     const concluidas = await buscarOPs(env, { dDtConclusaoDe: dInicio, dDtConclusaoAte: dFim, cConcluida: "S" });
+    for (const op of concluidas) op._concluida = true;
 
     const resultado = casarPlanoComOPs(
       data.calGrid.weeksData, data.calGrid.dayNums,
