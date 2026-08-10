@@ -809,7 +809,7 @@ function renderEstoque(estoque, cobMap){
       var corCob = '';
       if (cobInfo.status === 'critico') corCob = 'style="color:#ef4444;font-weight:700"';
       else if (cobInfo.status === 'alerta') corCob = 'style="color:#eab308;font-weight:700"';
-      linhaExtra = '<span class="sku-sub">' + p.codigo + '</span> <span class="min-val" ' + corCob + '>' + dias + '</span>';
+      linhaExtra = '<span class="sku-sub">' + p.codigo + '</span> <span class="min-val" ' + corCob + '>Ruptura em ' + dias + '</span>';
     } else if (cobInfo && cobInfo.status === 'sem_giro') {
       linhaExtra = '<span class="sku-sub">' + p.codigo + '</span> <span class="min-val" style="opacity:.4">sem giro</span>';
     } else {
