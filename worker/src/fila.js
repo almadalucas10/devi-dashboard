@@ -122,6 +122,7 @@ export async function buscarFilaDePedidos(env) {
       valorTotal,
       totalUnidades,
       quantidadeSkus: skus.size,
+      itens: itens.map(det => ({ codigo: (det.produto || {}).codigo, qtde: (det.produto || {}).quantidade || 0 })).filter(i => i.codigo),
     };
   }
 
@@ -137,6 +138,7 @@ export async function buscarFilaDePedidos(env) {
       item.valorTotal = detalhe.valorTotal;
       item.totalUnidades = detalhe.totalUnidades;
       item.quantidadeSkus = detalhe.quantidadeSkus;
+      item.itens = detalhe.itens;
 
       if (detalhe.codigoCliente) {
         let nome = nomesClientesCache[detalhe.codigoCliente];
@@ -200,6 +202,7 @@ export async function buscarFilaDePedidos(env) {
       quantidadeSkus: item.quantidadeSkus || 0,
       cliente: item.cliente || `Pedido #${item.numero}`,
       dataInclusao: item.dataInclusao,
+      itens: item.itens || [],
     });
   }
 

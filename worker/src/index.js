@@ -59,6 +59,34 @@ async function runLightSync(env) {
       console.error(`[light] ❌ Insumos: ${e.message}`);
     }
 
+    // Demanda da fila × estoque
+    try {
+      if (Array.isArray(partial.filaDePedidos) && Array.isArray(partial.estoque)) {
+        const dem = {};
+        const naoMapeados = [];
+        const codParaSku = {};
+        for (const sku of Object.keys(cacheProd)) {
+          const cp = cacheProd[sku];
+          if (cp && cp.codigo_produto) codParaSku[String(cp.codigo_produto)] = sku;
+        }
+        for (const pedido of partial.filaDePedidos) {
+          for (const item of (pedido.itens || [])) {
+            const sku = codParaSku[String(item.codigo)];
+            if (!sku) { if (item.codigo) naoMapeados.push(item.codigo); continue; }
+            dem[sku] = (dem[sku] || 0) + (item.qtde || 0);
+          }
+        }
+        const itens = Object.entries(dem).map(([sku, pedido]) => {
+          const e = partial.estoque.find(x => x.codigo === sku);
+          const saldo = e ? (e.saldo || 0) : 0;
+          return { sku, pedido, saldo, deficit: pedido - saldo };
+        }).sort((a, b) => b.deficit - a.deficit);
+        const total = itens.reduce((s, i) => s + i.pedido, 0);
+        partial.demandaFila = { itens, totalUnidades: total, pedidosConsiderados: partial.filaDePedidos.length, naoMapeados, geradoEm: new Date().toISOString() };
+        console.log(`[light] ✅ Demanda fila: ${itens.length} SKUs, ${total} un`);
+      }
+    } catch (e) { console.error(`[light] ⚠️ Demanda fila: ${e.message}`); }
+
     // Cobertura recalculada com saldo fresco (usa vendas-90d.json em cache)
     if (Array.isArray(partial.estoque)) {
       try {
