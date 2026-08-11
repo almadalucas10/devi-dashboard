@@ -42,44 +42,57 @@ const CODIGOS = Object.keys(INSUMOS);
 export async function buscarEstoqueInsumos(env) {
   const hoje = new Date();
   const dataStr = `${("0"+hoje.getDate()).slice(-2)}/${("0"+(hoje.getMonth()+1)).slice(-2)}/${hoje.getFullYear()}`;
-
-  // ListarPosEstoque com todos os códigos
-  const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
-    nPagina: 1, nRegPorPagina: 100,
-    dDataPosicao: dataStr,
-    codigo_local_estoque: 3125334492,
-    lista_produtos: CODIGOS.map(c => ({ cCodigo: c })),
-  });
-
-  const registros = resultado.produtos || [];
   const estoque = [];
 
-  for (const cod of CODIGOS) {
-    const reg = registros.find(r => r.codigo === cod);
-    const nome = INSUMOS[cod] || cod;
-    const saldo = reg ? (reg.saldo || 0) : 0;
-    const minimo = reg ? (reg.estoque_minimo || 0) : 0;
-
-    let status = "ok";
-    if (saldo <= 0) status = "indisponivel";
-    else if (minimo > 0 && saldo < minimo) status = "baixo";
-    else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
-
-    // Categoria
-    let cat = "Outros";
-    if (cod.startsWith("MPC") || cod.startsWith("MP0") || cod.startsWith("MPR0")) cat = "Concentrados";
-    else if (cod.startsWith("MPA") || cod.startsWith("MP ") || cod.startsWith("MP0") || cod.startsWith("MPR")) cat = "Aditivos";
-    if (cod.match(/^MP\d/)) cat = cod.startsWith("MPC") ? "Aromas" : cod.startsWith("MPR") && !cod.startsWith("MPR0") ? "Aromas" : "Aditivos";
-    if (cod.startsWith("MP020") || cod.startsWith("MP022") || cod.startsWith("MP036") ||
-        cod.startsWith("MP043") || cod.startsWith("MP044") || cod.startsWith("MPA") ||
-        cod.startsWith("MPC") || cod.startsWith("MPR") && parseInt(cod.slice(3)) < 10) cat = "Aromas/Extratos";
-    if (cod.startsWith("R") || cod.startsWith("PRD00772")) cat = "Rótulos";
-    if (cod.startsWith("SAB")) cat = "Sucos Org.";
-
-    estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status, categoria: cat });
+  // Busca em lotes de 10 (evita erro 5113 com códigos inexistentes)
+  for (let i = 0; i < CODIGOS.length; i += 10) {
+    const lote = CODIGOS.slice(i, i + 10);
+    try {
+      const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
+        nPagina: 1, nRegPorPagina: 100,
+        dDataPosicao: dataStr,
+        codigo_local_estoque: 3125334492,
+        lista_produtos: lote.map(c => ({ cCodigo: c })),
+      });
+      const regs = resultado.produtos || [];
+      for (const cod of lote) {
+        const reg = regs.find(r => r.codigo === cod);
+        const nome = INSUMOS[cod] || cod;
+        const saldo = reg ? (reg.saldo || 0) : 0;
+        const minimo = reg ? (reg.estoque_minimo || 0) : 0;
+        let status = "ok";
+        if (saldo <= 0) status = "indisponivel";
+        else if (minimo > 0 && saldo < minimo) status = "baixo";
+        else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
+        estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
+      }
+    } catch (e) {
+      // Lote com códigos inválidos — tenta individualmente
+      for (const cod of lote) {
+        try {
+          const r = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
+            nPagina: 1, nRegPorPagina: 1,
+            dDataPosicao: dataStr,
+            codigo_local_estoque: 3125334492,
+            lista_produtos: [{ cCodigo: cod }],
+          });
+          const reg = (r.produtos || [])[0];
+          const nome = INSUMOS[cod] || cod;
+          const saldo = reg ? (reg.saldo || 0) : 0;
+          const minimo = reg ? (reg.estoque_minimo || 0) : 0;
+          let status = "ok";
+          if (saldo <= 0) status = "indisponivel";
+          else if (minimo > 0 && saldo < minimo) status = "baixo";
+          else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
+          estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
+        } catch (e2) {
+          // Código não existe na Omie — ignora
+        }
+      }
+    }
+    if (i + 10 < CODIGOS.length) await new Promise(r => setTimeout(r, 300));
   }
 
-  // Ordena: indisponível/baixo primeiro, depois alerta, depois ok
   const ordem = { indisponivel: 0, baixo: 1, alerta: 2, ok: 3 };
   estoque.sort((a, b) => (ordem[a.status] || 4) - (ordem[b.status] || 4));
 
