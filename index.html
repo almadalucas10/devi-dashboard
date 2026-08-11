@@ -133,13 +133,13 @@
   .estoque-item.ok .estoque-valores .principal{ color:#22c55e; }
 
   /* Painel Necessidade de Reposição — barra segmentada (2 linhas por item) */
-  .rep-item{ margin-bottom:11px; }
-  .rep-nome{ font-size:15px; font-weight:600; color:var(--text-hi); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rep-item{ margin-bottom:9px; }
+  .rep-nome{ font-size:clamp(14.9px,0.95vw,21.4px); font-weight:700; color:var(--text-hi); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .rep-linha{ display:flex; align-items:center; gap:12px; }
   .rep-seg{ flex:1; height:17px; background:#1c2733; border-radius:8px; overflow:hidden; display:flex; min-width:0; }
   .rep-seg i{ display:block; height:100%; min-width:3px; }
-  .rep-val{ font-size:15px; font-weight:700; min-width:62px; text-align:right; color:#ef4444; white-space:nowrap; }
-  .rep-leg{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11px; color:#8b98a5; margin-top:10px; }
+  .rep-val{ font-size:clamp(18.4px,1.2vw,27.3px); font-weight:800; min-width:62px; text-align:right; color:#ef4444; white-space:nowrap; }
+  .rep-leg{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:clamp(10.9px,0.68vw,15.6px); color:#8b98a5; margin-top:8px; }
   .rep-leg span{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
   .rep-simbolo{ display:inline-block; width:10px; height:10px; border-radius:3px; }
 
@@ -538,10 +538,10 @@ const DEMO = {
   // Necessidade de Reposição — dados de referência (docs/necessidade-reposicao)
   reposicao:{
     itens:[
-      { sku:"FX001", descricao:"Kombucha Frutas Vermelhas",       pedido:1128, saldo:1906, minimo:3500, necessidade:2722 },
-      { sku:"FX006", descricao:"Kombucha Frutas Vermelhas 6pk",   pedido:12,   saldo:960,  minimo:2200, necessidade:1252 },
-      { sku:"CH003", descricao:"Kombucha Chá Verde 3pk",          pedido:12,   saldo:886,  minimo:1500, necessidade:626  },
-      { sku:"FX002", descricao:"Kombucha Frutas Vermelhas 2L",    pedido:240,  saldo:3172, minimo:3000, necessidade:68   }
+      { sku:"FX001", descricao:"Kombucha - Frutas Vermelhas - DÊVI 269ml", pedido:1128, saldo:1906, minimo:3500, necessidade:2722 },
+      { sku:"FX006", descricao:"Kombucha - Mirtilo e Morango - DÊVI 269ml", pedido:12, saldo:960, minimo:2200, necessidade:1252 },
+      { sku:"CH003", descricao:"Chá - Camomila e Maracujá - DÊVI 269ml",  pedido:12,  saldo:886,  minimo:1500, necessidade:626  },
+      { sku:"FX002", descricao:"Kombucha - Abacaxi e Gengibre - DÊVI 2L", pedido:240, saldo:3172, minimo:3000, necessidade:68   }
     ],
     totalUnidades: 1392,
     pedidosConsiderados: 3,
@@ -1064,6 +1064,13 @@ function renderCobertura(cob){
   }
 }
 
+// Nome curto do produto — trunca no primeiro " - " (mesma regra do calendário/cobertura)
+function nomeCurtoReposicao(nome){
+  if (!nome) return '';
+  const idx = String(nome).indexOf(' - ');
+  return idx > 0 ? String(nome).substring(0, idx).trim() : String(nome);
+}
+
 function renderReposicao(rp){
   const el = document.getElementById('reposicaoLista');
   if(!el) return;
@@ -1096,7 +1103,7 @@ function renderReposicao(rp){
       + segs.map(function(s){ return '<i style="flex:' + s.valor + ';background:' + s.cor + '"></i>'; }).join('')
       + '</span>';
     return '<div class="rep-item">'
-      + '<div class="rep-nome">' + (d.descricao || d.sku) + '</div>'
+      + '<div class="rep-nome">' + nomeCurtoReposicao(d.descricao || d.sku) + '</div>'
       + '<div class="rep-linha">' + barra
       + '<div class="rep-val">' + falta.toLocaleString('pt-BR') + '</div></div>'
       + '</div>';
