@@ -243,10 +243,9 @@ export default {
 
     if (url.pathname === "/api/debug/produtos") {
       try {
-        const { buscarTodasPaginas } = await import("./omie.js");
-        const prods = await buscarTodasPaginas(env, "/geral/produtos/", "ListarProdutos",
-          (p) => ({ pagina: p, registros_por_pagina: 100 }), { maxPages: 10, pageDelay: 300 });
-        return json(prods.map(p => ({ codigo: p.codigo, codigo_produto: p.codigo_produto, descricao: p.descricao, tipo: p.tipo, ncm: p.ncm, inativo: p.inativo })));
+        const { chamarOmie } = await import("./omie.js");
+        const r = await chamarOmie(env, "/geral/produtos/", "ListarProdutos", { pagina: 1, registros_por_pagina: 3 });
+        return json({ keys: Object.keys(r), total_paginas: r.total_de_paginas, total_registros: r.total_de_registros, amostra: (r.cadastros||r.produto_servico_cadastro||[]).slice(0,3) });
       } catch(e) { return json({ erro: e.message }, 500); }
     }
 
