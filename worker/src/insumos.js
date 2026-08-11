@@ -50,7 +50,6 @@ export async function buscarEstoqueInsumos(env) {
   // ListarPosEstoque com todos os códigos no ALMOXARIFADO
   const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
     nPagina: 1, nRegPorPagina: 100,
-    dDataPosicao: dataStr,
     codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
     lista_produtos: CODIGOS.map(c => ({ cCodigo: c })),
   });
@@ -71,6 +70,6 @@ export async function buscarEstoqueInsumos(env) {
   const ordem = { indisponivel: 0, baixo: 1, alerta: 2, ok: 3 };
   estoque.sort((a, b) => (ordem[a.status] || 4) - (ordem[b.status] || 4));
 
-  console.log(`✅ Insumos: ${estoque.length} itens, ${estoque.filter(e=>e.status!=='ok').length} com alerta`);
+  console.log(`✅ Insumos v2 ALMOXARIFADO: ${estoque.length} itens, ${estoque.filter(e=>e.status!=='ok').length} com alerta`);
   return estoque;
 }
