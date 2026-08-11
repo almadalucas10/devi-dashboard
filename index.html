@@ -432,7 +432,7 @@
         </div>
       </div>
       <div class="bottom-pair">
-        <div class="panel"><h2>🏆 Ranking de Produtos Mais Produzidos</h2><div id="rankingLista" class="ranking-lista"></div></div>
+        <div class="panel"><h2>🧪 Estoque — Insumos</h2><div id="insumosLista" class="estoque-lista"></div></div>
         <div class="panel"><h2>🥫 Latas Realizadas por Mês</h2><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
       </div>
     </div>
@@ -911,6 +911,26 @@ function renderFila(fila){
   }).join('');
 }
 
+function renderInsumos(insumos){
+  const el = document.getElementById('insumosLista');
+  if(!el) return;
+  if(!Array.isArray(insumos) || insumos.length === 0){
+    el.innerHTML = '<div style="opacity:.5;text-align:center;padding:12px;font-size:12px;">Sem dados de insumos</div>';
+    return;
+  }
+  const MAX = 8;
+  const badges = { baixo:"Baixo", alerta:"Alerta", ok:"OK", indisponivel:"Falta!" };
+  const ordenado = insumos.slice(0, MAX);
+  el.innerHTML = ordenado.map(function(p, i){
+    const cls = p.status === "baixo" ? "baixo" : p.status === "alerta" ? "alerta" : p.status === "indisponivel" ? "baixo" : "ok";
+    return '<div class="estoque-item ' + cls + '">'
+      + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
+      + '<div class="estoque-info"><div class="sku">' + (p.descricao || p.codigo) + '</div><div class="minimo"><span class="estoque-badge">' + (badges[p.status]||p.status) + '</span> <span class="sku-sub">' + p.codigo + '</span></div></div>'
+      + '<div class="estoque-valores"><div class="principal">' + fmt(p.saldo) + ' un</div></div>'
+      + '</div>';
+  }).join('');
+}
+
 function renderEstoque(estoque, cobMap){
   const el = document.getElementById('estoqueLista');
   if(!el) return;
@@ -1094,6 +1114,9 @@ async function refresh(){
     renderEstoque(estoqueComCob, cobMap);
 
     renderTrendChart(dataOmie.tendenciaProducao);
+    if (dataOmie.insumos) {
+      try { renderInsumos(dataOmie.insumos); } catch(e) { console.error('Insumos:', e); }
+    }
     renderRankingChart(dataOmie.rankingProducao);
     if (dataOmie.kpis && !dataOmie.kpis.erro) {
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }

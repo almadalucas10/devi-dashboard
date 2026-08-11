@@ -7,6 +7,7 @@ import { readJson, writeJson, writeSyncMeta } from "./r2.js";
 import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
 import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
+import { buscarEstoqueInsumos } from "./insumos.js";
 import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
 import { atualizarAgregadoVendas, recalcularCobertura } from "./cobertura.js";
 import { R2_KEYS } from "./constants.js";
@@ -48,6 +49,14 @@ async function runLightSync(env) {
     } catch (e) {
       partial.estoque = { erro: e.message };
       console.error(`[light] ❌ Estoque: ${e.message}`);
+    }
+
+    try {
+      partial.insumos = await buscarEstoqueInsumos(env);
+      console.log(`[light] ✅ Insumos: ${partial.insumos.length} itens`);
+    } catch (e) {
+      partial.insumos = { erro: e.message };
+      console.error(`[light] ❌ Insumos: ${e.message}`);
     }
 
     // Cobertura recalculada com saldo fresco (usa vendas-90d.json em cache)
