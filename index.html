@@ -919,14 +919,19 @@ function renderInsumos(insumos){
     return;
   }
   const MAX = 8;
-  const badges = { baixo:"Baixo", alerta:"Alerta", ok:"OK", indisponivel:"Falta!" };
+  const badges = { insuficiente:"Falta", baixo:"Baixo", ok:"OK", indisponivel:"Zerado", sem_dado:"?" };
   const ordenado = insumos.slice(0, MAX);
   el.innerHTML = ordenado.map(function(p, i){
-    const cls = p.status === "baixo" ? "baixo" : p.status === "alerta" ? "alerta" : p.status === "indisponivel" ? "baixo" : "ok";
+    const cls = p.status === "insuficiente" || p.status === "indisponivel" ? "baixo" : p.status === "baixo" ? "alerta" : "ok";
+    const b = badges[p.status] || p.status;
+    let extra = '';
+    if (p.status === 'insuficiente') extra = 'Falta ' + fmt(p.deficit,1) + ' ' + p.unidade;
+    else if (p.status === 'sem_dado') extra = 'sem dado';
+    else extra = 'Consumo ' + fmt(p.consumo,1) + ' ' + p.unidade;
     return '<div class="estoque-item ' + cls + '">'
       + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="estoque-info"><div class="sku">' + (p.descricao || p.codigo) + '</div><div class="minimo"><span class="estoque-badge">' + (badges[p.status]||p.status) + '</span> <span class="sku-sub">' + p.codigo + '</span></div></div>'
-      + '<div class="estoque-valores"><div class="principal">' + fmt(p.saldo) + ' un</div></div>'
+      + '<div class="estoque-info"><div class="sku">' + (p.descricao || p.codigo) + '</div><div class="minimo"><span class="estoque-badge">' + b + '</span> <span class="sku-sub">' + p.codigo + '</span> <span class="min-val">' + extra + '</span></div></div>'
+      + '<div class="estoque-valores"><div class="principal">' + (p.saldo !== null ? fmt(p.saldo,1) + ' ' + p.unidade : '—') + '</div></div>'
       + '</div>';
   }).join('');
 }

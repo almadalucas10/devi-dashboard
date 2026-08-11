@@ -1,79 +1,152 @@
 // ============================================================================
-// Estoque de Insumos (matérias-primas) — substitui Ranking
+// Painel de Insumos — 38 itens monitorados com consumo via calendário × BOM
 // ============================================================================
 import { chamarOmie } from "./omie.js";
+import { readJson } from "./r2.js";
+import { R2_KEYS } from "./constants.js";
 
-// Matérias-primas monitoradas (código Omie → nome)
-const INSUMOS = {
-  // Aditivos
-  MP018: "Goma Arábica", MP025: "Isomalto (IMO)", MP027: "Inulina em Pó",
-  MPA032: "Ácido Ascórbico", MPR012: "Sorbato de Potássio", MPR013: "Ácido Cítrico",
-  MPR016: "Estévia", MPR022: "Benzoato de Sódio",
-  // Aromas e Extratos
-  MP020: "Extrato Abacaxi", MP022: "Aroma Laranja", MP036: "Aroma Uva",
-  MP043: "Aroma Mouthfeel", MP044: "Aroma Steviaroom", MPA001: "Aroma Limão Siciliano",
-  MPA007: "Aroma Refrescância", MPA008: "Aroma Acerola", MPA031: "Extrato Camu-Camu",
-  MPC005: "Extrato Camomila", MPC006: "Aroma Maracujá", MPC011: "Aroma Chá Verde",
-  MPC020: "Extrato Chá Verde", MPC030: "Extrato Pêssego", MPC032: "Extrato Gengibre",
-  MPC043: "Extrato Maracujá", MPR004: "Extrato Guaraná", MPR006: "Aroma Guaraná",
-  MPR007: "Extrato Limão", MPR008: "Aroma Limão Taiti", MPR009: "Aroma Açaí",
-  MPR011: "Extrato Mirtilo", MPR023: "Extrato Cranberry", MPR024: "Aroma Frutas Vermelhas",
-  PRD00789: "Água Destilada",
-  // Concentrados
-  MP030: "Conc. Maçã 70º", MP032: "Conc. Chá-Mate", MP034: "Conc. Laranja",
-  MP035: "Conc. Limão", MP045: "Conc. Uva 68º", MPC002: "Conc. Maçã e Maracujá",
-  MPC004: "Conc. Maçã e Pêssego", MPR010: "Conc. Maçã 70", MPR018: "Conc. Maçã e Morango",
-  MPR020: "Conc. Maçã e Framboesa", MPR021: "Conc. Limão 45º", MPR029: "Conc. Frutas Vermelhas",
-  // Rótulos
-  PRD00772: "Rótulo TMN Uva 2026", RAS001: "Rótulo Limão Siciliano", RAS002: "Rótulo Camu Camu",
-  RCH001: "Rótulo Chá Verde", RCH002: "Rótulo Hibisco", RCH002M: "Rótulo Hibisco Mana",
-  RCH003: "Rótulo Camomila", RCH004: "Rótulo Mate Limão",
-  RFX001: "Rótulo Komb Frutas Verm.", RFX002: "Rótulo Komb Abacaxi", RFX003: "Rótulo Komb Maçã",
-  RFX006: "Rótulo Komb Mirtilo", RFX007: "Rótulo Komb Pink Lemonade",
-  RRF001: "Rótulo Refri Limão", RRF001M: "Rótulo Limão Mana", RRF002: "Rótulo Refri Frutas Verm.",
-  RRF003: "Rótulo Refri Guaraná", RRF004: "Rótulo Refri Uva", RRF005: "Rótulo Refri Laranja",
-  RRTM001: "Rótulo TMN Limão", RRTM002: "Rótulo TMN Laranja", RRTM003: "Rótulo TMN Uva",
-  SAB01: "Suco Org. Abacaxi", SAB02: "Suco Org. Limão", SAB03: "Suco Org. Morango",
-  SAB04: "Suco Org. Amora", SAB05: "Suco Org. Amora Mirtilo",
+const LOCAL_ALMOXARIFADO = 3125326654;
+
+// 38 insumos monitorados com SKUs associados
+const INSUMOS = [
+  { codigo: 'MP018', desc: 'Goma Arábica', un: 'KG', familia: 'Aditivos', skuQtd: {CH001:.002690,CH002:.002690,CH004:.001978,FX001:.005381,FX002:.005381,FX003:.005381,FX006:.005381,FX007:.005381,RF001:.002690,RF002:.002690,RF003:.002690,RF004:.002690,RF005:.002690,RTM001:.002690,RTM002:.002690,RTM003:.002690} },
+  { codigo: 'MPR010', desc: 'Conc. Maçã 70 Brix', un: 'KG', familia: 'Concentrados', skuQtd: {CH001:.001865,CH002:.009254,CH003:.005770,CH004:.009254,RF001:.001865,RF002:.009254,RF003:.009254,RF004:.009254,RF005:.009254,RTM001:.001865,RTM002:.009254,RTM003:.009254} },
+  { codigo: 'MPR016', desc: 'Estévia', un: 'KG', familia: 'Aditivos', skuQtd: {CH001:.000026,CH002:.000011,CH003:.000016,CH004:.000011,RF001:.000016,RF002:.000011,RF003:.000011,RF004:.000011,RF005:.000011,RTM001:.000016,RTM002:.000011,RTM003:.000011} },
+  { codigo: 'MPR021', desc: 'Conc. Limão 45°Bx', un: 'KG', familia: 'Concentrados', skuQtd: {CH001:.002287,CH002:.003093,CH003:.005491,CH004:.003093,RF001:.002287,RF003:.003093,RTM001:.002287} },
+  { codigo: 'MP05', desc: 'Chá Verde Orgânico', un: 'KG', familia: 'Base Kombucha', skuQtd: {FX001:.006500,FX002:.006500,FX003:.006500,FX006:.006500,FX007:.006500} },
+  { codigo: 'PRD00338', desc: 'Açúcar Cristal Org.', un: 'KG', familia: 'Base Kombucha', skuQtd: {FX001:.040000,FX002:.040000,FX003:.040000,FX006:.040000,FX007:.040000} },
+  { codigo: 'MPA001', desc: 'Aroma Limão Siciliano', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH004:.000437,FX007:.003905,RF001:.003905,RTM001:.003905} },
+  { codigo: 'MPR007', desc: 'Extrato Limão Siciliano', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH004:.000568,RF001:.000568,RTM001:.000568} },
+  { codigo: 'MPR015', desc: 'Hibisco Desidratado', un: 'KG', familia: 'Hortifruti', skuQtd: {CH001:.000168,CH002:.000887,RF003:.000887} },
+  { codigo: 'MPR029', desc: 'Conc. Frutas Vermelhas', un: 'KG', familia: 'Concentrados', skuQtd: {CH002:.009496,RF002:.009496} },
+  { codigo: 'MP045', desc: 'Conc. Uva 68°Brix', un: 'KG', familia: 'Concentrados', skuQtd: {RF004:.009496,RTM002:.009496} },
+  { codigo: 'MP034', desc: 'Conc. Laranja', un: 'KG', familia: 'Concentrados', skuQtd: {RF005:.009496,RTM003:.009496} },
+  { codigo: 'MP04', desc: 'Morango Org. Congelado', un: 'KG', familia: 'Hortifruti', skuQtd: {FX006:.001865,FX007:.001865} },
+  { codigo: 'MP036', desc: 'Aroma Natural de Uva', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF004:.003905,RTM002:.003905} },
+  { codigo: 'MP03', desc: 'Framboesa Org. Congelada', un: 'KG', familia: 'Hortifruti', skuQtd: {FX001:.001865,FX007:.001865} },
+  { codigo: 'MP022', desc: 'Aroma Natural de Laranja', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF005:.003905,RTM003:.003905} },
+  { codigo: 'MP003', desc: 'Amora Org. Congelada', un: 'KG', familia: 'Hortifruti', skuQtd: {FX001:.001865,FX006:.001865} },
+  { codigo: 'MPR024', desc: 'Aroma Frutas Vermelhas', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {FX001:.003905,RF002:.003905} },
+  { codigo: 'MPR011', desc: 'Extrato de Mirtilo', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH002:.000323,FX006:.000323} },
+  { codigo: 'MP044', desc: 'Aroma Steviaroom 2000', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH001:.000038,RF002:.000038} },
+  { codigo: 'MP021', desc: 'Gengibre Orgânico', un: 'KG', familia: 'Hortifruti', skuQtd: {FX002:.000500,FX003:.000500} },
+  { codigo: 'MPC002', desc: 'Conc. Maçã e Maracujá', un: 'KG', familia: 'Concentrados', skuQtd: {CH003:.008985} },
+  { codigo: 'MP032', desc: 'Conc. Chá-Mate Tosta Alta', un: 'KG', familia: 'Concentrados', skuQtd: {CH004:.010567} },
+  { codigo: 'MPC004', desc: 'Conc. Maçã e Pêssego', un: 'KG', familia: 'Concentrados', skuQtd: {CH001:.010567} },
+  { codigo: 'MPC005', desc: 'Extrato Camomila', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH003:.003093} },
+  { codigo: 'MPR006', desc: 'Aroma Natural de Guaraná', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF003:.003905} },
+  { codigo: 'MP030', desc: 'Conc. Maçã 70º Brix', un: 'KG', familia: 'Concentrados', skuQtd: {FX003:.010567} },
+  { codigo: 'MPR018', desc: 'Conc. Maçã e Morango', un: 'KG', familia: 'Concentrados', skuQtd: {CH002:.005649} },
+  { codigo: 'MPR002', desc: 'Açaí 12% Xingu Fruit', un: 'KG', familia: 'Hortifruti', skuQtd: {RF003:.005000} },
+  { codigo: 'MPC030', desc: 'Extrato de Pêssego', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH001:.000750} },
+  { codigo: 'MP02', desc: 'Mirtilo Org. Congelado', un: 'KG', familia: 'Hortifruti', skuQtd: {FX006:.001865} },
+  { codigo: 'MPC020', desc: 'Extrato Aquoso Chá Verde', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH001:.000403} },
+  { codigo: 'MPC011', desc: 'Aroma Natural Chá Verde', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH001:.000437} },
+  { codigo: 'MPR023', desc: 'Extrato de Cranberry', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF002:.000323} },
+  { codigo: 'MPC006', desc: 'Aroma de Maracujá', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH003:.000526} },
+  { codigo: 'MPR004', desc: 'Extrato de Guaraná', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF003:.000323} },
+  { codigo: 'MPR009', desc: 'Aroma de Açaí', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF003:.003905} },
+  { codigo: 'MP020', desc: 'Extrato de Abacaxi', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {FX002:.000750} },
+];
+
+// Mapa SKU → sigla planilha (para cruzar com calendário)
+const SKU_PARA_SIGLA = {
+  CH001:'CVP',CH002:'CHM',CH003:'CCM',CH004:'CML',
+  FX001:'KFV',FX002:'KABX',FX003:'KMÇ',FX006:'KMIR',FX007:'KPL',
+  RF001:'RLS',RF002:'RFV',RF003:'RGA',RF004:'RUV',RF005:'RLA',
+  RTM001:'RTMLS',RTM002:'RTMUV',RTM003:'RTMLA',
 };
 
-const CODIGOS = Object.keys(INSUMOS);
-// Local de estoque: 91=INSUMOS (3132022755), 96=ROTULOS (3132020859)
-// ALMOXARIFADO (3125326654) — local correto para matérias-primas
-const LOCAL_ESTOQUE_INSUMOS = 3125326654;
+function parseNum(v) {
+  if (!v || v.trim() === "") return 0;
+  const n = Number(String(v).replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmt(n, d=1) { return n.toLocaleString("pt-BR", {maximumFractionDigits: d}); }
+
+// ============================================================================
+// Busca estoque + calcula consumo via calendário
+// ============================================================================
 
 export async function buscarEstoqueInsumos(env) {
   const hoje = new Date();
-  const dataStr = `${("0"+hoje.getDate()).slice(-2)}/${("0"+(hoje.getMonth()+1)).slice(-2)}/${hoje.getFullYear()}`;
   const estoque = [];
 
-  // Resolve código → id_prod e consulta PosicaoEstoque individual
-  for (const cod of CODIGOS) {
+  // 1. Lê o calendário do dashboard (já enriquecido com OPs)
+  const dashData = await readJson(env, R2_KEYS.dashboard);
+  const calGrid = dashData && dashData.calGrid;
+
+  // 2. Calcula planejado por SKU a partir do calendário
+  const planejadoPorSKU = {};
+  if (calGrid) {
+    const wd = calGrid.weeksData;
+    for (const row of wd) {
+      for (const cell of row) {
+        if (!cell) continue;
+        const sigla = cell.sigla || cell[0] || "";
+        if (/FERIADO|MANUTEN|INVENTÁRIO/i.test(sigla)) continue;
+        const planejada = cell.planejada || cell[1] || 0;
+        // sigla da planilha → SKU
+        let siglaBase = sigla.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
+        const sku = SKU_PARA_SIGLA[sigla] || SKU_PARA_SIGLA[siglaBase];
+        if (sku) planejadoPorSKU[sku] = (planejadoPorSKU[sku] || 0) + planejada;
+      }
+    }
+  }
+
+  // 3. Busca estoque individual + calcula consumo
+  for (const ins of INSUMOS) {
     try {
-      const p = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo: cod });
+      const p = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo: ins.codigo });
       if (!p || !p.codigo_produto) continue;
       await new Promise(r => setTimeout(r, 100));
 
       const r = await chamarOmie(env, "/estoque/consulta/", "PosicaoEstoque", {
-        codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
+        codigo_local_estoque: LOCAL_ALMOXARIFADO,
         id_prod: p.codigo_produto,
       });
-      const nome = INSUMOS[cod] || cod;
+
       const saldo = r.saldo || 0;
       const minimo = r.estoque_minimo || 0;
+
+      // Consumo previsto = Σ(planejado × qtd_por_unidade) para cada SKU
+      let consumo = 0;
+      for (const [sku, qtd] of Object.entries(ins.skuQtd)) {
+        const plan = planejadoPorSKU[sku] || 0;
+        consumo += plan * qtd;
+      }
+
+      const deficit = Math.max(0, consumo - saldo);
       let status = "ok";
       if (saldo <= 0) status = "indisponivel";
+      else if (deficit > 0) status = "insuficiente";
       else if (minimo > 0 && saldo < minimo) status = "baixo";
-      else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
-      estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
+
+      estoque.push({
+        codigo: ins.codigo,
+        descricao: ins.desc,
+        saldo,
+        minimo,
+        consumo: Math.round(consumo * 1000) / 1000,
+        deficit: Math.round(deficit * 1000) / 1000,
+        unidade: ins.un,
+        familia: ins.familia,
+        status,
+      });
     } catch (e) {
-      // produto sem estoque — ignora
+      estoque.push({
+        codigo: ins.codigo, descricao: ins.desc, saldo: null, minimo: 0,
+        consumo: 0, deficit: 0, unidade: ins.un, familia: ins.familia, status: "sem_dado",
+      });
     }
   }
 
-  const ordem = { indisponivel: 0, baixo: 1, alerta: 2, ok: 3 };
-  estoque.sort((a, b) => (ordem[a.status] || 4) - (ordem[b.status] || 4));
+  // Ordena: insuficiente → baixo → indisponivel → ok → sem_dado
+  const ordem = { insuficiente: 0, baixo: 1, indisponivel: 2, ok: 3, sem_dado: 4 };
+  estoque.sort((a, b) => (ordem[a.status] || 5) - (ordem[b.status] || 5));
 
-  console.log(`✅ Insumos v2 ALMOXARIFADO: ${estoque.length} itens, ${estoque.filter(e=>e.status!=='ok').length} com alerta`);
+  const criticos = estoque.filter(e => e.status === 'insuficiente' || e.status === 'indisponivel').length;
+  console.log(`✅ Insumos: ${estoque.length} itens, ${criticos} críticos`);
   return estoque;
 }
