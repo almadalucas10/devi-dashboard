@@ -221,6 +221,18 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/debug/insumo-teste") {
+      try {
+        const { chamarOmie } = await import("./omie.js");
+        const r = await chamarOmie(env, "/estoque/consulta/", "PosicaoEstoque", {
+          codigo_local_estoque: 3132022755,
+          id_prod: "MP018",
+          data: "10/08/2026",
+        });
+        return json(r);
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/debug/locais") {
       try {
         const { chamarOmie } = await import("./omie.js");
