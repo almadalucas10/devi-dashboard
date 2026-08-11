@@ -437,7 +437,7 @@
             <div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">Carregando...</div>
           </div>
         </div>
-        <div class="panel"><h2>📦 Demanda na Fila</h2><div id="demandaFila" class="estoque-lista"></div></div>
+        <div class="panel"><h2>📦 Necessidade de Reposição</h2><div id="reposicaoLista" class="estoque-lista"></div></div>
       </div>
     </div>
   </div>
@@ -1038,36 +1038,24 @@ function renderCobertura(cob){
   }
 }
 
-function renderDemandaFila(df){
-  const el = document.getElementById('demandaFila');
+function renderReposicao(rp){
+  const el = document.getElementById('reposicaoLista');
   if(!el) return;
-  if(!df || !df.itens || df.itens.length === 0){
-    el.innerHTML = '<div style="opacity:.5;text-align:center;padding:12px;font-size:12px;">Sem dados de demanda</div>';
-    return;
-  }
-  const PISO = 100;
-  const itens = df.itens.filter(i => i.pedido >= PISO);
-  const comDeficit = itens.filter(i => i.deficit > 0);
-  // Estado vazio: tudo coberto
-  if (comDeficit.length === 0) {
+  if(!rp || !rp.itens || rp.itens.length === 0){
     el.innerHTML = '<div style="text-align:center;padding:16px;">'
-      + '<div style="font-size:18px;color:#4ade80;font-weight:700;">✓ Fila coberta pelo estoque</div>'
-      + '<div style="font-size:11px;opacity:.5;margin-top:4px;">' + df.pedidosConsiderados + ' pedidos · ' + df.totalUnidades.toLocaleString('pt-BR') + ' un</div>'
+      + '<div style="font-size:18px;color:#4ade80;font-weight:700;">✓ Estoque acima do mínimo</div>'
+      + '<div style="font-size:11px;opacity:.5;margin-top:4px;">após atender a fila</div>'
       + '</div>';
     return;
   }
   const MAX = 8;
-  const topo = itens.sort((a,b) => b.deficit - a.deficit).slice(0, MAX);
-  el.innerHTML = '<div style="font-size:11px;opacity:.6;text-align:right;padding:2px 6px;">' + df.pedidosConsiderados + ' pedidos · ' + df.totalUnidades.toLocaleString('pt-BR') + ' un</div>'
+  const topo = rp.itens.slice(0, MAX);
+  el.innerHTML = '<div style="font-size:11px;opacity:.6;text-align:right;padding:2px 6px;">' + topo.length + ' de ' + rp.itens.length + ' SKUs</div>'
     + topo.map(function(d, i){
-      const cls = d.deficit > 0 ? 'baixo' : 'ok';
-      let situacao, cor;
-      if (d.deficit > 0) { situacao = 'Faltam ' + Math.abs(d.deficit).toLocaleString('pt-BR'); cor = '#ef4444'; }
-      else { situacao = 'Sobram ' + Math.abs(d.deficit).toLocaleString('pt-BR'); cor = '#22c55e'; }
-      return '<div class="estoque-item ' + cls + '">'
+      return '<div class="estoque-item baixo">'
         + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-        + '<div class="estoque-info"><div class="sku">' + (d.descricao || d.sku) + '</div><div class="minimo"><span class="sku-sub">Pedido ' + d.pedido.toLocaleString('pt-BR') + ' un</span><span class="min-val"> Estoque ' + d.saldo.toLocaleString('pt-BR') + '</span></div></div>'
-        + '<div class="estoque-valores"><div class="principal" style="color:' + cor + '">' + situacao + '</div></div>'
+        + '<div class="estoque-info"><div class="sku">' + (d.descricao || d.sku) + '</div><div class="minimo"><span class="estoque-badge">Repor</span> <span class="sku-sub">' + d.sku + '</span><span class="min-val"> fila ' + d.pedido.toLocaleString('pt-BR') + ' · mín ' + d.minimo.toLocaleString('pt-BR') + '</span></div></div>'
+        + '<div class="estoque-valores"><div class="principal">' + d.necessidade.toLocaleString('pt-BR') + ' un</div></div>'
         + '</div>';
     }).join('');
 }
@@ -1164,8 +1152,8 @@ async function refresh(){
     }
     renderEstoque(estoqueComCob, cobMap);
 
-    if (dataOmie.demandaFila) {
-      try { renderDemandaFila(dataOmie.demandaFila); } catch(e) { console.error('Demanda:', e); }
+    if (dataOmie.reposicao) {
+      try { renderReposicao(dataOmie.reposicao); } catch(e) { console.error('Reposição:', e); }
     }
     if (dataOmie.insumos) {
       try { renderInsumos(dataOmie.insumos); } catch(e) { console.error('Insumos:', e); }

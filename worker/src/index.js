@@ -74,15 +74,20 @@ async function runLightSync(env) {
             dem[sku] = (dem[sku] || 0) + (item.qtde || 0);
           }
         }
+        const semMinimo = [];
         const itens = Object.entries(dem).map(([sku, pedido]) => {
           const e = partial.estoque.find(x => x.codigo === sku);
           const saldo = e ? (e.saldo || 0) : 0;
           const descricao = e ? (e.descricao || sku) : sku;
-          return { sku, descricao, pedido, saldo, deficit: pedido - saldo };
-        }).sort((a, b) => b.deficit - a.deficit);
+          const minimo = e ? (e.estoqueMinimo || 0) : 0;
+          if (!minimo) semMinimo.push(sku);
+          const necessidade = pedido + minimo - saldo;
+          return { sku, descricao, pedido, saldo, minimo, necessidade: Math.max(0, necessidade) };
+        }).filter(i => i.necessidade > 0)
+          .sort((a, b) => b.necessidade - a.necessidade);
         const total = itens.reduce((s, i) => s + i.pedido, 0);
-        partial.demandaFila = { itens, totalUnidades: total, pedidosConsiderados: partial.filaDePedidos.length, naoMapeados, geradoEm: new Date().toISOString() };
-        console.log(`[light] ✅ Demanda fila: ${itens.length} SKUs, ${total} un`);
+        partial.reposicao = { itens, totalUnidades: total, pedidosConsiderados: partial.filaDePedidos.length, semMinimo, naoMapeados, geradoEm: new Date().toISOString() };
+        console.log(`[light] ✅ Reposição: ${itens.length} SKUs, ${total} un`);
       }
     } catch (e) { console.error(`[light] ⚠️ Demanda fila: ${e.message}`); }
 
