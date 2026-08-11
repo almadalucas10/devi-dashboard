@@ -1092,11 +1092,14 @@ function renderCobertura(cob){
   }
 }
 
-// Nome curto do produto — trunca no primeiro " - " (mesma regra do calendário/cobertura)
+// Nome curto do produto — remove o sufixo comercial "DÊVI ..." (todos os produtos
+// são DÊVI); mantém o resto do nome (sabor/produto)
 function nomeCurtoReposicao(nome){
   if (!nome) return '';
-  const idx = String(nome).indexOf(' - ');
-  return idx > 0 ? String(nome).substring(0, idx).trim() : String(nome);
+  const s = String(nome);
+  const idx = s.search(/DÊVI|DEVI/i);
+  if (idx > 0) return s.slice(0, idx).replace(/\s*[-–]\s*$/, '').trim();
+  return s;
 }
 
 function renderReposicao(rp){
