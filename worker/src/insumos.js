@@ -71,6 +71,6 @@ export async function buscarEstoqueInsumos(env) {
   const ordem = { indisponivel: 0, baixo: 1, alerta: 2, ok: 3 };
   estoque.sort((a, b) => (ordem[a.status] || 4) - (ordem[b.status] || 4));
 
-  console.log(`✅ Insumos: ${estoque.length} itens (${Object.keys(idPorCodigo).length} códigos mapeados), ${estoque.filter(e=>e.status!=='ok').length} com alerta`);
+  console.log(`✅ Insumos: ${estoque.length} itens, ${estoque.filter(e=>e.status!=='ok').length} com alerta`);
   return estoque;
 }
