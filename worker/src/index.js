@@ -221,6 +221,27 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/debug/estruturas") {
+      try {
+        const { buscarTodasPaginas } = await import("./omie.js");
+        // Tenta vários endpoints de estrutura
+        const endpoints = [
+          "/produtos/estrutura/", "/geral/produtos/",
+        ];
+        const metodos = ["ListarEstruturas", "ListarEstruturasProduto", "ConsultarEstrutura"];
+        const results = {};
+        for (const ep of endpoints) {
+          for (const mt of metodos) {
+            try {
+              const r = await (await import("./omie.js")).chamarOmie(env, ep, mt, { nPagina: 1, nRegPorPagina: 3 });
+              results[`${ep} ${mt}`] = { keys: Object.keys(r).slice(0,10), total: r.nTotRegistros || r.total_de_registros || 0 };
+            } catch(e) { results[`${ep} ${mt}`] = { erro: e.message.slice(0,80) }; }
+          }
+        }
+        return json(results);
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/debug/almox") {
       try {
         const { chamarOmie } = await import("./omie.js");
