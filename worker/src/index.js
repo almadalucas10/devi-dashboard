@@ -77,7 +77,8 @@ async function runLightSync(env) {
         const itens = Object.entries(dem).map(([sku, pedido]) => {
           const e = partial.estoque.find(x => x.codigo === sku);
           const saldo = e ? (e.saldo || 0) : 0;
-          return { sku, pedido, saldo, deficit: pedido - saldo };
+          const descricao = e ? (e.descricao || sku) : sku;
+          return { sku, descricao, pedido, saldo, deficit: pedido - saldo };
         }).sort((a, b) => b.deficit - a.deficit);
         const total = itens.reduce((s, i) => s + i.pedido, 0);
         partial.demandaFila = { itens, totalUnidades: total, pedidosConsiderados: partial.filaDePedidos.length, naoMapeados, geradoEm: new Date().toISOString() };

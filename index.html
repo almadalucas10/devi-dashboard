@@ -425,14 +425,14 @@
             <div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">Carregando...</div>
           </div>
         </div>
-        <div class="panel"><h2>📋 Fila de Pedidos</h2>
+        <div class="panel"><h2>🧪 Estoque — Insumos</h2><div id="insumosLista" class="estoque-lista"></div></div>
+      </div>
+      <div class="bottom-pair">
+        <div class="panel"><h2>📋 Fila de Pedidos <span id="filaCount" style="font-size:.55em;opacity:.5;"></span></h2>
           <div class="fila-lista" id="filaLista">
             <div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">Carregando...</div>
           </div>
         </div>
-      </div>
-      <div class="bottom-pair">
-        <div class="panel"><h2>🧪 Estoque — Insumos</h2><div id="insumosLista" class="estoque-lista"></div></div>
         <div class="panel"><h2>📦 Demanda na Fila</h2><div id="demandaFila" class="estoque-lista"></div></div>
       </div>
     </div>
@@ -889,8 +889,12 @@ function renderFila(fila){
     el.innerHTML = '<div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">' + msg + '</div>';
     return;
   }
-  const MAX_ITENS = 8; // mesma quantidade do estoque
+  const MAX_ITENS = 5; // espaço reduzido no bottom-pair
   const ordenado = [...fila].sort((a,b) => (b.valorTotal||0) - (a.valorTotal||0)).slice(0, MAX_ITENS);
+  // Atualiza contador
+  var fc = document.getElementById('filaCount');
+  if (fc && fila.length > MAX_ITENS) fc.textContent = MAX_ITENS + ' de ' + fila.length;
+  else if (fc) fc.textContent = '';
   el.innerHTML = ordenado.map(function(p, i){
     const etapaLabel = ETAPA_LABELS[p.etapa] || ("Etapa " + p.etapa);
     const etapaCls = ETAPA_CLASSES[p.etapa] || "";
@@ -1033,16 +1037,29 @@ function renderDemandaFila(df){
     el.innerHTML = '<div style="opacity:.5;text-align:center;padding:12px;font-size:12px;">Sem dados de demanda</div>';
     return;
   }
+  const PISO = 100;
+  const itens = df.itens.filter(i => i.pedido >= PISO);
+  const comDeficit = itens.filter(i => i.deficit > 0);
+  // Estado vazio: tudo coberto
+  if (comDeficit.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;">'
+      + '<div style="font-size:18px;color:#4ade80;font-weight:700;">✓ Fila coberta pelo estoque</div>'
+      + '<div style="font-size:11px;opacity:.5;margin-top:4px;">' + df.pedidosConsiderados + ' pedidos · ' + df.totalUnidades.toLocaleString('pt-BR') + ' un</div>'
+      + '</div>';
+    return;
+  }
   const MAX = 8;
-  const itens = df.itens.slice(0, MAX);
+  const topo = itens.sort((a,b) => b.deficit - a.deficit).slice(0, MAX);
   el.innerHTML = '<div style="font-size:11px;opacity:.6;text-align:right;padding:2px 6px;">' + df.pedidosConsiderados + ' pedidos · ' + df.totalUnidades.toLocaleString('pt-BR') + ' un</div>'
-    + itens.map(function(d, i){
+    + topo.map(function(d, i){
       const cls = d.deficit > 0 ? 'baixo' : 'ok';
-      const saldoTxt = d.deficit > 0 ? ('−' + Math.abs(d.deficit).toLocaleString('pt-BR')) : ('+' + Math.abs(d.deficit).toLocaleString('pt-BR'));
+      let situacao, cor;
+      if (d.deficit > 0) { situacao = 'Faltam ' + Math.abs(d.deficit).toLocaleString('pt-BR'); cor = '#ef4444'; }
+      else { situacao = 'Sobram ' + Math.abs(d.deficit).toLocaleString('pt-BR'); cor = '#22c55e'; }
       return '<div class="estoque-item ' + cls + '">'
         + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-        + '<div class="estoque-info"><div class="sku">' + d.sku + '</div><div class="minimo"><span class="sku-sub">Pedido ' + d.pedido.toLocaleString('pt-BR') + ' un</span><span class="min-val"> Estoque ' + d.saldo.toLocaleString('pt-BR') + '</span></div></div>'
-        + '<div class="estoque-valores"><div class="principal" style="color:' + (d.deficit > 0 ? '#ef4444' : '#22c55e') + '">' + saldoTxt + '</div></div>'
+        + '<div class="estoque-info"><div class="sku">' + (d.descricao || d.sku) + '</div><div class="minimo"><span class="sku-sub">Pedido ' + d.pedido.toLocaleString('pt-BR') + ' un</span><span class="min-val"> Estoque ' + d.saldo.toLocaleString('pt-BR') + '</span></div></div>'
+        + '<div class="estoque-valores"><div class="principal" style="color:' + cor + '">' + situacao + '</div></div>'
         + '</div>';
     }).join('');
 }
