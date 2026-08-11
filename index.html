@@ -16,6 +16,7 @@
     --bg-0:#07110f; --panel:#0f2420; --line: rgba(255,255,255,0.08);
     --amber:#e8a33d; --aqua:#3ddcc2; --bad:#e2685a; --purple:#8f8fe8;
     --text-hi:#f4efe6; --text-lo:#8fa39d;
+    --verde:#22c55e; --ambar:#f59e0b; --vermelho:#ef4444;
   }
   *{box-sizing:border-box;}
   html,body{ margin:0; padding:0; height:100%; background:var(--bg-0); color:var(--text-hi);
@@ -130,6 +131,17 @@
   .estoque-item.baixo .estoque-valores .principal{ color:#ef4444; }
   .estoque-item.alerta .estoque-valores .principal{ color:#eab308; }
   .estoque-item.ok .estoque-valores .principal{ color:#22c55e; }
+
+  /* Painel Necessidade de Reposição — barra segmentada (2 linhas por item) */
+  .rep-item{ margin-bottom:11px; }
+  .rep-nome{ font-size:15px; font-weight:600; color:var(--text-hi); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rep-linha{ display:flex; align-items:center; gap:12px; }
+  .rep-seg{ flex:1; height:17px; background:#1c2733; border-radius:8px; overflow:hidden; display:flex; min-width:0; }
+  .rep-seg i{ display:block; height:100%; min-width:3px; }
+  .rep-val{ font-size:15px; font-weight:700; min-width:62px; text-align:right; color:#ef4444; white-space:nowrap; }
+  .rep-leg{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11px; color:#8b98a5; margin-top:10px; }
+  .rep-leg span{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .rep-simbolo{ display:inline-block; width:10px; height:10px; border-radius:3px; }
 
   /* Ranking — top 5 em lista (mesmo modelo visual da fila e estoque) */
   .ranking-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow:hidden; justify-content:space-evenly; }
@@ -437,7 +449,7 @@
             <div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">Carregando...</div>
           </div>
         </div>
-        <div class="panel"><h2>📦 Necessidade de Reposição</h2><div id="reposicaoLista" class="estoque-lista"></div></div>
+        <div class="panel"><h2>📦 Necessidade de Reposição <span id="reposicaoResumo" style="font-size:.55em;opacity:.5;"></span></h2><div id="reposicaoLista" class="estoque-lista"></div></div>
       </div>
     </div>
   </div>
@@ -522,6 +534,20 @@ const DEMO = {
       [["KPL/3",3000,null],["CHM2K",7435,7100],["CVP",4464,null],["RGA2K",7435,null],["CML",4464,null],null,null],
       [["CHMSAMS2K",7435,null],["CMLSAMS",4464,null],["RLSSAMS2K",7435,null],["CVPSAMS",4464,null],["RFV/RGASAMS",4464,null],null,null],
     ]
+  },
+  // Necessidade de Reposição — dados de referência (docs/necessidade-reposicao)
+  reposicao:{
+    itens:[
+      { sku:"FX001", descricao:"Kombucha Frutas Vermelhas",       pedido:1128, saldo:1906, minimo:3500, necessidade:2722 },
+      { sku:"FX006", descricao:"Kombucha Frutas Vermelhas 6pk",   pedido:12,   saldo:960,  minimo:2200, necessidade:1252 },
+      { sku:"CH003", descricao:"Kombucha Chá Verde 3pk",          pedido:12,   saldo:886,  minimo:1500, necessidade:626  },
+      { sku:"FX002", descricao:"Kombucha Frutas Vermelhas 2L",    pedido:240,  saldo:3172, minimo:3000, necessidade:68   }
+    ],
+    totalUnidades: 1392,
+    pedidosConsiderados: 3,
+    semMinimo: [],
+    naoMapeados: [],
+    geradoEm: new Date().toISOString()
   }
 };
 
@@ -1041,23 +1067,45 @@ function renderCobertura(cob){
 function renderReposicao(rp){
   const el = document.getElementById('reposicaoLista');
   if(!el) return;
+  const resumo = document.getElementById('reposicaoResumo');
   if(!rp || !rp.itens || rp.itens.length === 0){
+    if (resumo) resumo.textContent = '';
     el.innerHTML = '<div style="text-align:center;padding:16px;">'
       + '<div style="font-size:18px;color:#4ade80;font-weight:700;">✓ Estoque acima do mínimo</div>'
       + '<div style="font-size:11px;opacity:.5;margin-top:4px;">após atender a fila</div>'
       + '</div>';
     return;
   }
-  const MAX = 8;
-  const topo = rp.itens.slice(0, MAX);
-  el.innerHTML = '<div style="font-size:11px;opacity:.6;text-align:right;padding:2px 6px;">' + topo.length + ' de ' + rp.itens.length + ' SKUs</div>'
-    + topo.map(function(d, i){
-      return '<div class="estoque-item baixo">'
-        + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-        + '<div class="estoque-info"><div class="sku">' + (d.descricao || d.sku) + '</div><div class="minimo"><span class="estoque-badge">Repor</span> <span class="sku-sub">' + d.sku + '</span><span class="min-val"> fila ' + d.pedido.toLocaleString('pt-BR') + ' · mín ' + d.minimo.toLocaleString('pt-BR') + '</span></div></div>'
-        + '<div class="estoque-valores"><div class="principal">' + d.necessidade.toLocaleString('pt-BR') + ' un</div></div>'
-        + '</div>';
-    }).join('');
+  const MAX = 5; // 2 linhas por item no bottom-pair (339px) — espaço p/ ~5 itens
+  const itens = rp.itens.slice(0, MAX);
+  const total = rp.itens.reduce(function(s,i){ return s + (i.necessidade || 0); }, 0);
+  if (resumo) {
+    resumo.textContent = ' · ' + rp.itens.length + ' SKU' + (rp.itens.length > 1 ? 's' : '')
+      + ' · repor ' + total.toLocaleString('pt-BR') + ' un';
+  }
+  el.innerHTML = itens.map(function(d){
+    const sobra     = Math.max(0, (d.saldo || 0) - (d.pedido || 0));
+    const consumido = Math.min(d.pedido || 0, d.saldo || 0);
+    const falta     = d.necessidade || 0;
+    const segs = [
+      { valor: sobra,     cor: 'var(--verde)' },
+      { valor: consumido, cor: 'var(--ambar)' },
+      { valor: falta,     cor: 'var(--vermelho)' }
+    ].filter(function(s){ return s.valor > 0; });
+    const barra = '<span class="rep-seg">'
+      + segs.map(function(s){ return '<i style="flex:' + s.valor + ';background:' + s.cor + '"></i>'; }).join('')
+      + '</span>';
+    return '<div class="rep-item">'
+      + '<div class="rep-nome">' + (d.descricao || d.sku) + '</div>'
+      + '<div class="rep-linha">' + barra
+      + '<div class="rep-val">' + falta.toLocaleString('pt-BR') + '</div></div>'
+      + '</div>';
+  }).join('')
+    + '<div class="rep-leg">'
+    + '<span><i class="rep-simbolo" style="background:var(--verde)"></i> sobra após a fila</span>'
+    + '<span><i class="rep-simbolo" style="background:var(--ambar)"></i> consumido pela fila</span>'
+    + '<span><i class="rep-simbolo" style="background:var(--vermelho)"></i> falta para o mínimo</span>'
+    + '</div>';
 }
 
 function setStatusDot(ok){
@@ -1097,6 +1145,9 @@ async function refresh(){
   if (MODO_DEMO) {
     console.warn('[dashboard] MODO DEMO — dados fictícios');
     applyData(DEMO);
+    if (DEMO.reposicao) {
+      try { renderReposicao(DEMO.reposicao); } catch(e) { console.error('Reposição demo:', e); }
+    }
     setStatusDot(true);
     return;
   }
