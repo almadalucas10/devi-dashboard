@@ -221,6 +221,34 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/debug/almox") {
+      try {
+        const { chamarOmie } = await import("./omie.js");
+        // Busca o codigo_produto numerico do MP018
+        const p = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo: "MP018" });
+        if (!p || !p.codigo_produto) return json({ erro: "MP018 nao encontrado" });
+        // PosicaoEstoque com id_prod numerico
+        const r = await chamarOmie(env, "/estoque/consulta/", "PosicaoEstoque", {
+          codigo_local_estoque: 3125326654,
+          id_prod: p.codigo_produto,
+        });
+        return json({ produto: p.codigo_produto, descricao: p.descricao, estoque: r });
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
+    if (url.pathname === "/api/debug/almox-old") {
+      try {
+        const { chamarOmie } = await import("./omie.js");
+        // ListarPosEstoque SEM filtro — todos os produtos no almoxarifado
+        const r = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
+          nPagina: 1, nRegPorPagina: 10,
+          codigo_local_estoque: 3125326654,
+        });
+        const prods = (r.produtos || []).slice(0, 10);
+        return json({ total: r.nTotRegistros || 0, paginas: r.nTotPaginas || 1, amostra: prods });
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/debug/insumo-teste") {
       try {
         const { chamarOmie } = await import("./omie.js");
