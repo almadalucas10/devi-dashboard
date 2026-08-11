@@ -212,6 +212,15 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/debug/produtos") {
+      try {
+        const { buscarTodasPaginas } = await import("./omie.js");
+        const prods = await buscarTodasPaginas(env, "/geral/produtos/", "ListarProdutos",
+          (p) => ({ pagina: p, registros_por_pagina: 100 }), { maxPages: 10, pageDelay: 300 });
+        return json(prods.map(p => ({ codigo: p.codigo, codigo_produto: p.codigo_produto, descricao: p.descricao, tipo: p.tipo, ncm: p.ncm, inativo: p.inativo })));
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/health") {
       const dash = await readJson(env, R2_KEYS.dashboard);
       const omie = await readJson(env, R2_KEYS.omie);
