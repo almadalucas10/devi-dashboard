@@ -49,12 +49,13 @@ const INSUMOS = [
   { codigo: 'MP020', desc: 'Extrato de Abacaxi', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {FX002:.000750} },
 ];
 
-// Mapa SKU → sigla planilha (para cruzar com calendário)
-const SKU_PARA_SIGLA = {
-  CH001:'CVP',CH002:'CHM',CH003:'CCM',CH004:'CML',
-  FX001:'KFV',FX002:'KABX',FX003:'KMÇ',FX006:'KMIR',FX007:'KPL',
-  RF001:'RLS',RF002:'RFV',RF003:'RGA',RF004:'RUV',RF005:'RLA',
-  RTM001:'RTMLS',RTM002:'RTMUV',RTM003:'RTMLA',
+// Mapa sigla planilha → SKU (para cruzar calendário com BOM)
+const SIGLA_PARA_SKU = {
+  CVP:'CH001',CHM:'CH002',CCM:'CH003',CML:'CH004',
+  KFV:'FX001',KABX:'FX002','KMÇ':'FX003',KMC:'FX003',KMIR:'FX006',KPL:'FX007',
+  RLS:'RF001',RFV:'RF002',RGA:'RF003',RUV:'RF004',RLA:'RF005',
+  RTMLS:'RTM001',RTMUV:'RTM002',RTMLA:'RTM003',
+  CVPSAMS:null,CMLSAMS:null,CHMSAMS:null,RLSSAMS:null,RTMSAMS:null,'RFV/RGASAMS':null,
 };
 
 function parseNum(v) {
@@ -89,7 +90,7 @@ export async function buscarEstoqueInsumos(env) {
         const planejada = cell.planejada || cell[1] || 0;
         // sigla da planilha → SKU
         let siglaBase = sigla.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
-        const sku = SKU_PARA_SIGLA[sigla] || SKU_PARA_SIGLA[siglaBase];
+        const sku = SIGLA_PARA_SKU[sigla] || SIGLA_PARA_SKU[siglaBase];
         if (sku) planejadoPorSKU[sku] = (planejadoPorSKU[sku] || 0) + planejada;
       }
     }
