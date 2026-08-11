@@ -226,9 +226,10 @@ export default {
         const { buscarTodasPaginas } = await import("./omie.js");
         // Tenta vários endpoints de estrutura
         const endpoints = [
-          "/produtos/estrutura/", "/geral/produtos/",
+          "/produtos/estrutura/", "/geral/produtos/", "/produtos/consultaestrutura/",
+          "/geral/estrutura/", "/produtos/receita/", "/produtos/composicao/",
         ];
-        const metodos = ["ListarEstruturas", "ListarEstruturasProduto", "ConsultarEstrutura"];
+        const metodos = ["ListarEstruturas", "ConsultarEstrutura", "ListarComposicao", "PesquisarEstrutura"];
         const results = {};
         for (const ep of endpoints) {
           for (const mt of metodos) {
