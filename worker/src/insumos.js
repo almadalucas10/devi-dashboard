@@ -47,37 +47,16 @@ export async function buscarEstoqueInsumos(env) {
   const dataStr = `${("0"+hoje.getDate()).slice(-2)}/${("0"+(hoje.getMonth()+1)).slice(-2)}/${hoje.getFullYear()}`;
   const estoque = [];
 
-  // Resolve códigos → id_prod numérico via ListarProdutos
-  const idPorCodigo = {};
-  try {
-    const { buscarTodasPaginas } = await import("./omie.js");
-    const todos = await buscarTodasPaginas(env, "/geral/produtos/", "ListarProdutos",
-      (p) => ({ pagina: p, registros_por_pagina: 100 }),
-      { maxPages: 5, pageDelay: 300 });
-    for (const prod of todos) {
-      if (CODIGOS.includes(prod.codigo)) {
-        idPorCodigo[prod.codigo] = prod.codigo_produto;
-      }
-    }
-  } catch (e) { console.warn(`ListarProdutos insumos: ${e.message}`); }
-
-  // Fallback: ConsultarProduto para códigos não encontrados
+  // ConsultarProduto individual → id_prod → PosicaoEstoque
   for (const cod of CODIGOS) {
-    if (idPorCodigo[cod]) continue;
     try {
       const p = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo: cod });
-      if (p && p.codigo_produto) idPorCodigo[cod] = p.codigo_produto;
-    } catch (e) { /* não existe */ }
-  }
+      if (!p || !p.codigo_produto) continue;
+      await new Promise(r => setTimeout(r, 150)); // respiro
 
-  // Busca estoque para cada produto encontrado
-  for (const cod of CODIGOS) {
-    const idProd = idPorCodigo[cod];
-    if (!idProd) continue;
-    try {
       const r = await chamarOmie(env, "/estoque/consulta/", "PosicaoEstoque", {
         codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
-        id_prod: idProd,
+        id_prod: p.codigo_produto,
         data: dataStr,
       });
       const nome = INSUMOS[cod] || cod;
@@ -89,7 +68,7 @@ export async function buscarEstoqueInsumos(env) {
       else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
       estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
     } catch (e) {
-      // Sem estoque registrado
+      // Produto não encontrado ou sem estoque
     }
   }
 
