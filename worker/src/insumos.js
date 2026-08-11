@@ -68,7 +68,7 @@ export async function buscarEstoqueInsumos(env) {
       else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
       estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
     } catch (e) {
-      // Produto não encontrado ou sem estoque
+      if (estoque.length === 0) console.warn(`⚠️ ${cod}: ${e.message}`);
     }
   }
 
