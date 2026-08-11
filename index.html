@@ -258,29 +258,29 @@
   .cal-cell{ background:#16202b; border-left:5px solid transparent; border-radius:8px;
     display:flex; flex-direction:column; justify-content:center; padding:5px 7px; min-height:0;
     position:relative; overflow:hidden; }
-  .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(12px,0.72vw,15px); font-weight:500; line-height:1; }
+  .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(15px,0.9vw,19px); font-weight:500; line-height:1; }
   .cal-cell .cal-dow{ display:none; }
-  .cal-cell .cal-sku{ color:#e8eef4; font-size:clamp(19px,1.2vw,24px); font-weight:500; letter-spacing:-0.3px; line-height:1.1; margin-top:2px; }
-  .cal-cell .cal-qtde{ color:#cfe0ee; font-size:clamp(15px,0.9vw,19px); line-height:1.2; }
-  .cal-cell .cal-op{ position:absolute; right:8px; bottom:6px; font-size:clamp(12px,0.75vw,16px); font-family:ui-monospace,monospace; }
+  .cal-cell .cal-sku{ color:#e8eef4; font-size:clamp(22px,1.35vw,28px); font-weight:500; letter-spacing:-0.3px; line-height:1.1; margin-top:4px; }
+  .cal-cell .cal-qtde{ color:#cfe0ee; font-size:clamp(18px,1.1vw,24px); line-height:1.2; }
+  .cal-cell .cal-op{ position:absolute; right:8px; bottom:6px; font-size:clamp(14px,0.85vw,19px); font-family:ui-monospace,monospace; }
 
   /* Tipos de dia (fundo + cor do texto) */
   .cal-cell.t-producao{ background:#16202b; }
   .cal-cell.t-manutencao{ background:#3a2a12; }
   .cal-cell.t-manutencao .cal-dia{ color:#b89a66; }
-  .cal-cell.t-manutencao .cal-sku{ color:#f0c987; font-size:clamp(15px,0.95vw,20px); }
+  .cal-cell.t-manutencao .cal-sku{ color:#f0c987; font-size:clamp(19px,1.15vw,24px); }
   .cal-cell.t-inventario{ background:#241a3a; }
   .cal-cell.t-inventario .cal-dia{ color:#b097d8; }
-  .cal-cell.t-inventario .cal-sku{ color:#c4aef0; font-size:clamp(15px,0.95vw,20px); }
+  .cal-cell.t-inventario .cal-sku{ color:#c4aef0; font-size:clamp(19px,1.15vw,24px); }
   .cal-cell.t-feriado{ background:#3a1a2a; }
   .cal-cell.t-feriado .cal-dia{ color:#d890a8; }
-  .cal-cell.t-feriado .cal-sku{ color:#f0aec9; font-size:clamp(15px,0.95vw,20px); }
+  .cal-cell.t-feriado .cal-sku{ color:#f0aec9; font-size:clamp(19px,1.15vw,24px); }
   .cal-cell.t-vazio{ background:#111820; }
 
   /* Fim de semana — coluna estreita (46px): só o número do dia, centralizado.
      Se houver OP, a faixa lateral colorida (.st-*) continua marcando o estado. */
   .cal-cell.fds{ padding:4px; background:#0e151d; justify-content:center; }
-  .cal-cell.fds .cal-dia{ font-size:11px; text-align:center; }
+  .cal-cell.fds .cal-dia{ font-size:14px; text-align:center; }
 
   /* Faixa lateral — estado da OP (único canal de status) */
   .st-concluida{ border-left-color:#22c55e; }
@@ -811,7 +811,7 @@ function renderCalendar(calGrid, geradoEm){
       } else {
         // SKU: reduz fonte por comprimento, nunca trunca
         const skuLen = sigla.length;
-        const skuPx = skuLen <= 7 ? 19 : skuLen <= 10 ? 15 : 12;
+        const skuPx = skuLen <= 7 ? 24 : skuLen <= 10 ? 19 : 15;
         const skuSize = ` style="font-size:clamp(${skuPx-7}px,${(skuPx/17).toFixed(1)}vw,${skuPx}px);overflow:visible;white-space:nowrap;letter-spacing:-0.4px"`;
         html += `<div class="cal-sku"${skuSize}>${sigla}</div>`;
 
