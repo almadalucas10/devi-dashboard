@@ -221,6 +221,14 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/debug/locais") {
+      try {
+        const { chamarOmie } = await import("./omie.js");
+        const r = await chamarOmie(env, "/estoque/local/", "ListarLocaisEstoque", { nPagina: 1, nRegPorPagina: 50 });
+        return json(r.cadastros || r);
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/debug/produtos") {
       try {
         const { buscarTodasPaginas } = await import("./omie.js");
