@@ -250,9 +250,10 @@ export default {
     console.log("[cron] iniciando...");
     try {
       await runLightSync(env);
+      // Heavy sync: 6h BRT ou a cada 2h (0,2,4,6,8,10,12,14,16,18,20,22 UTC)
       const horaUTC = new Date().getUTCHours();
-      if (horaUTC === 9) {
-        console.log("[cron] 6h BRT — executando sync pesado...");
+      if (horaUTC === 9 || horaUTC % 2 === 0) {
+        console.log("[cron] executando sync pesado...");
         await runHeavySync(env);
       }
       console.log("[cron] ✅");
