@@ -281,6 +281,8 @@
   .cal-cell.t-feriado .cal-dia{ color:#d890a8; }
   .cal-cell.t-feriado .cal-sku{ color:#f0aec9; font-size:clamp(23px,1.4vw,32px); }
   .cal-cell.t-vazio{ background:#111820; }
+  /* Tipos não-produtivos: sem faixa lateral transparente (fundo rente à margem) */
+  .cal-cell.t-manutencao, .cal-cell.t-inventario, .cal-cell.t-feriado{ border-left-width:0; }
 
   /* Fim de semana — coluna estreita (46px): só o número do dia, centralizado.
      Se houver OP, a faixa lateral colorida (.st-*) continua marcando o estado. */
@@ -427,9 +429,9 @@
       <h2>📅 Calendário — <span id="calMonthLabel">—</span> <span id="calStatus" style="font-size:.6em;opacity:.7;"></span>
         <span class="cal-legenda">
           <span class="chip" style="background:#16202b;color:var(--text-hi);">produção</span>
-          <span class="chip" style="background:#3a2a12;color:#f0c987;">manutenção</span>
-          <span class="chip" style="background:#241a3a;color:#c4aef0;">inventário</span>
-          <span class="chip" style="background:#3a1a2a;color:#f0aec9;">feriado</span>
+          <span class="chip" style="background:#3a2a12;color:#f0c987;">🛠️ manutenção</span>
+          <span class="chip" style="background:#241a3a;color:#c4aef0;">📋 inventário</span>
+          <span class="chip" style="background:#3a1a2a;color:#f0aec9;">🎉 feriado</span>
           <span class="sep">|</span>
           <span class="estado" style="border-left-color:#22c55e;">concluída</span>
           <span class="estado" style="border-left-color:#3b82f6;">andamento</span>
@@ -809,10 +811,11 @@ function renderCalendar(calGrid, geradoEm){
       const dIdx = (new Date(ano, mes, parseInt(dayNum))).getDay();
       let html = `<div class="cal-dia">${dayNum}<span class="cal-dow"> ${dowShort[dIdx]}</span></div>`;
 
-      // Não produtivo: só dia + rótulo
+      // Não produtivo: só dia + rótulo (com ícone do tipo)
       if(tipoDia !== 't-producao') {
         let corSku = tipoDia === 't-manutencao' ? '#f0c987' : tipoDia === 't-inventario' ? '#c4aef0' : '#f0aec9';
-        html += `<div class="cal-sku" style="color:${corSku}">${sigla}</div>`;
+        const icone = tipoDia === 't-manutencao' ? '🛠️ ' : tipoDia === 't-inventario' ? '📋 ' : '🎉 ';
+        html += `<div class="cal-sku" style="color:${corSku}">${icone}${sigla}</div>`;
       } else {
         // SKU: reduz fonte por comprimento, nunca trunca
         const skuLen = sigla.length;
