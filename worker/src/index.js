@@ -64,15 +64,12 @@ async function runLightSync(env) {
       if (Array.isArray(partial.filaDePedidos) && Array.isArray(partial.estoque)) {
         const dem = {};
         const naoMapeados = [];
-        const codParaSku = {};
-        for (const sku of Object.keys(cacheProd)) {
-          const cp = cacheProd[sku];
-          if (cp && cp.codigo_produto) codParaSku[String(cp.codigo_produto)] = sku;
-        }
+        const skusValidos = new Set(Object.keys(cacheProd));
         for (const pedido of partial.filaDePedidos) {
           for (const item of (pedido.itens || [])) {
-            const sku = codParaSku[String(item.codigo)];
-            if (!sku) { if (item.codigo) naoMapeados.push(item.codigo); continue; }
+            const sku = item.codigo;
+            if (!sku) continue;
+            if (!skusValidos.has(sku)) { naoMapeados.push(sku); continue; }
             dem[sku] = (dem[sku] || 0) + (item.qtde || 0);
           }
         }
