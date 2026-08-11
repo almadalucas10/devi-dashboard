@@ -229,13 +229,8 @@ export default {
     }
 
     if (url.pathname === "/api/sync" && request.method === "POST") {
-      const t0 = Date.now();
-      try {
-        await runHeavySync(env);
-        return json({ ok: true, elapsedMs: Date.now() - t0 });
-      } catch (e) {
-        return json({ erro: e.message, elapsedMs: Date.now() - t0 }, 500);
-      }
+      ctx.waitUntil(runHeavySync(env));
+      return json({ ok: true, message: "sync pesado disparado em background" });
     }
 
     if (url.pathname === "/api/sync/light" && request.method === "POST") {
