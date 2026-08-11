@@ -96,6 +96,9 @@ export async function buscarEstoqueInsumos(env) {
     }
   }
 
+  console.log(`🔍 planejadoPorSKU: ${Object.keys(planejadoPorSKU).length} SKUs, total ${Object.values(planejadoPorSKU).reduce((a,b)=>a+b,0)} un`);
+  for (const [k,v] of Object.entries(planejadoPorSKU).slice(0,5)) console.log(`  ${k}: ${v}`);
+
   // 3. Busca estoque individual + calcula consumo
   for (const ins of INSUMOS) {
     try {
