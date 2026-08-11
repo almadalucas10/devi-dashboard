@@ -38,6 +38,9 @@ const INSUMOS = {
 };
 
 const CODIGOS = Object.keys(INSUMOS);
+// Local de estoque: 91=INSUMOS (3132022755), 96=ROTULOS (3132020859)
+// ALMOXARIFADO (3125326654) para todos os insumos
+const LOCAL_ESTOQUE_INSUMOS = 3125326654;
 
 export async function buscarEstoqueInsumos(env) {
   const hoje = new Date();
@@ -51,7 +54,7 @@ export async function buscarEstoqueInsumos(env) {
       const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
         nPagina: 1, nRegPorPagina: 100,
         dDataPosicao: dataStr,
-        codigo_local_estoque: 3125334492,
+        codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
         lista_produtos: lote.map(c => ({ cCodigo: c })),
       });
       const regs = resultado.produtos || [];
@@ -73,7 +76,7 @@ export async function buscarEstoqueInsumos(env) {
           const r = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
             nPagina: 1, nRegPorPagina: 1,
             dDataPosicao: dataStr,
-            codigo_local_estoque: 3125334492,
+            codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
             lista_produtos: [{ cCodigo: cod }],
           });
           const reg = (r.produtos || [])[0];
