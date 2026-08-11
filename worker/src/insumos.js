@@ -39,8 +39,8 @@ const INSUMOS = {
 
 const CODIGOS = Object.keys(INSUMOS);
 // Local de estoque: 91=INSUMOS (3132022755), 96=ROTULOS (3132020859)
-// ALMOXARIFADO (3125326654) para todos os insumos
-const LOCAL_ESTOQUE_INSUMOS = 3125326654;
+// INSUMOS (3132022755) para matérias-primas
+const LOCAL_ESTOQUE_INSUMOS = 3132022755;
 
 export async function buscarEstoqueInsumos(env) {
   const hoje = new Date();
