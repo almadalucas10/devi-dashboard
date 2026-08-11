@@ -985,7 +985,7 @@ function renderInsumos(insumos){
     return;
   }
   const MAX = 8;
-  const badges = { insuficiente:"Falta", baixo:"Baixo", ok:"OK", indisponivel:"Zerado", sem_dado:"?" };
+  const badges = { insuficiente:"Baixo", baixo:"Alerta", ok:"Saudável", indisponivel:"Baixo", sem_dado:"Sem dado" };
   const ordenado = insumos.slice(0, MAX);
   el.innerHTML = ordenado.map(function(p, i){
     const cls = p.status === "insuficiente" || p.status === "indisponivel" ? "baixo" : p.status === "baixo" ? "alerta" : "ok";
@@ -1016,9 +1016,9 @@ function renderEstoque(estoque, cobMap){
   const disponiveis = estoque.filter(function(p){ return p.saldo !== null && p.saldo !== undefined; });
   // Já vem ordenado por cobertura do refresh()
   const ordenado = disponiveis.slice(0, MAX_ITENS);
-  const badges = { baixo:"Baixo", alerta:"Alerta", ok:"Saudável", indisponivel:"Indisponível" };
+  const badges = { baixo:"Baixo", alerta:"Alerta", ok:"Saudável", indisponivel:"Baixo" };
   el.innerHTML = ordenado.map(function(p, i){
-    const cls = p.status === "baixo" ? "baixo" : p.status === "alerta" ? "alerta" : "ok";
+    const cls = p.status === "baixo" || p.status === "indisponivel" ? "baixo" : p.status === "alerta" ? "alerta" : "ok";
     const nomeExibicao = p.descricao || p.codigo;
 
     // Cobertura no lugar do mínimo
