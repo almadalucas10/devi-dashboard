@@ -75,7 +75,14 @@ async function runLightSync(env) {
           }
         }
         const semMinimo = [];
-        const itens = Object.entries(dem).map(([sku, pedido]) => {
+        // Candidatos: SKUs com demanda na fila + todos do estoque —
+        // abaixo do mínimo entra mesmo sem pedido na fila (ex.: CH003)
+        const candidatos = new Set(Object.keys(dem));
+        for (const e of partial.estoque) {
+          if (e && e.codigo) candidatos.add(e.codigo);
+        }
+        const itens = [...candidatos].map((sku) => {
+          const pedido = dem[sku] || 0;
           const e = partial.estoque.find(x => x.codigo === sku);
           const saldo = e ? (e.saldo || 0) : 0;
           const descricao = e ? (e.descricao || sku) : sku;
