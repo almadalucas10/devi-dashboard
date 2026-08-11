@@ -342,7 +342,7 @@ export function extrairKPIsDoCalendario(calGrid, ano, mes) {
       }
     }
   }
-  const eficienciaMes = planejadoMes > 0 ? realizadoMes / planejadoMes : 0;
+  const eficienciaMes = planejadoConcluidasMes > 0 ? realizadoMes / planejadoConcluidasMes : 0;
   return { planejadoMes, realizadoMes, eficienciaMes, pendentesMes, produzidoPorSku };
 }
 
