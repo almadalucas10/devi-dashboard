@@ -65,6 +65,7 @@ async function runLightSync(env) {
         const dem = {};
         const naoMapeados = [];
         const skusValidos = new Set(Object.keys(cacheProd));
+        console.log(`🔍 cacheProd keys (${skusValidos.size}): ${[...skusValidos].join(', ')}`);
         for (const pedido of partial.filaDePedidos) {
           for (const item of (pedido.itens || [])) {
             const sku = item.codigo;
