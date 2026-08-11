@@ -413,6 +413,10 @@
           <span style="border-left:3px solid #3b82f6;padding-left:4px;font-size:12px;">andamento</span>
           <span style="border-left:3px solid #ef4444;padding-left:4px;font-size:12px;">sem OP</span>
           <span style="border-left:3px solid #f59e0b;padding-left:4px;font-size:12px;">divergência</span>
+          &nbsp;|&nbsp;
+          <span style="color:#fbbf24;font-size:12px;">≥90%</span>
+          <span style="color:#f87171;font-size:12px;">&lt;90%</span>
+          <span style="color:#60a5fa;font-size:12px;">&gt;105%</span>
         </span>
       </h2>
       <div class="calendar" id="cal"></div>
@@ -765,15 +769,19 @@ function renderCalendar(calGrid){
       const skuSize = ` style="font-size:clamp(${skuPx-7}px,${(skuPx/17).toFixed(1)}vw,${skuPx}px);overflow:visible;white-space:nowrap;letter-spacing:-0.4px"`;
       html += `<div class="cal-sku"${skuSize}>${sigla}</div>`;
 
-      // Quantidade — se concluída com produzido ≠ planejado, mostra ambos
+      // Quantidade — concluída mostra produzido com cor por eficiência
       if(planejado !== null && planejado !== undefined) {
-        if (estado === 'op_concluida' && produzido && produzido !== planejado) {
-          html += `<div class="cal-qtde">${planejado.toLocaleString('pt-BR')} → ${produzido.toLocaleString('pt-BR')}</div>`;
-        } else if (estado === 'op_concluida' && produzido) {
-          html += `<div class="cal-qtde">${produzido.toLocaleString('pt-BR')}</div>`;
-        } else {
-          html += `<div class="cal-qtde">${planejado.toLocaleString('pt-BR')}</div>`;
+        let qtde = planejado;
+        let corQtde = '';
+        if (estado === 'op_concluida' && produzido) {
+          qtde = produzido;
+          const ef = planejado > 0 ? produzido / planejado : 1;
+          if (ef > 1.05) corQtde = 'color:#60a5fa';
+          else if (ef >= 0.95) corQtde = '';
+          else if (ef >= 0.90) corQtde = 'color:#fbbf24';
+          else corQtde = 'color:#f87171';
         }
+        html += `<div class="cal-qtde" style="${corQtde}">${qtde.toLocaleString('pt-BR')}</div>`;
       }
 
       // OP no canto inferior direito
