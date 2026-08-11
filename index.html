@@ -251,31 +251,36 @@
 
   .chart-wrap{ position:relative; flex:1; min-height:0; }
 
-  .calendar{ display:grid; grid-template-columns:repeat(7, var(--cell-size, 60px));
-    grid-template-rows: var(--head-size, 28px) repeat(var(--weeks, 5), var(--cell-size, 60px)); gap:8px; justify-content:center; align-content:center; margin:0 auto; }
+  .calendar{ display:grid; grid-template-columns:repeat(5, 1fr) 46px 46px;
+    grid-template-rows: var(--head-size, 28px) repeat(var(--weeks, 5), 74px); gap:6px; justify-content:center; align-content:center; width:100%; }
   .cal-head{ display:flex; align-items:center; justify-content:center; font-size:clamp(15.9px,0.95vw,24.6px); color:var(--text-lo); font-weight:700; }
   /* Célula do calendário — layout novo (faixa lateral + dia no canto) */
   .cal-cell{ background:#16202b; border-left:5px solid transparent; border-radius:8px;
-    display:flex; flex-direction:column; padding:6px 8px; min-height:0;
+    display:flex; flex-direction:column; padding:5px 7px; min-height:0;
     position:relative; overflow:hidden; }
-  .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(15px,0.9vw,19px); font-weight:500; line-height:1; }
+  .cal-cell .cal-dia{ color:#7c8b9a; font-size:clamp(12px,0.72vw,15px); font-weight:500; line-height:1; }
   .cal-cell .cal-dow{ display:none; }
-  .cal-cell .cal-sku{ color:#e8eef4; font-size:clamp(21px,1.3vw,28px); font-weight:500; letter-spacing:-0.3px; line-height:1.1; margin-top:2px; }
-  .cal-cell .cal-qtde{ color:#cfe0ee; font-size:clamp(17px,1.0vw,22px); line-height:1.2; }
-  .cal-cell .cal-op{ position:absolute; right:8px; bottom:6px; font-size:clamp(14px,0.85vw,19px); font-family:ui-monospace,monospace; }
+  .cal-cell .cal-sku{ color:#e8eef4; font-size:clamp(19px,1.2vw,24px); font-weight:500; letter-spacing:-0.3px; line-height:1.1; margin-top:2px; }
+  .cal-cell .cal-qtde{ color:#cfe0ee; font-size:clamp(15px,0.9vw,19px); line-height:1.2; }
+  .cal-cell .cal-op{ position:absolute; right:8px; bottom:6px; font-size:clamp(12px,0.75vw,16px); font-family:ui-monospace,monospace; }
 
   /* Tipos de dia (fundo + cor do texto) */
   .cal-cell.t-producao{ background:#16202b; }
   .cal-cell.t-manutencao{ background:#3a2a12; }
   .cal-cell.t-manutencao .cal-dia{ color:#b89a66; }
-  .cal-cell.t-manutencao .cal-sku{ color:#f0c987; font-size:clamp(19px,1.15vw,24px); }
+  .cal-cell.t-manutencao .cal-sku{ color:#f0c987; font-size:clamp(15px,0.95vw,20px); }
   .cal-cell.t-inventario{ background:#241a3a; }
   .cal-cell.t-inventario .cal-dia{ color:#b097d8; }
-  .cal-cell.t-inventario .cal-sku{ color:#c4aef0; font-size:clamp(19px,1.15vw,24px); }
+  .cal-cell.t-inventario .cal-sku{ color:#c4aef0; font-size:clamp(15px,0.95vw,20px); }
   .cal-cell.t-feriado{ background:#3a1a2a; }
   .cal-cell.t-feriado .cal-dia{ color:#d890a8; }
-  .cal-cell.t-feriado .cal-sku{ color:#f0aec9; font-size:clamp(19px,1.15vw,24px); }
+  .cal-cell.t-feriado .cal-sku{ color:#f0aec9; font-size:clamp(15px,0.95vw,20px); }
   .cal-cell.t-vazio{ background:#111820; }
+
+  /* Fim de semana — coluna estreita (46px): só o número do dia, centralizado.
+     Se houver OP, a faixa lateral colorida (.st-*) continua marcando o estado. */
+  .cal-cell.fds{ padding:4px; background:#0e151d; justify-content:center; }
+  .cal-cell.fds .cal-dia{ font-size:11px; text-align:center; }
 
   /* Faixa lateral — estado da OP (único canal de status) */
   .st-concluida{ border-left-color:#22c55e; }
@@ -521,11 +526,12 @@ const DEMO = {
   ],
   calGrid:{
     dayNums:[
-      [null,null,null,null,null,"01",null],
+      [null,null,null,null,null,"01","02"],
       ["03","04","05","06","07","08","09"],
-      ["10","11","12","13","14","15",null],
-      ["17","18","19","20","21","22",null],
-      ["24","25","26","27","28","29",null],
+      ["10","11","12","13","14","15","16"],
+      ["17","18","19","20","21","22","23"],
+      ["24","25","26","27","28","29","30"],
+      ["31",null,null,null,null,null,null],
     ],
     weeksData:[
       [null,null,null,null,null,null,null],
@@ -685,35 +691,14 @@ function renderTrendChart(tendencia){
   });
 }
 
-// Mede o espaço de verdade disponível no painel do calendário e calcula o maior tamanho de
-// célula que ainda cabe (largura E altura) sem cortar nada e sem precisar de rolagem — essencial
-// numa TV, onde não dá pra rolar a tela.
+// Altura das células é fixa (74px) e as colunas são assimétricas (5×1fr + 46px 46px);
+// aqui só informa o grid quantas semanas o mês tem (5 ou 6).
 function sizeCalendar(){
-  const panel = document.querySelector('.cal-panel');
   const calEl = document.getElementById('cal');
-  if(!panel || !calEl) return;
-
-  // Número de semanas do mês (dinâmico: 5 ou 6)
+  if(!calEl) return;
   const totalKids = calEl.children.length;
   const weeks = totalKids > 7 ? Math.ceil((totalKids - 7) / 7) : 5;
   calEl.style.setProperty('--weeks', weeks);
-
-  const h2 = panel.querySelector('h2');
-  const panelStyle = getComputedStyle(panel);
-  const padX = parseFloat(panelStyle.paddingLeft||0) + parseFloat(panelStyle.paddingRight||0);
-  const padY = parseFloat(panelStyle.paddingTop||0) + parseFloat(panelStyle.paddingBottom||0);
-  const h2Style = h2 ? getComputedStyle(h2) : null;
-  const h2Height = h2 ? h2.offsetHeight + (h2Style ? parseFloat(h2Style.marginBottom||0) : 0) : 0;
-  const availW = panel.clientWidth - padX;
-  const availH = panel.clientHeight - padY - h2Height;
-  const gap = 6, cols = 7, dataRows = 5, totalRows = 6; // cabeçalho (pequeno) + 5 semanas (quadradas)
-  const headSize = 26; // altura fixa e enxuta da linha "Segunda Terça Quarta..." — não precisa ser quadrada
-  const totalGapV = (totalRows - 1) * gap;
-  const cellW = (availW - (cols-1)*gap) / cols;
-  const cellH = (availH - totalGapV - headSize) / dataRows;
-  const cellSize = Math.max(24, Math.floor(Math.min(cellW, cellH)));
-  document.documentElement.style.setProperty('--cell-size', cellSize + 'px');
-  document.documentElement.style.setProperty('--head-size', headSize + 'px');
 }
 window.addEventListener('resize', sizeCalendar);
 
@@ -724,8 +709,15 @@ function formatarOP(cNumOP) {
   return '#' + sufixo;
 }
 
-function renderCalendar(calGrid){
-  const DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
+function semanasDoMes(ano, mes){
+  const primeiro = new Date(Date.UTC(ano, mes, 1));
+  const diasNoMes = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
+  const offset = (primeiro.getUTCDay() + 6) % 7; // 0 = segunda
+  return Math.ceil((offset + diasNoMes) / 7);
+}
+
+function renderCalendar(calGrid, geradoEm){
+  const DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta","S","D"];
   const calEl = document.getElementById('cal');
   calEl.innerHTML = "";
   calEl.className = 'calendar';
@@ -741,91 +733,120 @@ function renderCalendar(calGrid){
   }
 
   DAYS.forEach(d=>{ const h=document.createElement('div'); h.className='cal-head'; h.textContent=d; calEl.appendChild(h); });
-  const dayNums = (calGrid && calGrid.dayNums) || [];
   const weeksData = (calGrid && calGrid.weeksData) || [];
 
+  // Mês/ano de referência (geradoEm do payload; fallback: agora) — garante a
+  // sexta linha e o dia 31 mesmo se o cache vier com menos semanas
+  const dtRef = geradoEm ? new Date(geradoEm) : new Date();
+  const ano = dtRef.getFullYear(), mes = dtRef.getMonth();
+  const semanas = semanasDoMes(ano, mes);
+  const diasNoMes = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
+  const offset = (new Date(Date.UTC(ano, mes, 1)).getUTCDay() + 6) % 7;
+
   let semOP = 0, divergencias = 0;
-  weeksData.forEach((week,wi)=>week.forEach((cell,di)=>{
-    const dayNum = dayNums[wi] ? dayNums[wi][di] : null;
-    const c = document.createElement('div');
+  for(let wi = 0; wi < semanas; wi++){
+    for(let di = 0; di < 7; di++){
+      const n = wi*7 + di - offset + 1;
+      const dayNum = (n >= 1 && n <= diasNoMes) ? String(n).padStart(2,'0') : null;
+      const cell = (weeksData[wi] && weeksData[wi][di]) || null;
+      const isFds = di >= 5; // sábado (5) e domingo (6)
+      const estado = cell ? (cell.estado || null) : null;
 
-    // Célula vazia
-    if(!dayNum || !cell){
-      c.className = 'cal-cell t-vazio';
-      c.innerHTML = `<div class="cal-dia">${dayNum||'·'}</div>`;
-      calEl.appendChild(c); return;
-    }
+      // Estado da OP (faixa lateral) — contabiliza também no fim de semana
+      let stCls = '';
+      if(estado === 'planejado_sem_op') { stCls = 'st-sem-op'; semOP++; }
+      else if(estado === 'op_sem_plano') stCls = 'st-sem-plano';
+      else if(estado === 'op_aberta') stCls = 'st-aberta';
+      else if(estado === 'op_andamento') stCls = 'st-andamento';
+      else if(estado === 'op_concluida') stCls = 'st-concluida';
+      else if(estado === 'divergencia_qtde') { stCls = 'st-divergencia'; divergencias++; }
 
-    const sigla = cell[0], planejado = cell[1];
-    const produzido = (cell.produzida !== undefined) ? cell.produzida : cell[2];
-    const estado = cell.estado || null;
-    const confianca = cell.confianca || null;
-    const execucao = cell.execucao || null;
+      // Fora do mês — célula vazia muda
+      if(!dayNum){
+        const c = document.createElement('div');
+        c.className = 'cal-cell t-vazio';
+        c.innerHTML = '<div class="cal-dia">·</div>';
+        calEl.appendChild(c); continue;
+      }
 
-    // Tipo de dia (fundo)
-    let tipoDia = 't-producao';
-    if(/FERIADO/i.test(sigla)) tipoDia = 't-feriado';
-    else if(/MANUTEN/i.test(sigla)) tipoDia = 't-manutencao';
-    else if(/INVENTÁRIO/i.test(sigla)) tipoDia = 't-inventario';
+      // Fim de semana — coluna estreita: só o dia, faixa lateral se houver OP
+      if(isFds){
+        const c = document.createElement('div');
+        c.className = 'cal-cell fds' + (stCls ? ' ' + stCls : '');
+        c.innerHTML = '<div class="cal-dia">' + dayNum + '</div>';
+        calEl.appendChild(c); continue;
+      }
 
-    // Estado da OP (faixa lateral)
-    let stCls = '';
-    if(estado === 'planejado_sem_op') { stCls = 'st-sem-op'; semOP++; }
-    else if(estado === 'op_sem_plano') stCls = 'st-sem-plano';
-    else if(estado === 'op_aberta') stCls = 'st-aberta';
-    else if(estado === 'op_andamento') stCls = 'st-andamento';
-    else if(estado === 'op_concluida') stCls = 'st-concluida';
-    else if(estado === 'divergencia_qtde') { stCls = 'st-divergencia'; divergencias++; }
+      // Dia útil sem produção
+      if(!cell){
+        const c = document.createElement('div');
+        c.className = 'cal-cell t-vazio';
+        c.innerHTML = '<div class="cal-dia">' + dayNum + '</div>';
+        calEl.appendChild(c); continue;
+      }
 
-    c.className = 'cal-cell ' + tipoDia + (stCls ? ' ' + stCls : '');
+      const sigla = cell[0], planejado = cell[1];
+      const produzido = (cell.produzida !== undefined) ? cell.produzida : cell[2];
+      const confianca = cell.confianca || null;
+      const execucao = cell.execucao || null;
 
-    // Conteúdo — dia da semana no mobile
-    const dowShort = ['dom','seg','ter','qua','qui','sex','sab'];
-    const dIdx = (new Date(2026,7,parseInt(dayNum))).getDay(); // Agosto 2026
-    let html = `<div class="cal-dia">${dayNum}<span class="cal-dow"> ${dowShort[dIdx]}</span></div>`;
+      // Tipo de dia (fundo)
+      let tipoDia = 't-producao';
+      if(/FERIADO/i.test(sigla)) tipoDia = 't-feriado';
+      else if(/MANUTEN/i.test(sigla)) tipoDia = 't-manutencao';
+      else if(/INVENTÁRIO/i.test(sigla)) tipoDia = 't-inventario';
 
-    // Não produtivo: só dia + rótulo
-    if(tipoDia !== 't-producao') {
-      let corSku = tipoDia === 't-manutencao' ? '#f0c987' : tipoDia === 't-inventario' ? '#c4aef0' : '#f0aec9';
-      html += `<div class="cal-sku" style="color:${corSku}">${sigla}</div>`;
-    } else {
-      // SKU: reduz fonte por comprimento, nunca trunca
-      const n = sigla.length;
-      const skuPx = n <= 7 ? 21 : n <= 10 ? 17 : 14;
-      const skuSize = ` style="font-size:clamp(${skuPx-7}px,${(skuPx/17).toFixed(1)}vw,${skuPx}px);overflow:visible;white-space:nowrap;letter-spacing:-0.4px"`;
-      html += `<div class="cal-sku"${skuSize}>${sigla}</div>`;
+      const c = document.createElement('div');
+      c.className = 'cal-cell ' + tipoDia + (stCls ? ' ' + stCls : '');
 
-      // Quantidade — concluída mostra produzido com cor por eficiência
-      if(planejado !== null && planejado !== undefined) {
-        let qtde = planejado;
-        let corQtde = '';
-        if (estado === 'op_concluida' && produzido) {
-          qtde = produzido;
-          const ef = planejado > 0 ? produzido / planejado : 1;
-          if (ef > 1.05) corQtde = 'color:#60a5fa';
-          else if (ef >= 0.95) corQtde = '';
-          else if (ef >= 0.90) corQtde = 'color:#fbbf24';
-          else corQtde = 'color:#f87171';
+      // Conteúdo — dia da semana no mobile
+      const dowShort = ['dom','seg','ter','qua','qui','sex','sab'];
+      const dIdx = (new Date(ano, mes, parseInt(dayNum))).getDay();
+      let html = `<div class="cal-dia">${dayNum}<span class="cal-dow"> ${dowShort[dIdx]}</span></div>`;
+
+      // Não produtivo: só dia + rótulo
+      if(tipoDia !== 't-producao') {
+        let corSku = tipoDia === 't-manutencao' ? '#f0c987' : tipoDia === 't-inventario' ? '#c4aef0' : '#f0aec9';
+        html += `<div class="cal-sku" style="color:${corSku}">${sigla}</div>`;
+      } else {
+        // SKU: reduz fonte por comprimento, nunca trunca
+        const skuLen = sigla.length;
+        const skuPx = skuLen <= 7 ? 19 : skuLen <= 10 ? 15 : 12;
+        const skuSize = ` style="font-size:clamp(${skuPx-7}px,${(skuPx/17).toFixed(1)}vw,${skuPx}px);overflow:visible;white-space:nowrap;letter-spacing:-0.4px"`;
+        html += `<div class="cal-sku"${skuSize}>${sigla}</div>`;
+
+        // Quantidade — concluída mostra produzido com cor por eficiência
+        if(planejado !== null && planejado !== undefined) {
+          let qtde = planejado;
+          let corQtde = '';
+          if (estado === 'op_concluida' && produzido) {
+            qtde = produzido;
+            const ef = planejado > 0 ? produzido / planejado : 1;
+            if (ef > 1.05) corQtde = 'color:#60a5fa';
+            else if (ef >= 0.95) corQtde = '';
+            else if (ef >= 0.90) corQtde = 'color:#fbbf24';
+            else corQtde = 'color:#f87171';
+          }
+          html += `<div class="cal-qtde" style="${corQtde}">${qtde.toLocaleString('pt-BR')}</div>`;
         }
-        html += `<div class="cal-qtde" style="${corQtde}">${qtde.toLocaleString('pt-BR')}</div>`;
+
+        // OP no canto inferior direito
+        let opCls = 'op-normal', opText = '';
+        if(estado === 'planejado_sem_op') {
+          opCls = 'op-sem'; opText = 'sem OP';
+        } else if(execucao) {
+          opText = formatarOP(execucao.cNumero) || `OP ${execucao.nCodOP}`;
+          if(confianca === 'aproximada' || confianca === 'cross_month') { opText += ' ~'; opCls = 'op-aprox'; }
+        }
+        if(opText) {
+          html += `<div class="cal-op ${opCls}" title="${execucao ? execucao.cNumero || execucao.nCodOP : ''}">${opText}</div>`;
+        }
       }
 
-      // OP no canto inferior direito
-      let opCls = 'op-normal', opText = '';
-      if(estado === 'planejado_sem_op') {
-        opCls = 'op-sem'; opText = 'sem OP';
-      } else if(execucao) {
-        opText = formatarOP(execucao.cNumero) || `OP ${execucao.nCodOP}`;
-        if(confianca === 'aproximada' || confianca === 'cross_month') { opText += ' ~'; opCls = 'op-aprox'; }
-      }
-      if(opText) {
-        html += `<div class="cal-op ${opCls}" title="${execucao ? execucao.cNumero || execucao.nCodOP : ''}">${opText}</div>`;
-      }
+      c.innerHTML = html;
+      calEl.appendChild(c);
     }
-
-    c.innerHTML = html;
-    calEl.appendChild(c);
-  }));
+  }
 
   // Zoom mobile
   if (window.matchMedia('(max-width: 640px)').matches) {
@@ -885,7 +906,7 @@ function applyData(d){
   // renderPieChart(d.familias || []); // painel substituído pela Fila de Pedidos nesse teste
   // renderTrendChart(d.tendencia); // trocado: agora vem do Omie (entradas de estoque = produção)
   // renderRankingChart(d.skuMensal); // painel substituído pela Lista de Estoque nesse teste
-  renderCalendar(d.calGrid);
+  renderCalendar(d.calGrid, d.geradoEm);
   sizeCalendar();
   setTimeout(sizeCalendar, 50); // reforço: garante medida certa mesmo se a fonte/layout ainda estiver assentando
 }
