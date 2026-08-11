@@ -47,24 +47,28 @@ export async function buscarEstoqueInsumos(env) {
   const dataStr = `${("0"+hoje.getDate()).slice(-2)}/${("0"+(hoje.getMonth()+1)).slice(-2)}/${hoje.getFullYear()}`;
   const estoque = [];
 
-  // ListarPosEstoque com todos os códigos no ALMOXARIFADO
-  const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
-    nPagina: 1, nRegPorPagina: 100,
-    codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
-    lista_produtos: CODIGOS.map(c => ({ cCodigo: c })),
-  });
-
-  const registros = resultado.produtos || [];
+  // Resolve código → id_prod e consulta PosicaoEstoque individual
   for (const cod of CODIGOS) {
-    const reg = registros.find(r => r.codigo === cod);
-    const nome = INSUMOS[cod] || cod;
-    const saldo = reg ? (reg.saldo || 0) : 0;
-    const minimo = reg ? (reg.estoque_minimo || 0) : 0;
-    let status = "ok";
-    if (saldo <= 0) status = "indisponivel";
-    else if (minimo > 0 && saldo < minimo) status = "baixo";
-    else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
-    estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
+    try {
+      const p = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo: cod });
+      if (!p || !p.codigo_produto) continue;
+      await new Promise(r => setTimeout(r, 100));
+
+      const r = await chamarOmie(env, "/estoque/consulta/", "PosicaoEstoque", {
+        codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
+        id_prod: p.codigo_produto,
+      });
+      const nome = INSUMOS[cod] || cod;
+      const saldo = r.saldo || 0;
+      const minimo = r.estoque_minimo || 0;
+      let status = "ok";
+      if (saldo <= 0) status = "indisponivel";
+      else if (minimo > 0 && saldo < minimo) status = "baixo";
+      else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
+      estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
+    } catch (e) {
+      // produto sem estoque — ignora
+    }
   }
 
   const ordem = { indisponivel: 0, baixo: 1, alerta: 2, ok: 3 };
