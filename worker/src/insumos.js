@@ -39,37 +39,33 @@ const INSUMOS = {
 
 const CODIGOS = Object.keys(INSUMOS);
 // Local de estoque: 91=INSUMOS (3132022755), 96=ROTULOS (3132020859)
-// INSUMOS (3132022755) para matérias-primas
-const LOCAL_ESTOQUE_INSUMOS = 3132022755;
+// ALMOXARIFADO (3125326654) — local correto para matérias-primas
+const LOCAL_ESTOQUE_INSUMOS = 3125326654;
 
 export async function buscarEstoqueInsumos(env) {
   const hoje = new Date();
   const dataStr = `${("0"+hoje.getDate()).slice(-2)}/${("0"+(hoje.getMonth()+1)).slice(-2)}/${hoje.getFullYear()}`;
   const estoque = [];
 
-  // ConsultarProduto individual → id_prod → PosicaoEstoque
-  for (const cod of CODIGOS) {
-    try {
-      const p = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo: cod });
-      if (!p || !p.codigo_produto) continue;
-      await new Promise(r => setTimeout(r, 150)); // respiro
+  // ListarPosEstoque com todos os códigos no ALMOXARIFADO
+  const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {
+    nPagina: 1, nRegPorPagina: 100,
+    dDataPosicao: dataStr,
+    codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
+    lista_produtos: CODIGOS.map(c => ({ cCodigo: c })),
+  });
 
-      const r = await chamarOmie(env, "/estoque/consulta/", "PosicaoEstoque", {
-        codigo_local_estoque: LOCAL_ESTOQUE_INSUMOS,
-        id_prod: p.codigo_produto,
-        data: dataStr,
-      });
-      const nome = INSUMOS[cod] || cod;
-      const saldo = r.saldo || 0;
-      const minimo = r.estoque_minimo || 0;
-      let status = "ok";
-      if (saldo <= 0) status = "indisponivel";
-      else if (minimo > 0 && saldo < minimo) status = "baixo";
-      else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
-      estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
-    } catch (e) {
-      if (estoque.length === 0) console.warn(`⚠️ ${cod}: ${e.message}`);
-    }
+  const registros = resultado.produtos || [];
+  for (const cod of CODIGOS) {
+    const reg = registros.find(r => r.codigo === cod);
+    const nome = INSUMOS[cod] || cod;
+    const saldo = reg ? (reg.saldo || 0) : 0;
+    const minimo = reg ? (reg.estoque_minimo || 0) : 0;
+    let status = "ok";
+    if (saldo <= 0) status = "indisponivel";
+    else if (minimo > 0 && saldo < minimo) status = "baixo";
+    else if (minimo > 0 && saldo < minimo * 1.1) status = "alerta";
+    estoque.push({ codigo: cod, descricao: nome, saldo, estoqueMinimo: minimo, status });
   }
 
   const ordem = { indisponivel: 0, baixo: 1, alerta: 2, ok: 3 };
