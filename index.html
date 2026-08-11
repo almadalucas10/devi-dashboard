@@ -67,6 +67,13 @@
     box-shadow:0 6px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); }
   .panel h2{ margin:0 0 .8vh 0; font-size:clamp(23.0px,1.4vw,38.6px); font-weight:700; }
   .cal-panel{ grid-column:1; grid-row:2; overflow:hidden; }
+  .cal-panel h2{ font-size:clamp(16px,1.0vw,26px); margin-bottom:.4vh; }
+  .cal-legenda{ display:flex; align-items:center; gap:9px; flex-wrap:nowrap; overflow:hidden;
+    font-size:clamp(10.5px,0.65vw,14.5px); color:var(--text-lo); font-weight:600; margin-bottom:.8vh;
+    white-space:nowrap; }
+  .cal-legenda .chip{ padding:1px 7px; border-radius:3px; }
+  .cal-legenda .estado{ padding-left:5px; border-left:3px solid transparent; }
+  .cal-legenda .sep{ opacity:.35; }
 
   .fila-estoque-col{ grid-column:2; grid-row:1 / span 2; display:grid; grid-template-rows:1.5fr 1fr; gap:1vh; min-height:0; }
   .top-pair{ display:grid; grid-template-columns:1fr 1fr; gap:1.2vw; min-height:0; }
@@ -312,6 +319,7 @@
     .content-grid{ grid-template-columns:1fr; grid-template-rows:none; gap:1.5vh; }
     .kpis-rows{ grid-column:1; grid-row:auto; }
     .kpis-row-2{ grid-template-columns:1fr 1fr; gap:2.5vw; }
+    .cal-legenda{ flex-wrap:wrap; row-gap:4px; }
     .kpi{ padding:1.4vh 3vw; }
     .kpi .label{ font-size:12px; }
     .kpi .value{ font-size:26px; }
@@ -419,23 +427,22 @@
     </div>
 
     <div class="panel cal-panel">
-      <h2>📅 Calendário — <span id="calMonthLabel">—</span> <span id="calStatus" style="font-size:.7em;opacity:.7;"></span>
-        <span style="font-size:.5em; font-weight:600; color:var(--text-lo); margin-left:10px;">
-          <span style="background:#16202b;color:var(--text-hi);padding:2px 6px;border-radius:3px;font-size:12px;">produção</span>
-          <span style="background:#3a2a12;color:#f0c987;padding:2px 6px;border-radius:3px;font-size:12px;">manutenção</span>
-          <span style="background:#241a3a;color:#c4aef0;padding:2px 6px;border-radius:3px;font-size:12px;">inventário</span>
-          <span style="background:#3a1a2a;color:#f0aec9;padding:2px 6px;border-radius:3px;font-size:12px;">feriado</span>
-          &nbsp;|&nbsp;
-          <span style="border-left:3px solid #22c55e;padding-left:4px;font-size:12px;">concluída</span>
-          <span style="border-left:3px solid #3b82f6;padding-left:4px;font-size:12px;">andamento</span>
-          <span style="border-left:3px solid #ef4444;padding-left:4px;font-size:12px;">sem OP</span>
-          <span style="border-left:3px solid #f59e0b;padding-left:4px;font-size:12px;">divergência</span>
-          &nbsp;|&nbsp;
-          <span style="color:#fbbf24;font-size:12px;">≥90%</span>
-          <span style="color:#f87171;font-size:12px;">&lt;90%</span>
-          <span style="color:#60a5fa;font-size:12px;">&gt;105%</span>
-        </span>
-      </h2>
+      <h2>📅 Calendário — <span id="calMonthLabel">—</span> <span id="calStatus" style="font-size:.6em;opacity:.7;"></span></h2>
+      <div class="cal-legenda">
+        <span class="chip" style="background:#16202b;color:var(--text-hi);">produção</span>
+        <span class="chip" style="background:#3a2a12;color:#f0c987;">manutenção</span>
+        <span class="chip" style="background:#241a3a;color:#c4aef0;">inventário</span>
+        <span class="chip" style="background:#3a1a2a;color:#f0aec9;">feriado</span>
+        <span class="sep">|</span>
+        <span class="estado" style="border-left-color:#22c55e;">concluída</span>
+        <span class="estado" style="border-left-color:#3b82f6;">andamento</span>
+        <span class="estado" style="border-left-color:#ef4444;">sem OP</span>
+        <span class="estado" style="border-left-color:#f59e0b;">divergência</span>
+        <span class="sep">|</span>
+        <span style="color:#fbbf24;">≥90%</span>
+        <span style="color:#f87171;">&lt;90%</span>
+        <span style="color:#60a5fa;">&gt;105%</span>
+      </div>
       <div class="calendar" id="cal"></div>
     </div>
 
