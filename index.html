@@ -137,6 +137,26 @@
   .estoque-item.alerta .estoque-valores .principal{ color:#eab308; }
   .estoque-item.ok .estoque-valores .principal{ color:#22c55e; }
 
+  /* ========================================================================
+     Modelo A3 — Estoque/Insumos (ruptura + quantidade + barra)
+     Cor segue os dias de cobertura (vermelho/âmbar/verde/neutro)
+     ======================================================================== */
+  .est-item{ background:#141d27; border-left:4px solid transparent; border-radius:7px;
+    padding:6px 11px; margin-bottom:6px; flex:1; min-height:0; }
+  .est-nome{ font-size:clamp(13px,0.85vw,18px); font-weight:600; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; margin-bottom:3px; }
+  .est-duo{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .est-metade{ display:flex; align-items:baseline; gap:4px; min-width:0; }
+  .est-big{ font-size:clamp(20px,1.3vw,27px); font-weight:700; line-height:1; letter-spacing:-.5px; }
+  .est-un{ font-size:clamp(10px,0.62vw,13px); color:#8b98a5; font-weight:500; }
+  .est-sep{ width:1px; align-self:stretch; background:#26313d; margin:0 2px; flex-shrink:0; }
+  .est-barra{ height:5px; background:#1c2733; border-radius:3px; overflow:hidden; margin-top:6px; }
+  .est-barra i{ display:block; height:100%; min-width:2px; }
+  .est-cod{ font-size:clamp(9px,0.55vw,12px); color:#8b98a5; margin-top:3px; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; }
+  .cor-verde{ color:#4ade80; } .cor-ambar{ color:#fbbf24; }
+  .cor-vermelho{ color:#f87171; } .cor-neutro{ color:#cfe0ee; }
+
   /* Painel Necessidade de Reposição — barra segmentada (2 linhas por item) */
   .rep-item{ margin-bottom:9px; }
   .rep-nome{ font-size:clamp(14.9px,0.95vw,21.4px); font-weight:700; color:var(--text-hi); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -985,20 +1005,46 @@ function renderInsumos(insumos){
     el.innerHTML = '<div style="opacity:.5;text-align:center;padding:12px;font-size:12px;">Sem dados de insumos</div>';
     return;
   }
-  const MAX = 8;
-  const badges = { insuficiente:"Baixo", baixo:"Alerta", ok:"Saudável", indisponivel:"Baixo", sem_dado:"Sem dado" };
-  const ordenado = insumos.slice(0, MAX);
+  const MAX = 6; // cards A3 são mais altos
+  // Ordena por dias de cobertura ascendente; sem consumo (null) no final;
+  // sem mínimo definido por último entre os sem consumo
+  const ordenado = [...insumos].sort(function(a, b){
+    const da = (a.dias === null || a.dias === undefined) ? Infinity : a.dias;
+    const db = (b.dias === null || b.dias === undefined) ? Infinity : b.dias;
+    if (da !== db) return da - db;
+    if (a.dias === null) {
+      const am = a.minimo > 0 ? 0 : 1;
+      const bm = b.minimo > 0 ? 0 : 1;
+      return am - bm;
+    }
+    return 0;
+  }).slice(0, MAX);
+
   el.innerHTML = ordenado.map(function(p, i){
-    const cls = p.status === "insuficiente" || p.status === "indisponivel" ? "baixo" : p.status === "baixo" ? "alerta" : "ok";
-    const b = badges[p.status] || p.status;
-    let extra = '';
-    if (p.status === 'insuficiente') extra = 'Falta ' + fmt(p.deficit,1) + ' ' + p.unidade;
-    else if (p.status === 'sem_dado') extra = 'sem dado';
-    else extra = 'Consumo ' + fmt(p.consumo,1) + ' ' + p.unidade;
-    return '<div class="estoque-item ' + cls + '">'
-      + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="estoque-info"><div class="sku">' + (p.descricao || p.codigo) + '</div><div class="minimo"><span class="estoque-badge">' + b + '</span> <span class="sku-sub">' + p.codigo + '</span> <span class="min-val">' + extra + '</span></div></div>'
-      + '<div class="estoque-valores"><div class="principal">' + (p.saldo !== null ? fmt(p.saldo,1) + ' ' + p.unidade : '—') + '</div></div>'
+    const cor = p.cor || 'neutro';
+    const corCls = 'cor-' + cor;
+    const un = p.unidade || 'un';
+    const temConsumo = p.consumo && p.consumo > 0;
+    const temDias = (p.dias !== null && p.dias !== undefined);
+    const diasHtml = temDias
+      ? '<span class="est-big ' + corCls + '">' + nfmt(p.dias) + '</span><span class="est-un">dias</span>'
+      : '<span class="est-big cor-neutro">—</span><span class="est-un">sem uso no mês</span>';
+    const barraPct = (p.pctMinimo !== undefined && p.pctMinimo !== null) ? p.pctMinimo : 100;
+    const barraCor = cor === 'vermelho' ? '#ef4444' : cor === 'ambar' ? '#f59e0b' : cor === 'verde' ? '#22c55e' : '#cfe0ee';
+    const saldoStr = p.saldo !== null ? fmt(p.saldo) : '—';
+    let rodape = '';
+    if (p.minimo > 0) rodape = Math.round(p.saldo / p.minimo * 100) + ' % do mínimo (' + fmt(p.minimo) + ' ' + un + ')';
+    else rodape = 'sem mínimo definido';
+    if (temConsumo) rodape += ' · consumo ' + fmt(p.consumo) + ' ' + un + '/mês';
+    return '<div class="est-item" style="border-left-color:' + barraCor + '">'
+      + '<div class="est-nome">' + (p.descricao || p.codigo) + '</div>'
+      + '<div class="est-duo">'
+      + '<span class="est-metade">' + diasHtml + '</span>'
+      + '<span class="est-sep"></span>'
+      + '<span class="est-metade"><span class="est-big ' + corCls + '">' + saldoStr + '</span><span class="est-un">' + un + '</span></span>'
+      + '</div>'
+      + '<div class="est-barra"><i style="width:' + barraPct + '%;background:' + barraCor + '"></i></div>'
+      + '<div class="est-cod">' + rodape + '</div>'
       + '</div>';
   }).join('');
 }
@@ -1006,42 +1052,44 @@ function renderInsumos(insumos){
 function renderEstoque(estoque, cobMap){
   const el = document.getElementById('estoqueLista');
   if(!el) return;
-  cobMap = cobMap || {};
   if(!Array.isArray(estoque) || estoque.length === 0){
     var msg = 'Sem dados de estoque';
     if (estoque && estoque.erro) msg += ' — erro Omie: ' + estoque.erro;
     el.innerHTML = '<div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">' + msg + '</div>';
     return;
   }
-  const MAX_ITENS = 8;
+  const MAX_ITENS = 6; // cards A3 são mais altos
   const disponiveis = estoque.filter(function(p){ return p.saldo !== null && p.saldo !== undefined; });
-  // Já vem ordenado por cobertura do refresh()
-  const ordenado = disponiveis.slice(0, MAX_ITENS);
-  const badges = { baixo:"Baixo", alerta:"Alerta", ok:"Saudável", indisponivel:"Baixo" };
+  // Ordena por dias de cobertura ascendente (sem dias no final)
+  const ordenado = [...disponiveis].sort(function(a, b){
+    const da = (a.dias === null || a.dias === undefined) ? Infinity : a.dias;
+    const db = (b.dias === null || b.dias === undefined) ? Infinity : b.dias;
+    return da - db;
+  }).slice(0, MAX_ITENS);
+
   el.innerHTML = ordenado.map(function(p, i){
-    const cls = p.status === "baixo" || p.status === "indisponivel" ? "baixo" : p.status === "alerta" ? "alerta" : "ok";
-    const nomeExibicao = p.descricao || p.codigo;
-
-    // Cobertura no lugar do mínimo
-    var cobInfo = cobMap[p.codigo];
-    var linhaExtra = '';
-    if (cobInfo && cobInfo.cobertura !== null && cobInfo.cobertura !== undefined) {
-      var dias = cobInfo.cobertura.toLocaleString("pt-BR", {maximumFractionDigits:1}) + 'd';
-      // Cor só pra kombucha (lead definido)
-      var corCob = '';
-      if (cobInfo.status === 'critico') corCob = 'style="color:#ef4444;font-weight:700"';
-      else if (cobInfo.status === 'alerta') corCob = 'style="color:#eab308;font-weight:700"';
-      linhaExtra = '<span class="min-val" ' + corCob + '>Ruptura em ' + dias + '</span>';
-    } else if (cobInfo && cobInfo.status === 'sem_giro') {
-      linhaExtra = '<span class="min-val" style="opacity:.4">sem giro</span>';
-    } else {
-      linhaExtra = '<span class="min-val">mín: ' + fmt(p.estoqueMinimo) + ' un</span>';
-    }
-
-    return '<div class="estoque-item ' + cls + '">'
-      + '<div class="estoque-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="estoque-info"><div class="sku">' + nomeExibicao + '</div><div class="minimo"><span class="estoque-badge">' + (badges[p.status]||p.status) + '</span> ' + linhaExtra + '</div></div>'
-      + '<div class="estoque-valores"><div class="principal">' + fmt(p.saldo) + ' un</div></div>'
+    const cor = p.cor || 'neutro';
+    const corCls = 'cor-' + cor;
+    const minimo = p.estoqueMinimo || 0;
+    const temDias = (p.dias !== null && p.dias !== undefined);
+    const diasHtml = temDias
+      ? '<span class="est-big ' + corCls + '">' + nfmt(p.dias) + '</span><span class="est-un">dias</span>'
+      : '<span class="est-big cor-neutro">—</span><span class="est-un">sem giro</span>';
+    const barraPct = (p.pctMinimo !== undefined && p.pctMinimo !== null)
+      ? p.pctMinimo : (minimo > 0 ? Math.min(100, Math.round(p.saldo / minimo * 100)) : 100);
+    const barraCor = cor === 'vermelho' ? '#ef4444' : cor === 'ambar' ? '#f59e0b' : cor === 'verde' ? '#22c55e' : '#cfe0ee';
+    const rodape = minimo > 0
+      ? Math.round(p.saldo / minimo * 100) + ' % do mínimo (' + fmt(minimo) + ')'
+      : 'sem mínimo definido';
+    return '<div class="est-item" style="border-left-color:' + barraCor + '">'
+      + '<div class="est-nome">' + (p.descricao || p.codigo) + '</div>'
+      + '<div class="est-duo">'
+      + '<span class="est-metade">' + diasHtml + '</span>'
+      + '<span class="est-sep"></span>'
+      + '<span class="est-metade"><span class="est-big ' + corCls + '">' + fmt(p.saldo) + '</span><span class="est-un">un</span></span>'
+      + '</div>'
+      + '<div class="est-barra"><i style="width:' + barraPct + '%;background:' + barraCor + '"></i></div>'
+      + '<div class="est-cod">' + rodape + '</div>'
       + '</div>';
   }).join('');
 }

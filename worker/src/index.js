@@ -10,6 +10,7 @@ import { buscarEstoque } from "./estoque.js";
 import { buscarEstoqueInsumos } from "./insumos.js";
 import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
 import { atualizarAgregadoVendas, recalcularCobertura } from "./cobertura.js";
+import { enriquecerEstoqueRuptura } from "./ruptura.js";
 import { R2_KEYS } from "./constants.js";
 
 // ============================================================================
@@ -102,6 +103,7 @@ async function runLightSync(env) {
     if (Array.isArray(partial.estoque)) {
       try {
         partial.cobertura = await recalcularCobertura(env, partial.estoque);
+        enriquecerEstoqueRuptura(partial.estoque, partial.cobertura);
         await writeSyncMeta(env, { cobertura: Date.now() });
         console.log(`[light] ✅ Cobertura: ${partial.cobertura.critico ? partial.cobertura.critico.cobertura + 'd' : 'ok'}`);
       } catch (e) {
@@ -189,6 +191,7 @@ async function runHeavySync(env) {
     if (Array.isArray(data.estoque)) {
       try {
         data.cobertura = await recalcularCobertura(env, data.estoque);
+        enriquecerEstoqueRuptura(data.estoque, data.cobertura);
         await writeSyncMeta(env, { cobertura: Date.now() });
         console.log(`[heavy] ✅ Cobertura: ${data.cobertura.critico ? data.cobertura.critico.cobertura + 'd' : 'ok'}`);
       } catch (e) {

@@ -4,6 +4,7 @@
 import { chamarOmie } from "./omie.js";
 import { readJson } from "./r2.js";
 import { R2_KEYS } from "./constants.js";
+import { diasUteisRestantes, corPorDias, pctDoMinimo } from "./ruptura.js";
 
 const LOCAL_ALMOXARIFADO = 3125326654;
 
@@ -127,6 +128,13 @@ export async function buscarEstoqueInsumos(env) {
       else if (deficit > 0) status = "insuficiente";
       else if (minimo > 0 && saldo < minimo) status = "baixo";
 
+      // Ruptura (A3): dias de cobertura com base nos dias úteis restantes
+      const diasUteis = diasUteisRestantes(hoje);
+      let dias = null;
+      if (consumo > 0) dias = Math.round((saldo / (consumo / diasUteis)) * 10) / 10;
+      const pctMinimo = pctDoMinimo(saldo, minimo);
+      const cor = corPorDias(dias, minimo > 0 && saldo < minimo);
+
       estoque.push({
         codigo: ins.codigo,
         descricao: ins.desc,
@@ -137,18 +145,32 @@ export async function buscarEstoqueInsumos(env) {
         unidade: ins.un,
         familia: ins.familia,
         status,
+        dias,
+        pctMinimo,
+        cor,
       });
     } catch (e) {
       estoque.push({
         codigo: ins.codigo, descricao: ins.desc, saldo: null, minimo: 0,
         consumo: 0, deficit: 0, unidade: ins.un, familia: ins.familia, status: "sem_dado",
+        dias: null, pctMinimo: 100, cor: "neutro",
       });
     }
   }
 
-  // Ordena: insuficiente → baixo → indisponivel → ok → sem_dado
-  const ordem = { insuficiente: 0, baixo: 1, indisponivel: 2, ok: 3, sem_dado: 4 };
-  estoque.sort((a, b) => (ordem[a.status] || 5) - (ordem[b.status] || 5));
+  // Ordena por dias de cobertura ascendente; sem consumo (null) no final;
+  // sem mínimo definido por último entre os sem consumo
+  estoque.sort((a, b) => {
+    const da = a.dias === null || a.dias === undefined ? Infinity : a.dias;
+    const db = b.dias === null || b.dias === undefined ? Infinity : b.dias;
+    if (da !== db) return da - db;
+    if (a.dias === null) {
+      const am = a.minimo > 0 ? 0 : 1;
+      const bm = b.minimo > 0 ? 0 : 1;
+      if (am !== bm) return am - bm;
+    }
+    return 0;
+  });
 
   const criticos = estoque.filter(e => e.status === 'insuficiente' || e.status === 'indisponivel').length;
   console.log(`✅ Insumos: ${estoque.length} itens, ${criticos} críticos`);
