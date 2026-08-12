@@ -147,12 +147,13 @@ export async function buscarEstoqueInsumos(env) {
         dias,
         pctMinimo,
         cor,
+        valor: parseFloat(p.valor_unitario) || 0,
       });
     } catch (e) {
       estoque.push({
         codigo: ins.codigo, descricao: ins.desc, saldo: null, minimo: 0,
         consumo: 0, deficit: 0, unidade: ins.un, familia: ins.familia, status: "sem_dado",
-        dias: null, pctMinimo: 100, cor: "neutro",
+        dias: null, pctMinimo: 100, cor: "neutro", valor: 0,
       });
     }
   }

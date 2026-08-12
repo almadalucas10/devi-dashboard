@@ -467,12 +467,12 @@
 
     <div class="fila-estoque-col">
       <div class="top-pair">
-        <div class="panel"><h2>📦 Estoque — Produtos Acabados</h2>
+        <div class="panel"><h2>📦 Estoque — Produtos Acabados <span id="estoqueResumo" style="font-size:.55em;opacity:.5;"></span></h2>
           <div class="estoque-lista" id="estoqueLista">
             <div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">Carregando...</div>
           </div>
         </div>
-        <div class="panel"><h2>🧪 Estoque — Insumos</h2><div id="insumosLista" class="estoque-lista"></div></div>
+        <div class="panel"><h2>🧪 Estoque — Insumos <span id="insumosResumo" style="font-size:.55em;opacity:.5;"></span></h2><div id="insumosLista" class="estoque-lista"></div></div>
       </div>
       <div class="bottom-pair">
         <div class="panel"><h2>📋 Fila de Pedidos <span id="filaCount" style="font-size:.55em;opacity:.5;"></span></h2>
@@ -1000,10 +1000,18 @@ function renderFila(fila){
 function renderInsumos(insumos){
   const el = document.getElementById('insumosLista');
   if(!el) return;
+  const resumoEl = document.getElementById('insumosResumo');
   if(!Array.isArray(insumos) || insumos.length === 0){
+    if (resumoEl) resumoEl.textContent = '';
     el.innerHTML = '<div style="opacity:.5;text-align:center;padding:12px;font-size:12px;">Sem dados de insumos</div>';
     return;
   }
+  // Valor total do estoque de insumos (Σ saldo × valor unitário)
+  const valorTotal = insumos.reduce(function(s, p){
+    const saldo = (p.saldo !== null && p.saldo !== undefined) ? (p.saldo || 0) : 0;
+    return s + saldo * (p.valor || 0);
+  }, 0);
+  if (resumoEl) resumoEl.textContent = '· ' + fmtMoeda(valorTotal);
   const MAX = 5; // cards A3 são mais altos
   // Ordena por dias de cobertura ascendente; sem consumo (null) no final;
   // sem mínimo definido por último entre os sem consumo
@@ -1051,12 +1059,19 @@ function renderInsumos(insumos){
 function renderEstoque(estoque, cobMap){
   const el = document.getElementById('estoqueLista');
   if(!el) return;
+  const resumoEl = document.getElementById('estoqueResumo');
   if(!Array.isArray(estoque) || estoque.length === 0){
     var msg = 'Sem dados de estoque';
     if (estoque && estoque.erro) msg += ' — erro Omie: ' + estoque.erro;
+    if (resumoEl) resumoEl.textContent = '';
     el.innerHTML = '<div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">' + msg + '</div>';
     return;
   }
+  // Total de latas/unidades no estoque (todos os itens)
+  const totalLatas = estoque.reduce(function(s, p){
+    return s + ((p.saldo !== null && p.saldo !== undefined) ? (p.saldo || 0) : 0);
+  }, 0);
+  if (resumoEl) resumoEl.textContent = '· ' + fmt(totalLatas) + ' un';
   const MAX_ITENS = 5; // cards A3 são mais altos
   const disponiveis = estoque.filter(function(p){ return p.saldo !== null && p.saldo !== undefined; });
   // Ordena por dias de cobertura ascendente (sem dias no final)
