@@ -77,7 +77,8 @@ var DIAG_FUNCTIONS = {
   testarPlanejadoPlanilha: testarPlanejadoPlanilha,
   testarMovimentosKeys: testarMovimentosKeys,
   testarMovimentoEstoqueRealizadoRaw: testarMovimentoEstoqueRealizadoRaw,
-  testarSemIdProd: testarSemIdProd
+  testarSemIdProd: testarSemIdProd,
+  testarCalendarioAbas: testarCalendarioAbas
 };
 
 function doGet(e) {
@@ -208,10 +209,14 @@ function doGetInner(e) {
   } catch (e) { /* aba de tendência ausente — segue sem quebrar */ }
 
   // ---- Mês/Ano de referência (pra saber qual mês desenhar no calendário) ----
-  const ano = toNumber(findLabelValue(values, "ano de referência")) || (new Date()).getFullYear();
+  // Se a caixa "mês selecionado" estiver vazia, assume o mês atual (fallback).
+  const agora = new Date();
+  const MESES_NOME = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const ano = toNumber(findLabelValue(values, "ano de referência")) || agora.getFullYear();
   const mesNome = findLabelValue(values, "mês selecionado");
-  const monthNum = mesNome ? MONTH_MAP[String(mesNome).trim().toLowerCase()] : null;
-  data.mesLabel = mesNome ? String(mesNome).trim() : "";
+  const mesNomeNorm = mesNome ? String(mesNome).trim().toLowerCase() : "";
+  const monthNum = (mesNomeNorm && MONTH_MAP[mesNomeNorm]) ? MONTH_MAP[mesNomeNorm] : (agora.getMonth() + 1);
+  data.mesLabel = mesNomeNorm ? String(mesNome).trim() : MESES_NOME[agora.getMonth()];
 
   // ---- Calendário: montado direto da Produção por Lote (dá pra calcular eficiência por dia) ----
   if (monthNum) {
@@ -282,8 +287,38 @@ function buildCalendarFromLotes(ss, ano, monthNum) {
   return { dayNums: dayNums, weeksData: weeksData };
 }
 
-function findRow(values, needle, fromRow) {
-  fromRow = fromRow || 0;
+// Diagnóstico: lista as abas da planilha, o "mês selecionado" e células com "ref"
+// — pra descobrir onde falta o dia 31 e o que está escrito nos dias.
+function testarCalendarioAbas() {
+  const ss = getSpreadsheet();
+  let mesSel = null, anoRef = null;
+  const dash = ss.getSheetByName(SHEET_NAME);
+  if (dash) {
+    const maxR = Math.min(150, dash.getMaxRows()), maxC = Math.min(20, dash.getMaxColumns());
+    const values = dash.getRange(1, 1, maxR, maxC).getValues();
+    mesSel = findLabelValue(values, "mês selecionado");
+    anoRef = findLabelValue(values, "ano de referência");
+  }
+  const refs = [], abas = [];
+  for (const s of ss.getSheets()) {
+    const nome = s.getName();
+    abas.push({ nome: nome, ultimaLinha: s.getLastRow() });
+    // varre as primeiras 40 linhas procurando "ref" (texto nos dias?)
+    const maxR = Math.min(40, s.getMaxRows()), maxC = Math.min(12, s.getMaxColumns());
+    const vals = s.getRange(1, 1, maxR, maxC).getValues();
+    for (let r = 0; r < vals.length; r++) {
+      for (let c = 0; c < vals[r].length; c++) {
+        const v = vals[r][c];
+        if (typeof v === "string" && /^ref$/i.test(v.trim())) {
+          refs.push({ aba: nome, celula: "R" + (r + 1) + "C" + (c + 1) });
+        }
+      }
+    }
+  }
+  return { mesSelecionado: mesSel, anoReferencia: anoRef, refsEncontrados: refs, abas: abas };
+}
+
+function findRow(values, needle, fromRow) {  fromRow = fromRow || 0;
   const low = needle.toLowerCase();
   for (let r = fromRow; r < values.length; r++) {
     for (let c = 0; c < values[r].length; c++) {
