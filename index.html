@@ -396,8 +396,14 @@
       width:100%; height:auto; max-height:none; overflow:visible;
       position:static; margin:0 0 14px;
     }
-    .wrap{ padding:12px; gap:14px; }
+    .wrap{ padding:12px; gap:14px; max-width:100%; }
     .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:14px; width:100%; }
+
+    /* 2.1 — min-width:0 nos filhos flex/grid (barras e textos encolhem,
+       não empurram a largura e não comem a margem) */
+    .content-grid > *, .fila-estoque-col > *, .top-pair > *, .bottom-pair > *,
+    .kpis-row-2 > *, .est-duo > *, .est-metade, .ped .l1 > *, .cal-cell > *{ min-width:0; }
+    .panel{ padding:11px 12px; }
 
     /* Listas: sem rolagem interna — a página rola inteira */
     .estoque-lista, .fila-lista, .ranking-lista{ overflow:visible; max-height:none; }
