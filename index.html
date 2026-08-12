@@ -159,7 +159,7 @@
      Cor segue os dias de cobertura (vermelho/âmbar/verde/neutro)
      ======================================================================== */
   .est-item{ background:#141d27; border-left:4px solid transparent; border-radius:7px;
-    padding:6px 11px; margin-bottom:6px; flex:1; min-height:0;
+    padding:6px 11px; margin-bottom:6px; flex:1 0 auto; min-height:0;
     display:flex; flex-direction:column; overflow:hidden; }
   .est-nome{ font-size:clamp(13px,0.85vw,18px); font-weight:600; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; margin-bottom:2px; }
@@ -1242,8 +1242,18 @@ function renderReposicao(rp){
       + '</div>';
     return;
   }
-  const MAX = 5; // cards A3 são mais altos
-  const itens = rp.itens.slice(0, MAX);
+  // Cabe por altura: card ≈ 95px (duo + barra + rodapé). Ajuste dinâmico,
+  // como na fila — sem encolher cards (evita SKU/rodapé acavalados).
+  const painel = el.closest ? el.closest('.panel') : null;
+  const h2 = painel ? painel.querySelector('h2') : null;
+  const alt = (painel ? painel.clientHeight : 340) - (h2 ? h2.offsetHeight : 32);
+  let acum = 0;
+  const itens = [];
+  for (const item of rp.itens) {
+    if (acum + 95 > alt) break;
+    acum += 95;
+    itens.push(item);
+  }
   const total = rp.itens.reduce(function(s,i){ return s + (i.necessidade || 0); }, 0);
   if (resumo) {
     resumo.textContent = ' · ' + rp.itens.length + ' SKU' + (rp.itens.length > 1 ? 's' : '')
