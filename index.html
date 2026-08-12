@@ -1183,13 +1183,15 @@ function renderReposicao(rp){
     const barra = '<span class="rep-seg">'
       + segs.map(function(s){ return '<i style="flex:' + s.valor + ';background:' + s.cor + '"></i>'; }).join('')
       + '</span>';
-    // borda do card acompanha a urgência (vermelho abaixo do mínimo, senão âmbar)
+    // borda e número do card acompanham a urgência (vermelho abaixo do mínimo, senão âmbar)
     const cor = (d.saldo || 0) < (d.minimo || 0) ? 'vermelho' : 'ambar';
+    const corCls = 'cor-' + cor;
     const barraCor = cor === 'vermelho' ? '#ef4444' : '#f59e0b';
     return '<div class="est-item" style="border-left-color:' + barraCor + '">'
       + '<div class="est-nome">' + nomeCurtoReposicao(d.descricao || d.sku) + '</div>'
       + '<div class="rep-linha">' + barra
-      + '<div class="rep-val">' + fmt(falta) + '</div></div>'
+      + '<span class="est-big ' + corCls + '">' + fmt(falta) + '</span><span class="est-un">un</span>'
+      + '</div>'
       + '</div>';
   }).join('')
     + '<div class="rep-leg">'
