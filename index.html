@@ -1148,16 +1148,17 @@ function renderFila(fila){
   // Altura disponível no painel (menos cabeçalho e a legenda de famílias)
   const painel = el.closest ? el.closest('.panel') : null;
   const h2 = painel ? painel.querySelector('h2') : null;
-  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24;
+  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24 - 22; // -22 reserva a legenda de famílias
 
-  // No mobile a rolagem é livre: lista completa; na TV, cabe por altura
+  // No mobile a rolagem é livre: lista completa; na TV, cabe por altura (mede o card real)
   const escolhidos = MOBILE ? ordenado : (function(){
+    const hPed = medirCardFila(el) || 70;
     const out = [];
     let acumulado = 0;
     for (const pedido of ordenado) {
       const nSkus = agregarItens(pedido.itens).length;
       const linhas = Math.ceil(nSkus / 3);
-      const altura = 66 + (linhas - 1) * 16;
+      const altura = hPed + (linhas - 1) * 16;
       if (acumulado + altura > altDisponivel) break;
       acumulado += altura;
       out.push(pedido);
@@ -1217,6 +1218,24 @@ function medirCardEst(el){
     el.removeChild(probe);
     return h;
   } catch(e){ return 84; }
+}
+
+// Mede a altura real de um pedido da fila (1 linha de chips)
+function medirCardFila(el){
+  try {
+    const probe = document.createElement('div');
+    probe.className = 'ped';
+    probe.style.visibility = 'hidden';
+    probe.style.position = 'absolute';
+    probe.innerHTML = '<div class="l1"><span class="cli">X</span><span class="un">0 un</span></div>'
+      + '<div class="meta">A faturar · #1 · 3 SKUs</div>'
+      + '<div class="ped-seg"><i></i></div>'
+      + '<div class="ped-chips"><span class="chip">X <b>0</b></span></div>';
+    el.appendChild(probe);
+    const h = probe.offsetHeight;
+    el.removeChild(probe);
+    return h;
+  } catch(e){ return 70; }
 }
 
 function renderInsumos(insumos){
