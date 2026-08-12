@@ -423,6 +423,11 @@
     /* Espaçamento entre painéis */
     .content-grid, .fila-estoque-col{ gap:14px; }
 
+    /* Calendário por último no mobile (KPIs → listas → calendário) */
+    .content-grid .kpis-rows{ order:1; }
+    .content-grid .fila-estoque-col{ order:2; }
+    .content-grid .cal-panel{ order:3; }
+
     /* Barras sempre em 100% da largura útil */
     .est-barra, .rep-seg, .ped-seg{ width:100%; max-width:100%; }
 
@@ -1572,8 +1577,9 @@ async function refresh(){
 refresh();
 setInterval(refresh, REFRESH_MS);
 
-// Mobile: toca no título do painel para retrair/expandir a lista
+// Mobile: começa com tudo retraído; toca no título para expandir
 if (MOBILE) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.add('colapsado'); });
   document.querySelectorAll('.panel h2').forEach(function(h2){
     h2.addEventListener('click', function(){
       var panel = h2.closest('.panel');
