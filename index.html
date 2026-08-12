@@ -915,6 +915,8 @@ function renderCalendar(calGrid, geradoEm){
       }
 
       const sigla = cell[0], planejado = cell[1];
+      // Remove sufixos de formato/embalagem para exibição (2K, /3, SAMS, 24K)
+      const siglaExib = sigla.replace(/(\/3|24K|2K|SAMS)+$/i, '');
       const produzido = (cell.produzida !== undefined) ? cell.produzida : cell[2];
       const confianca = cell.confianca || null;
       const execucao = cell.execucao || null;
@@ -937,13 +939,13 @@ function renderCalendar(calGrid, geradoEm){
       if(tipoDia !== 't-producao') {
         let corSku = tipoDia === 't-manutencao' ? '#f0c987' : tipoDia === 't-inventario' ? '#c4aef0' : '#f0aec9';
         const icone = tipoDia === 't-manutencao' ? '🛠️ ' : tipoDia === 't-inventario' ? '📋 ' : '🎉 ';
-        html += `<div class="cal-sku" style="color:${corSku}">${icone}${sigla}</div>`;
+        html += `<div class="cal-sku" style="color:${corSku}">${icone}${siglaExib}</div>`;
       } else {
         // SKU: reduz fonte por comprimento, nunca trunca
-        const skuLen = sigla.length;
+        const skuLen = siglaExib.length;
         const skuPx = skuLen <= 7 ? 30 : skuLen <= 10 ? 24 : 18;
         const skuSize = ` style="font-size:clamp(${skuPx-7}px,${(skuPx/17).toFixed(1)}vw,${skuPx}px);overflow:visible;white-space:nowrap;letter-spacing:-0.4px"`;
-        html += `<div class="cal-sku"${skuSize}>${sigla}</div>`;
+        html += `<div class="cal-sku"${skuSize}>${siglaExib}</div>`;
 
         // Quantidade — concluída mostra produzido com cor por eficiência
         if(planejado !== null && planejado !== undefined) {
