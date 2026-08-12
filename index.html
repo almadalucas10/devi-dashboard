@@ -406,7 +406,12 @@
     .panel{ padding:11px 12px; }
 
     /* Listas: sem rolagem interna — a página rola inteira */
-    .estoque-lista, .fila-lista, .ranking-lista{ overflow:visible; max-height:none; }
+    .estoque-lista, .fila-lista, .ranking-lista{ overflow:visible; max-height:none;
+      gap:10px; justify-content:flex-start; }
+    .est-item, .ped{ flex:0 0 auto; } /* altura natural — nada encolhe/sobrepõe */
+
+    /* Espaçamento entre painéis */
+    .content-grid, .fila-estoque-col{ gap:14px; }
 
     /* Barras sempre em 100% da largura útil */
     .est-barra, .rep-seg, .ped-seg{ width:100%; max-width:100%; }
