@@ -942,10 +942,8 @@ function renderCalendar(calGrid, geradoEm){
         const icone = tipoDia === 't-manutencao' ? '🛠️ ' : tipoDia === 't-inventario' ? '📋 ' : '🎉 ';
         html += `<div class="cal-sku" style="color:${corSku}">${icone}${siglaExib}</div>`;
       } else {
-        // SKU: reduz fonte por comprimento, nunca trunca
-        const skuLen = siglaExib.length;
-        const skuPx = skuLen <= 7 ? 30 : skuLen <= 10 ? 24 : 18;
-        const skuSize = ` style="font-size:clamp(${skuPx-7}px,${(skuPx/17).toFixed(1)}vw,${skuPx}px);overflow:visible;white-space:nowrap;letter-spacing:-0.4px"`;
+        // SKU: fonte única (mesmo tamanho) — nome longo trunca com reticências
+        const skuSize = ` style="font-size:clamp(23px,1.8vw,30px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.4px"`;
         html += `<div class="cal-sku"${skuSize}>${siglaExib}</div>`;
 
         // Quantidade — concluída mostra produzido com cor por eficiência
