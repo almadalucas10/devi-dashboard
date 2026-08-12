@@ -341,6 +341,57 @@ export default {
       } catch(e) { return json({ erro: e.message }, 500); }
     }
 
+    if (url.pathname === "/api/debug/sheets-tabs") {
+      // Lista as abas da planilha (procurar ficha técnica / estruturas)
+      try {
+        const { getAccessToken } = await import("./sheets.js");
+        const token = await getAccessToken(env);
+        const res = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${env.SPREADSHEET_ID}?fields=sheets.properties.title`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = await res.json();
+        const tabs = ((data.sheets || []).map(s => s.properties.title)).filter(Boolean);
+        return json({ tabs, total: tabs.length, rawError: data.error || null, spreadId: env.SPREADSHEET_ID });
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
+    if (url.pathname === "/api/debug/movimentos-saida") {
+      // Levantamento: identifica a operação de SAÍDA de insumo do almoxarifado
+      // (ListarMovimentoEstoque, 90 dias) — para validar consumo real × ficha
+      try {
+        const { chamarOmie } = await import("./omie.js");
+        const fim = new Date();
+        const ini = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+        const d = (x) => `${("0"+x.getDate()).slice(-2)}/${("0"+(x.getMonth()+1)).slice(-2)}/${x.getFullYear()}`;
+        const raw = await chamarOmie(env, "/estoque/consulta/", "ListarMovimentoEstoque", {
+          nPagina: 1,
+          nRegPorPagina: 100,
+          codigo_local_estoque: 3125326654,
+          dDtInicial: d(ini),
+          dDtFinal: d(fim),
+        });
+        const movs = raw.movProdutoListar || [];
+        const combos = {};
+        const saidas = { total: 0, qtde: 0 };
+        for (const m of movs) {
+          const tipo = m.tipo || "?";
+          const key = `${tipo}|${m.codOrigem || "?"}|${m.operacao || "?"}|${m.desOrigem || ""}`;
+          combos[key] = (combos[key] || 0) + 1;
+          if (tipo === "saida" || m.qtde < 0) { saidas.total++; saidas.qtde += Math.abs(m.qtde || 0); }
+        }
+        const amostra = movs.slice(0, 3);
+        return json({
+          periodo: `${d(ini)} a ${d(fim)}`,
+          totalMovimentos: movs.length,
+          nTotPaginas: raw.nTotPaginas || 1,
+          combos,
+          saidas,
+          amostra: amostra.map(m => ({ tipo: m.tipo, operacao: m.operacao, codOrigem: m.codOrigem, desOrigem: m.desOrigem, qtde: m.qtde, dtMov: m.dtMov, idProd: m.idProd || m.codigoProduto, numPedido: m.numPedido })),
+        });
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/health") {
       const dash = await readJson(env, R2_KEYS.dashboard);
       const omie = await readJson(env, R2_KEYS.omie);

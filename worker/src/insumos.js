@@ -4,7 +4,8 @@
 import { chamarOmie } from "./omie.js";
 import { readJson } from "./r2.js";
 import { R2_KEYS } from "./constants.js";
-import { diasUteisRestantes, corPorDias, pctDoMinimo } from "./ruptura.js";
+import { corInsumo } from "./ruptura.js";
+import { ESTRUTURAS, porUnidadeComEstruturas } from "./estruturas.js";
 
 const LOCAL_ALMOXARIFADO = 3125326654;
 
@@ -78,8 +79,11 @@ export async function buscarEstoqueInsumos(env) {
   const dashData = await readJson(env, R2_KEYS.dashboard);
   const calGrid = dashData && dashData.calGrid;
 
-  // 2. Calcula planejado por SKU a partir do calendário
+  // 2. Calcula planejado por SKU a partir do calendário.
+  //    planejadoPorSKU = mês inteiro (contexto); restantePorSKU = só lotes
+  //    ainda não concluídos (é o que vai consumir insumo de agora em diante)
   const planejadoPorSKU = {};
+  const restantePorSKU = {};
   if (calGrid) {
     const wd = calGrid.weeksData;
     for (const row of wd) {
@@ -88,16 +92,19 @@ export async function buscarEstoqueInsumos(env) {
         const sigla = cell.sigla || cell[0] || "";
         if (/FERIADO|MANUTEN|INVENTÁRIO/i.test(sigla)) continue;
         const planejada = cell.planejada || cell[1] || 0;
+        if (!planejada) continue;
+        const concluido = cell.estado === "op_concluida";
         // sigla da planilha → SKU
         let siglaBase = sigla.replace(/2K$/i,"").replace(/\/3$/,"").replace(/SAMS$/i,"");
         const sku = SIGLA_PARA_SKU[sigla] || SIGLA_PARA_SKU[siglaBase];
-        if (sku) planejadoPorSKU[sku] = (planejadoPorSKU[sku] || 0) + planejada;
+        if (!sku) continue;
+        planejadoPorSKU[sku] = (planejadoPorSKU[sku] || 0) + planejada;
+        if (!concluido) restantePorSKU[sku] = (restantePorSKU[sku] || 0) + planejada;
       }
     }
   }
 
-  console.log(`🔍 planejadoPorSKU: ${Object.keys(planejadoPorSKU).length} SKUs, total ${Object.values(planejadoPorSKU).reduce((a,b)=>a+b,0)} un`);
-  for (const [k,v] of Object.entries(planejadoPorSKU).slice(0,5)) console.log(`  ${k}: ${v}`);
+  console.log(`🔍 planejadoPorSKU: ${Object.keys(planejadoPorSKU).length} SKUs, total ${Object.values(planejadoPorSKU).reduce((a,b)=>a+b,0)} un | restante (não concluído): ${Object.values(restantePorSKU).reduce((a,b)=>a+b,0)} un`);
 
   // 3. Busca estoque individual + calcula consumo
   for (const ins of INSUMOS) {
@@ -114,25 +121,37 @@ export async function buscarEstoqueInsumos(env) {
       const saldo = r.saldo || 0;
       const minimo = r.estoque_minimo || 0;
 
-      // Consumo previsto = Σ(planejado × qtd_por_unidade) para cada SKU
-      let consumo = 0;
-      for (const [sku, qtd] of Object.entries(ins.skuQtd)) {
-        const plan = planejadoPorSKU[sku] || 0;
-        consumo += plan * qtd;
+      // Consumo previsto = Σ(planejado × qtd_por_unidade) para cada SKU.
+      // Usa explosão multinível (ESTRUTURAS) quando preenchida; senão o mapa plano.
+      const usarEstruturas = Object.keys(ESTRUTURAS).length > 0;
+      const skus = usarEstruturas
+        ? new Set([...Object.keys(planejadoPorSKU), ...Object.keys(restantePorSKU)])
+        : Object.keys(ins.skuQtd);
+      let consumo = 0;   // mês inteiro (contexto)
+      let restante = 0;  // só o que falta produzir
+      for (const sku of skus) {
+        let qtd;
+        if (usarEstruturas) {
+          const porUn = porUnidadeComEstruturas(sku, ESTRUTURAS) || {};
+          qtd = porUn[ins.codigo] || 0;
+        } else {
+          qtd = ins.skuQtd[sku] || 0;
+        }
+        if (!qtd) continue;
+        consumo += (planejadoPorSKU[sku] || 0) * qtd;
+        restante += (restantePorSKU[sku] || 0) * qtd;
       }
 
       const deficit = Math.max(0, consumo - saldo);
+      const falta = Math.max(0, restante - saldo);
       let status = "ok";
       if (saldo <= 0) status = "indisponivel";
       else if (deficit > 0) status = "insuficiente";
       else if (minimo > 0 && saldo < minimo) status = "baixo";
 
-      // Ruptura (A3): dias de cobertura com base nos dias úteis restantes
-      const diasUteis = diasUteisRestantes(hoje);
-      let dias = null;
-      if (consumo > 0) dias = Math.round((saldo / (consumo / diasUteis)) * 10) / 10;
-      const pctMinimo = pctDoMinimo(saldo, minimo);
-      const cor = corPorDias(dias, minimo > 0 && saldo < minimo);
+      // Cobertura do insumo: cobre o que falta produzir? (em vez de "dias")
+      const pctRestante = restante > 0 ? Math.min(100, Math.round(saldo / restante * 100)) : 0;
+      const cor = corInsumo(saldo, restante, minimo);
 
       estoque.push({
         codigo: ins.codigo,
@@ -140,36 +159,35 @@ export async function buscarEstoqueInsumos(env) {
         saldo,
         minimo,
         consumo: Math.round(consumo * 1000) / 1000,
+        restante: Math.round(restante * 1000) / 1000,
+        falta: Math.round(falta * 1000) / 1000,
         deficit: Math.round(deficit * 1000) / 1000,
         unidade: ins.un,
         familia: ins.familia,
         status,
-        dias,
-        pctMinimo,
+        dias: null,
+        pctRestante,
+        pctMinimo: minimo > 0 ? Math.min(100, Math.round(saldo / minimo * 100)) : 100,
         cor,
         valor: parseFloat(r.cmc) || 0,
       });
     } catch (e) {
       estoque.push({
         codigo: ins.codigo, descricao: ins.desc, saldo: null, minimo: 0,
-        consumo: 0, deficit: 0, unidade: ins.un, familia: ins.familia, status: "sem_dado",
-        dias: null, pctMinimo: 100, cor: "neutro", valor: 0,
+        consumo: 0, restante: 0, falta: 0, deficit: 0, unidade: ins.un, familia: ins.familia, status: "sem_dado",
+        dias: null, pctRestante: 0, pctMinimo: 100, cor: "neutro", valor: 0,
       });
     }
   }
 
-  // Ordena por dias de cobertura ascendente; sem consumo (null) no final;
-  // sem mínimo definido por último entre os sem consumo
+  // Ordena: vermelho → âmbar → verde (pelo maior déficit), neutro (sem uso
+  // no restante do mês) no final
+  const pesoCor = { vermelho: 0, ambar: 1, verde: 2, neutro: 3 };
   estoque.sort((a, b) => {
-    const da = a.dias === null || a.dias === undefined ? Infinity : a.dias;
-    const db = b.dias === null || b.dias === undefined ? Infinity : b.dias;
-    if (da !== db) return da - db;
-    if (a.dias === null) {
-      const am = a.minimo > 0 ? 0 : 1;
-      const bm = b.minimo > 0 ? 0 : 1;
-      if (am !== bm) return am - bm;
-    }
-    return 0;
+    const pa = pesoCor[a.cor] !== undefined ? pesoCor[a.cor] : 3;
+    const pb = pesoCor[b.cor] !== undefined ? pesoCor[b.cor] : 3;
+    if (pa !== pb) return pa - pb;
+    return (b.falta || 0) - (a.falta || 0);
   });
 
   const criticos = estoque.filter(e => e.status === 'insuficiente' || e.status === 'indisponivel').length;

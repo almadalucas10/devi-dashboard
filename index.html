@@ -1013,40 +1013,37 @@ function renderInsumos(insumos){
   }, 0);
   if (resumoEl) resumoEl.textContent = '· ' + fmtMoeda(valorTotal);
   const MAX = 5; // cards A3 são mais altos
-  // Ordena por dias de cobertura ascendente; sem consumo (null) no final;
-  // sem mínimo definido por último entre os sem consumo
-  const ordenado = [...insumos].sort(function(a, b){
-    const da = (a.dias === null || a.dias === undefined) ? Infinity : a.dias;
-    const db = (b.dias === null || b.dias === undefined) ? Infinity : b.dias;
-    if (da !== db) return da - db;
-    if (a.dias === null) {
-      const am = a.minimo > 0 ? 0 : 1;
-      const bm = b.minimo > 0 ? 0 : 1;
-      return am - bm;
-    }
-    return 0;
-  }).slice(0, MAX);
+  // Ordenação já vem do worker (vermelho → âmbar → verde → sem uso); mantém
+  const ordenado = insumos.slice(0, MAX);
 
   el.innerHTML = ordenado.map(function(p, i){
     const cor = p.cor || 'neutro';
     const corCls = 'cor-' + cor;
     const un = p.unidade || 'un';
-    const temConsumo = p.consumo && p.consumo > 0;
-    const temDias = (p.dias !== null && p.dias !== undefined);
-    const diasHtml = temDias
-      ? '<span class="est-big ' + corCls + '">' + nfmt(p.dias) + '</span><span class="est-un">dias</span>'
-      : '<span class="est-big cor-neutro">—</span><span class="est-un">sem uso no mês</span>';
-    const barraPct = (p.pctMinimo !== undefined && p.pctMinimo !== null) ? p.pctMinimo : 100;
+    const restante = p.restante || 0;
+    const falta = p.falta || 0;
+    const semUso = restante <= 0;
+    // Cobertura: "Falta N" / "cobre" / "— sem uso no mês" (em vez de dias)
+    let esqHtml;
+    if (semUso) {
+      esqHtml = '<span class="est-big cor-neutro">—</span><span class="est-un">sem uso no mês</span>';
+    } else if (falta > 0) {
+      esqHtml = '<span class="est-big ' + corCls + '">Falta ' + nfmt(falta) + '</span><span class="est-un">' + un + '</span>';
+    } else {
+      esqHtml = '<span class="est-big ' + corCls + '">cobre</span>';
+    }
+    const barraPct = semUso ? 0 : ((p.pctRestante !== undefined && p.pctRestante !== null)
+      ? p.pctRestante : (restante > 0 ? Math.min(100, Math.round(p.saldo / restante * 100)) : 0));
     const barraCor = cor === 'vermelho' ? '#ef4444' : cor === 'ambar' ? '#f59e0b' : cor === 'verde' ? '#22c55e' : '#cfe0ee';
-    const saldoStr = p.saldo !== null ? fmt(p.saldo) : '—';
-    let rodape = '';
-    if (p.minimo > 0) rodape = Math.round(p.saldo / p.minimo * 100) + ' % do mínimo (' + fmt(p.minimo) + ' ' + un + ')';
-    else rodape = 'sem mínimo definido';
-    if (temConsumo) rodape += ' · consumo ' + fmt(p.consumo) + ' ' + un + '/mês';
+    const saldoStr = p.saldo !== null && p.saldo !== undefined ? fmt(p.saldo) : '—';
+    const rodape = semUso
+      ? 'sem uso no restante do mês'
+      : 'restam produzir ' + nfmt(restante) + ' ' + un
+        + (p.minimo > 0 ? ' · mín ' + fmt(p.minimo) + ' ' + un : '');
     return '<div class="est-item" style="border-left-color:' + barraCor + '">'
       + '<div class="est-nome">' + (p.descricao || p.codigo) + '</div>'
       + '<div class="est-duo">'
-      + '<span class="est-metade">' + diasHtml + '</span>'
+      + '<span class="est-metade">' + esqHtml + '</span>'
       + '<span class="est-sep"></span>'
       + '<span class="est-metade"><span class="est-big ' + corCls + '">' + saldoStr + '</span><span class="est-un">' + un + '</span></span>'
       + '</div>'

@@ -37,6 +37,18 @@ export function pctDoMinimo(saldo, minimo) {
   return Math.min(100, Math.round((saldo / minimo) * 100));
 }
 
+// Cor do insumo: cobre o que falta produzir?
+//   restante <= 0  → neutro (sem uso no restante do mês)
+//   saldo < restante → vermelho (não cobre a produção restante)
+//   saldo < mínimo  → âmbar (cobre, mas abaixo do mínimo cadastrado)
+//   senão           → verde
+export function corInsumo(saldo, restante, minimo) {
+  if (restante === null || restante === undefined || restante <= 0) return "neutro";
+  if (saldo < restante) return "vermelho";
+  if (minimo > 0 && saldo < minimo) return "ambar";
+  return "verde";
+}
+
 // Consolida dias/cobertura no payload de estoque acabado (fonte: bloco cobertura)
 export function enriquecerEstoqueRuptura(estoque, cobertura) {
   if (!Array.isArray(estoque)) return estoque;
