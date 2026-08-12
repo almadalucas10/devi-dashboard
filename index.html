@@ -21,7 +21,7 @@
   *{box-sizing:border-box;}
   html,body{ margin:0; padding:0; height:100%; background:var(--bg-0); color:var(--text-hi);
     font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif; overflow:hidden; }
-  .wrap{ height:100vh; display:flex; flex-direction:column; padding:1.8vh 2vw; gap:1vh; }
+  .wrap{ height:100vh; display:flex; flex-direction:column; padding:1.2vh 1.6vw; gap:0.6vh; }
   .wrap{ position:relative; }
   .wrap::before{
     content:''; position:absolute; inset:-15%;
@@ -51,36 +51,36 @@
   @keyframes pulse-bad{ 0%,100%{ opacity:1; box-shadow:0 0 4px 1px rgba(239,68,68,.5); } 50%{ opacity:.55; box-shadow:0 0 14px 5px rgba(239,68,68,.9); } }
 
   .content-grid{ flex:1; display:grid; grid-template-columns:1.35fr 1.15fr; grid-template-rows:auto 1fr;
-    gap:0.8vh 1.2vw; min-height:0; }
-  .kpis-rows{ grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.8vh; }
-  .kpis-row-2{ display:grid; grid-template-columns:repeat(4,1fr); gap:0.8vw; flex:1; }
+    gap:0.5vh 1vw; min-height:0; }
+  .kpis-rows{ grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.5vh; }
+  .kpis-row-2{ display:grid; grid-template-columns:repeat(4,1fr); gap:0.6vw; flex:1; }
   .kpi{ background:linear-gradient(180deg,var(--panel),rgba(15,36,32,.6)); border:1px solid var(--line);
-    border-radius:12px; padding:0.5vh 1.1vw;
+    border-radius:12px; padding:0.4vh 1vw;
     box-shadow:0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
     transition:box-shadow .3s, transform .3s; }
-  .kpi .label{ font-size:clamp(10.9px,0.68vw,17.6px); color:var(--text-lo); font-weight:600; }
-  .kpi .value{ font-size:clamp(21.8px,1.7vw,42.9px); font-weight:800; margin-top:1px; }
+  .kpi .label{ font-size:clamp(11px,0.7vw,18px); color:var(--text-lo); font-weight:600; }
+  .kpi .value{ font-size:clamp(24px,1.9vw,48px); font-weight:800; margin-top:1px; }
   .kpi.amber .value{ color:var(--amber); } .kpi.aqua .value{ color:var(--aqua); } .kpi.bad .value{ color:var(--bad); }
 
   .panel{ background:linear-gradient(180deg,var(--panel),rgba(15,36,32,.55)); border:1px solid var(--line);
-    border-radius:16px; padding:1.4vh 1.2vw; display:flex; flex-direction:column; min-height:0;
+    border-radius:16px; padding:1vh 1vw; display:flex; flex-direction:column; min-height:0;
     box-shadow:0 6px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); }
   .panel h2{ margin:0 0 .8vh 0; font-size:clamp(23.0px,1.4vw,38.6px); font-weight:700; }
   .cal-panel{ grid-column:1; grid-row:2; overflow:hidden; }
-  .cal-panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.6vh; }
-  .cal-legenda{ margin-left:12px; font-size:clamp(11px,0.7vw,15px); font-weight:600; color:var(--text-lo); white-space:nowrap; }
+  .cal-panel h2{ font-size:clamp(15px,0.95vw,25px); margin-bottom:.4vh; }
+  .cal-legenda{ margin-left:12px; font-size:clamp(11.5px,0.72vw,15.5px); font-weight:600; color:var(--text-lo); white-space:nowrap; }
   .cal-legenda .chip{ padding:1px 7px; border-radius:3px; }
   .cal-legenda .estado{ padding-left:5px; border-left:3px solid transparent; }
   .cal-legenda .sep{ opacity:.35; }
 
-  .fila-estoque-col{ grid-column:2; grid-row:1 / span 2; display:grid; grid-template-rows:1fr 1fr; gap:1vh; min-height:0;
+  .fila-estoque-col{ grid-column:2; grid-row:1 / span 2; display:grid; grid-template-rows:1fr 1fr; gap:0.6vh; min-height:0;
     margin-top:-69px; } /* Opção A: sobe a coluna direita para junto do header (y≈16) */
   .top-pair .panel, .bottom-pair .panel{ height:100%; min-height:0; overflow:hidden; }
-  .top-pair{ display:grid; grid-template-columns:1fr 1fr; gap:1.2vw; min-height:0; }
-  .top-pair .panel{ padding:0.8vh 0.9vw; }
+  .top-pair{ display:grid; grid-template-columns:1fr 1fr; gap:0.9vw; min-height:0; }
+  .top-pair .panel{ padding:0.6vh 0.8vw; }
   .top-pair .panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.3vh; }
-  .bottom-pair{ display:grid; grid-template-columns:1fr 1fr; gap:1.2vw; min-height:0; }
-  .bottom-pair .panel{ padding:0.8vh 0.9vw; }
+  .bottom-pair{ display:grid; grid-template-columns:1fr 1fr; gap:0.9vw; min-height:0; }
+  .bottom-pair .panel{ padding:0.6vh 0.8vw; }
   .bottom-pair .panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.3vh; }
 
   /* Fila de Pedidos — teste substituindo o painel da pizza */
@@ -112,10 +112,10 @@
   .fila-valores .secundario{ font-size:clamp(11.5px,0.70vw,14.9px); color:var(--text-lo); white-space:nowrap; }
 
   /* Fila de Pedidos B2 — barra de composição + chips por SKU */
-  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:6px 10px 7px; }
+  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:5px 9px 6px; }
   .ped .l1{ display:flex; justify-content:space-between; align-items:baseline; gap:9px; }
-  .ped .cli{ font-size:clamp(13px,0.85vw,18px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .ped .un{ font-size:clamp(15px,0.95vw,20px); font-weight:700; color:#fbbf24; white-space:nowrap; }
+  .ped .cli{ font-size:clamp(14px,0.95vw,20px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .ped .un{ font-size:clamp(16px,1.05vw,22px); font-weight:700; color:#fbbf24; white-space:nowrap; }
   .ped .meta{ font-size:clamp(9.5px,0.6vw,13px); color:#8b98a5; margin-top:1px; }
   .ped-seg{ height:8px; border-radius:5px; overflow:hidden; display:flex; margin-top:6px; gap:1px; }
   .ped-seg i{ display:block; height:100%; min-width:3px; }
@@ -161,18 +161,18 @@
      Cor segue os dias de cobertura (vermelho/âmbar/verde/neutro)
      ======================================================================== */
   .est-item{ background:#141d27; border-left:4px solid transparent; border-radius:7px;
-    padding:6px 11px; margin-bottom:6px; flex:1 0 auto; min-height:0;
+    padding:5px 9px; margin-bottom:4px; flex:1 0 auto; min-height:0;
     display:flex; flex-direction:column; overflow:hidden; }
-  .est-nome{ font-size:clamp(13px,0.85vw,18px); font-weight:600; overflow:hidden;
+  .est-nome{ font-size:clamp(14px,0.95vw,20px); font-weight:600; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; margin-bottom:2px; }
   .est-duo{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
   .est-metade{ display:flex; align-items:baseline; gap:4px; min-width:0; }
-  .est-big{ font-size:clamp(20px,1.3vw,27px); font-weight:700; line-height:1; letter-spacing:-.5px; }
-  .est-un{ font-size:clamp(10px,0.62vw,13px); color:#8b98a5; font-weight:500; }
+  .est-big{ font-size:clamp(22px,1.45vw,31px); font-weight:700; line-height:1; letter-spacing:-.5px; }
+  .est-un{ font-size:clamp(11px,0.68vw,14px); color:#8b98a5; font-weight:500; }
   .est-sep{ width:1px; align-self:stretch; background:#26313d; margin:0 2px; flex-shrink:0; }
-  .est-barra{ height:5px; background:#1c2733; border-radius:3px; overflow:hidden; margin-top:4px; }
+  .est-barra{ height:5px; background:#1c2733; border-radius:3px; overflow:hidden; margin-top:3px; }
   .est-barra i{ display:block; height:100%; min-width:2px; }
-  .est-cod{ font-size:clamp(9px,0.55vw,12px); color:#8b98a5; margin-top:auto; padding-top:3px;
+  .est-cod{ font-size:clamp(10px,0.62vw,13px); color:#8b98a5; margin-top:auto; padding-top:2px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cor-verde{ color:#4ade80; } .cor-ambar{ color:#fbbf24; }
   .cor-vermelho{ color:#f87171; } .cor-neutro{ color:#cfe0ee; }
@@ -943,7 +943,7 @@ function renderCalendar(calGrid, geradoEm){
         html += `<div class="cal-sku" style="color:${corSku}">${icone}${siglaExib}</div>`;
       } else {
         // SKU: fonte única (mesmo tamanho) — nome longo trunca com reticências
-        const skuSize = ` style="font-size:clamp(23px,1.8vw,30px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.4px"`;
+        const skuSize = ` style="font-size:clamp(25px,1.9vw,33px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.4px"`;
         html += `<div class="cal-sku"${skuSize}>${siglaExib}</div>`;
 
         // Quantidade — concluída mostra produzido com cor por eficiência
