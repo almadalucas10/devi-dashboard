@@ -383,11 +383,23 @@
 
   /* Zoom mobile */
   .cal-mundo{ transform-origin:0 0; will-change:transform; }
+  .resumo-turno{ display:none; }
   .cal-zoom-btns{ display:none; position:fixed; bottom:12px; right:12px; z-index:100; gap:6px; }
   .cal-zoom-btns button{ width:40px; height:40px; border-radius:50%; border:1px solid #444; background:#1a2430; color:#fff; font-size:20px; cursor:pointer; }
   @media (max-width: 640px) {
-    .cal-zoom-btns{ display:flex; flex-direction:column; }
-    .cal-mundo{ touch-action:none; }
+    /* Correção 1 — painéis com altura pelo conteúdo, sem sobreposição */
+    .panel, .panel.cal-panel{ height:auto; max-height:none; overflow:visible; margin-bottom:14px; }
+    .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:14px; }
+
+    /* Calendário agrupado por semana (zoom removido) */
+    .cal-semana{ font-size:12px; font-weight:700; color:#7dd3fc; margin:10px 0 2px;
+      padding:2px 4px; border-bottom:1px solid rgba(255,255,255,.1);
+      text-transform:uppercase; letter-spacing:.5px; }
+
+    /* Resumo do turno — o que exige ação agora */
+    .resumo-turno{ display:block; background:var(--panel); border:1px solid var(--line);
+      border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.65; }
+    .resumo-turno .rt-titulo{ font-weight:700; margin-bottom:3px; color:#fbbf24; }
   }
 
   /* ======================================================================== */
@@ -444,6 +456,8 @@
     </div>
     <div class="meta"><span class="dot" id="statusDot"></span>Agora: <b id="clockLive">--:--:--</b></div>
   </header>
+
+  <div class="resumo-turno" id="resumoTurno"></div>
 
   <div class="content-grid">
     <div class="kpis-rows">
@@ -515,6 +529,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXoo
 const CSV_URL_OMIE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1172546852&single=true&output=csv";
 
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutos
+const MOBILE = window.matchMedia('(max-width: 640px)').matches;
 const MODO_DEMO = new URLSearchParams(location.search).has('demo');
 if (MODO_DEMO) {
   document.body.insertAdjacentHTML('afterbegin',
@@ -787,7 +802,25 @@ function renderCalendar(calGrid, geradoEm){
   const offset = (new Date(Date.UTC(ano, mes, 1)).getUTCDay() + 6) % 7;
 
   let semOP = 0, divergencias = 0;
+  const mobileCal = window.matchMedia('(max-width: 640px)').matches;
   for(let wi = 0; wi < semanas; wi++){
+    // Mobile: agrupa por semana — rótulo "Semana X–Y" antes das células
+    if (mobileCal) {
+      let minD = null, maxD = null;
+      for (let di = 0; di < 7; di++) {
+        const n = wi*7 + di - offset + 1;
+        if (n >= 1 && n <= diasNoMes) {
+          if (minD === null) minD = n;
+          maxD = n;
+        }
+      }
+      if (minD !== null) {
+        const h = document.createElement('div');
+        h.className = 'cal-semana';
+        h.textContent = 'Semana ' + (minD === maxD ? String(minD) : minD + '–' + maxD);
+        calEl.appendChild(h);
+      }
+    }
     for(let di = 0; di < 7; di++){
       const n = wi*7 + di - offset + 1;
       const dayNum = (n >= 1 && n <= diasNoMes) ? String(n).padStart(2,'0') : null;
@@ -892,12 +925,7 @@ function renderCalendar(calGrid, geradoEm){
     }
   }
 
-  // Zoom mobile
-  if (window.matchMedia('(max-width: 640px)').matches) {
-    ativarZoom(mundo);
-  } else {
-    desativarZoom(mundo);
-  }
+  // Zoom mobile removido — substituído por lista agrupada por semana
   // Atualiza semanas e redimensiona
   setTimeout(sizeCalendar, 10);
 
@@ -979,11 +1007,68 @@ const ETAPA_CLASSES = {
 
 function fmtMoeda(n){ if(n===null||n===undefined||isNaN(n)) return "—"; return "R$ " + n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+// Resumo do turno (mobile) — o que exige ação agora, sem rolar
+function renderResumoTurno(dataOmie, dashData){
+  const el = document.getElementById('resumoTurno');
+  if(!el) return;
+  const linhas = [];
+
+  // Lotes em andamento e sem OP (calendário)
+  let semOP = 0;
+  const andamento = [];
+  const cg = dashData && dashData.calGrid;
+  if (cg && cg.weeksData) {
+    for (const row of cg.weeksData) for (const cell of row) {
+      if (!cell) continue;
+      if (cell.estado === 'planejado_sem_op') semOP++;
+      else if (cell.estado === 'op_andamento') {
+        const sigla = cell.sigla || cell[0] || '';
+        andamento.push({ sku: sigla, n: cell.planejada || cell[1] || 0,
+          op: cell.execucao ? (cell.execucao.cNumero || cell.execucao.nCodOP) : null });
+      }
+    }
+  }
+  if (andamento.length) {
+    linhas.push('Hoje: ' + andamento.slice(0, 3).map(function(x){
+      return x.sku + ' ' + fmt(x.n) + ' un' + (x.op ? ' · ' + formatarOP(x.op) : '');
+    }).join(' · '));
+  }
+  if (semOP > 0) linhas.push('Sem OP: ' + semOP + ' lote' + (semOP > 1 ? 's' : ''));
+
+  // Rompendo (cobertura crítica)
+  const rompendo = [];
+  if (dataOmie && dataOmie.cobertura && Array.isArray(dataOmie.cobertura.todos)) {
+    for (const c of dataOmie.cobertura.todos) {
+      if (c.status === 'critico' && c.cobertura !== null && c.cobertura !== undefined) rompendo.push(c);
+    }
+  }
+  if (rompendo.length) {
+    linhas.push('Rompendo: ' + rompendo.slice(0, 3).map(function(c){
+      return c.codigo + ' em ' + nfmt(c.cobertura) + 'd';
+    }).join(' · '));
+  }
+
+  // Insumo crítico
+  let insumoCrit = null;
+  if (dataOmie && Array.isArray(dataOmie.insumos)) {
+    insumoCrit = dataOmie.insumos.find(function(i){ return i.cor === 'vermelho'; });
+  }
+  if (insumoCrit) {
+    linhas.push('Insumo: ' + nomeCurtoReposicao(insumoCrit.descricao) + ' falta ' + nfmt(insumoCrit.falta) + ' ' + insumoCrit.unidade);
+  }
+
+  if (!linhas.length) {
+    el.innerHTML = '<div style="color:#4ade80;font-weight:700;">✓ Sem pontos de atenção</div>';
+  } else {
+    el.innerHTML = '<div class="rt-titulo">⚠ ' + linhas.length + ' ponto' + (linhas.length > 1 ? 's' : '') + ' de atenção</div>'
+      + '<div>' + linhas.join('<br>') + '</div>';
+  }
+}
+
 // Agrega os itens de um pedido por código (o payload traz linhas repetidas do
 // mesmo SKU) e ordena por quantidade decrescente — chips e segmentos seguem a
 // mesma ordem.
-function agregarItens(itens){
-  const mapa = new Map();
+function agregarItens(itens){  const mapa = new Map();
   for (const it of itens || []) {
     const cod = String(it.codigo).trim();
     mapa.set(cod, (mapa.get(cod) || 0) + (it.qtde || 0));
@@ -1021,20 +1106,30 @@ function renderFila(fila){
   const h2 = painel ? painel.querySelector('h2') : null;
   const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24;
 
-  // Cabe pedidos por altura estimada: 62px p/ 1 linha de chips, +14 por linha extra
-  let acumulado = 0;
-  const escolhidos = [];
-  for (const pedido of ordenado) {
-    const nSkus = agregarItens(pedido.itens).length;
-    const linhas = Math.ceil(nSkus / 3);
-    const altura = 62 + (linhas - 1) * 14;
-    if (acumulado + altura > altDisponivel) break;
-    acumulado += altura;
-    escolhidos.push(pedido);
-  }
+  // No mobile a rolagem é livre: lista completa; na TV, cabe por altura
+  const escolhidos = MOBILE ? ordenado : (function(){
+    const out = [];
+    let acumulado = 0;
+    for (const pedido of ordenado) {
+      const nSkus = agregarItens(pedido.itens).length;
+      const linhas = Math.ceil(nSkus / 3);
+      const altura = 62 + (linhas - 1) * 14;
+      if (acumulado + altura > altDisponivel) break;
+      acumulado += altura;
+      out.push(pedido);
+    }
+    return out;
+  })();
 
-  // Cabeçalho reflete o que coube (sem corte)
-  if (fc) fc.textContent = escolhidos.length + ' de ' + fila.length;
+  // Cabeçalho: mobile = total ("17 pedidos · 8.244 un"); TV = o que coube
+  if (fc) {
+    if (MOBILE) {
+      const totalUn = ordenado.reduce(function(s,p){ return s + (p.totalUnidades||0); }, 0);
+      fc.textContent = ordenado.length + ' pedido' + (ordenado.length > 1 ? 's' : '') + ' · ' + fmt(totalUn) + ' un';
+    } else {
+      fc.textContent = escolhidos.length + ' de ' + fila.length;
+    }
+  }
 
   const chipsHtml = function(itens){
     return agregarItens(itens).map(function(a){
@@ -1080,7 +1175,7 @@ function renderInsumos(insumos){
     return s + saldo * (p.valor || 0);
   }, 0);
   if (resumoEl) resumoEl.textContent = '· ' + fmtMoeda(valorTotal);
-  const MAX = 5; // cards A3 são mais altos
+  const MAX = MOBILE ? 999 : 5; // cards A3 são mais altos
   // Ordenação já vem do worker (vermelho → âmbar → verde → sem uso); mantém
   const ordenado = insumos.slice(0, MAX);
 
@@ -1137,7 +1232,7 @@ function renderEstoque(estoque, cobMap){
     return s + ((p.saldo !== null && p.saldo !== undefined) ? (p.saldo || 0) : 0);
   }, 0);
   if (resumoEl) resumoEl.textContent = '· ' + fmt(totalLatas) + ' un';
-  const MAX_ITENS = 5; // cards A3 são mais altos
+  const MAX_ITENS = MOBILE ? 999 : 5; // cards A3 são mais altos
   const disponiveis = estoque.filter(function(p){ return p.saldo !== null && p.saldo !== undefined; });
   // Ordena por dias de cobertura ascendente (sem dias no final)
   const ordenado = [...disponiveis].sort(function(a, b){
@@ -1242,18 +1337,20 @@ function renderReposicao(rp){
       + '</div>';
     return;
   }
-  // Cabe por altura: card ≈ 95px (duo + barra + rodapé). Ajuste dinâmico,
-  // como na fila — sem encolher cards (evita SKU/rodapé acavalados).
-  const painel = el.closest ? el.closest('.panel') : null;
-  const h2 = painel ? painel.querySelector('h2') : null;
-  const alt = (painel ? painel.clientHeight : 340) - (h2 ? h2.offsetHeight : 32);
-  let acum = 0;
-  const itens = [];
-  for (const item of rp.itens) {
-    if (acum + 95 > alt) break;
-    acum += 95;
-    itens.push(item);
-  }
+  // No mobile a rolagem é livre: lista completa; na TV, cabe por altura
+  const itens = MOBILE ? rp.itens : (function(){
+    const painel = el.closest ? el.closest('.panel') : null;
+    const h2 = painel ? painel.querySelector('h2') : null;
+    const alt = (painel ? painel.clientHeight : 340) - (h2 ? h2.offsetHeight : 32);
+    let acum = 0;
+    const out = [];
+    for (const item of rp.itens) {
+      if (acum + 95 > alt) break;
+      acum += 95;
+      out.push(item);
+    }
+    return out;
+  })();
   const total = rp.itens.reduce(function(s,i){ return s + (i.necessidade || 0); }, 0);
   if (resumo) {
     resumo.textContent = ' · ' + rp.itens.length + ' SKU' + (rp.itens.length > 1 ? 's' : '')
@@ -1347,10 +1444,11 @@ async function refresh(){
   }
 
   // Dashboard (calendário): Worker primeiro, CSV fallback
-  let producaoOk = false, dashErro = null;
+  let producaoOk = false, dashErro = null, dashAtual = null;
   try {
     const data = await loadFromJson(WORKER_URL + "/api/dashboard?_=" + Date.now());
     if (data && !data.error && data.calGrid) {
+      dashAtual = data;
       applyData(data);
       producaoOk = true;
       marcarFrescor(data.geradoEm, 'frescorDash');
@@ -1407,6 +1505,7 @@ async function refresh(){
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
     }
     marcarFrescor(dataOmie.geradoEm, 'frescorOmie');
+    try { renderResumoTurno(dataOmie, dashAtual); } catch(e) { console.error('Resumo:', e); }
     omieOk = true;
   };
   try {
