@@ -105,14 +105,14 @@
   .fila-valores .secundario{ font-size:clamp(11.5px,0.70vw,14.9px); color:var(--text-lo); white-space:nowrap; }
 
   /* Fila de Pedidos B2 — barra de composição + chips por SKU */
-  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:2px 6px 3px; }
+  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:2px 6px 2px; }
   .ped .l1{ display:flex; justify-content:space-between; align-items:baseline; gap:9px; }
-  .ped .cli{ font-size:clamp(18px,1.3vw,27px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .ped .un{ font-size:clamp(21px,1.4vw,29px); font-weight:700; color:#fbbf24; white-space:nowrap; }
-  .ped .meta{ font-size:clamp(9.5px,0.6vw,13px); color:#8b98a5; margin-top:1px; }
-  .ped-seg{ height:8px; border-radius:5px; overflow:hidden; display:flex; margin-top:6px; gap:1px; }
+  .ped .cli{ font-size:clamp(13px,0.92vw,18px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .ped .un{ font-size:clamp(15px,1.05vw,21px); font-weight:700; color:#fbbf24; white-space:nowrap; }
+  .ped .meta{ font-size:clamp(9px,0.55vw,11px); color:#8b98a5; margin-top:0; }
+  .ped-seg{ height:6px; border-radius:5px; overflow:hidden; display:flex; margin-top:4px; gap:1px; }
   .ped-seg i{ display:block; height:100%; min-width:3px; }
-  .ped-chips{ display:flex; gap:9px; margin-top:5px; flex-wrap:wrap; font-size:clamp(10px,0.65vw,13.5px); }
+  .ped-chips{ display:flex; gap:9px; margin-top:4px; flex-wrap:wrap; font-size:clamp(9.5px,0.6vw,12px); }
   .ped-chips .chip{ display:flex; align-items:center; gap:4px; color:#8b98a5; white-space:nowrap; }
   .ped-chips .chip b{ color:#cfe0ee; font-weight:700; }
   .ped-chips .pt{ width:6px; height:6px; border-radius:2px; display:inline-block; }
@@ -358,6 +358,7 @@
     .panel h2{ font-size:16px; }
 
     .fila-estoque-col{ grid-column:1; grid-row:auto; grid-template-rows:none; gap:1.5vh; margin-top:0; }
+    .fila-lista{ overflow-y:auto; overflow-x:hidden; }
     .top-pair{ grid-template-columns:1fr; gap:1.5vh; }
     .top-pair .panel{ height:320px; }
     .bottom-pair{ grid-template-columns:1fr; gap:1.5vh; }
@@ -1158,7 +1159,7 @@ function renderFila(fila){
     for (const pedido of ordenado) {
       const nSkus = agregarItens(pedido.itens).length;
       const linhas = Math.ceil(nSkus / 3);
-      const altura = hPed + (linhas - 1) * 16;
+      const altura = hPed + (linhas - 1) * 14;
       if (acumulado + altura > altDisponivel) break;
       acumulado += altura;
       out.push(pedido);
