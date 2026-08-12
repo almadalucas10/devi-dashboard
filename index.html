@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PCP Bebidas — Dashboard TV</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -388,8 +388,10 @@
   .cal-zoom-btns button{ width:40px; height:40px; border-radius:50%; border:1px solid #444; background:#1a2430; color:#fff; font-size:20px; cursor:pointer; }
   @media (max-width: 640px) {
     /* Correção 1 — painéis com altura pelo conteúdo, sem sobreposição */
-    .panel, .panel.cal-panel{ height:auto; max-height:none; overflow:visible; margin-bottom:14px; }
-    .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:14px; }
+    html, body{ overflow-x:hidden; }
+    .wrap{ padding:10px 12px; gap:10px; }
+    .panel, .panel.cal-panel{ height:auto; max-height:none; overflow:visible; margin-bottom:10px; }
+    .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:10px; }
 
     /* Calendário agrupado por semana (zoom removido) */
     .cal-semana{ font-size:12px; font-weight:700; color:#7dd3fc; margin:10px 0 2px;
