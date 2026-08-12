@@ -177,7 +177,7 @@
 
   /* Reposição de Estoque — barra segmentada (sobra/consumido/falta) dentro de card */
   .rep-linha{ display:flex; align-items:center; gap:12px; }
-  .rep-seg{ flex:1; height:17px; background:#1c2733; border-radius:8px; overflow:hidden; display:flex; min-width:0; }
+  .rep-seg{ width:100%; height:17px; background:#1c2733; border-radius:8px; overflow:hidden; display:flex; margin-top:6px; min-width:0; }
   .rep-seg i{ display:block; height:100%; min-width:3px; }
   .rep-val{ font-size:clamp(18.4px,1.2vw,27.3px); font-weight:800; min-width:62px; text-align:right; color:#ef4444; white-space:nowrap; }
   .rep-leg{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:clamp(10.9px,0.68vw,15.6px); color:#8b98a5; margin-top:8px; }
@@ -1273,11 +1273,15 @@ function renderReposicao(rp){
     // rodapé no mesmo estilo dos painéis de Estoque/Insumos
     const rodape = (minimo > 0 ? Math.round(saldo / minimo * 100) + ' % do mínimo (' + fmt(minimo) + ')' : 'sem mínimo definido')
       + ' · fila ' + fmt(pedido) + ' un';
+    // duo (repor | saldo) + barra segmentada em largura total, como os demais painéis
     return '<div class="est-item" style="border-left-color:' + barraCor + '">'
       + '<div class="est-nome">' + nomeCurtoReposicao(d.descricao || d.sku) + '</div>'
-      + '<div class="rep-linha">' + barra
-      + '<span class="est-big ' + corCls + '">' + fmt(falta) + '</span><span class="est-un">un</span>'
+      + '<div class="est-duo">'
+      + '<span class="est-metade"><span class="est-big ' + corCls + '">' + fmt(falta) + '</span><span class="est-un">repor</span></span>'
+      + '<span class="est-sep"></span>'
+      + '<span class="est-metade"><span class="est-big ' + corCls + '">' + fmt(saldo) + '</span><span class="est-un">un</span></span>'
       + '</div>'
+      + barra
       + '<div class="est-cod">' + rodape + '</div>'
       + '</div>';
   }).join('')
