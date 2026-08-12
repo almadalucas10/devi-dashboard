@@ -397,6 +397,12 @@
     .cal-semana{ font-size:12px; font-weight:700; color:#7dd3fc; margin:10px 0 2px;
       padding:2px 4px; border-bottom:1px solid rgba(255,255,255,.1);
       text-transform:uppercase; letter-spacing:.5px; }
+    .cal-cell .cal-sku{ overflow:hidden; text-overflow:ellipsis; }
+
+    /* Elementos seguem a margem do viewport — nada estoura a largura */
+    .content-grid, .fila-estoque-col, .panel, .cal-panel, .calendar,
+    .kpis-rows, .kpis-row-2, .top-pair, .bottom-pair,
+    .est-item, .ped, .cal-cell, .kpi, .resumo-turno{ min-width:0; max-width:100%; }
 
     /* Resumo do turno — o que exige ação agora */
     .resumo-turno{ display:block; background:var(--panel); border:1px solid var(--line);
