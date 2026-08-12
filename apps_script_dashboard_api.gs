@@ -247,7 +247,12 @@ function buildCalendarFromLotes(ss, ano, monthNum) {
   const wd = wdRaw === 0 ? 7 : wdRaw; // 1=segunda...7=domingo
   const monday1 = new Date(ano, monthNum - 1, 1 - (wd - 1));
 
-  for (let w = 0; w < 5; w++) {
+  // Número de semanas do mês (5 ou 6) — cobre o dia 29/30/31 em meses longos
+  // (ex.: agosto/2026 e novembro/2026 precisam de 6 semanas)
+  const offset = (wdRaw + 6) % 7; // dias antes do dia 1 (segunda = 0)
+  const semanas = Math.ceil((new Date(ano, monthNum, 0).getDate() + offset) / 7);
+
+  for (let w = 0; w < semanas; w++) {
     const dayRow = [], weekRow = [];
     for (let d = 0; d < 7; d++) {
       const dt = new Date(monday1.getFullYear(), monday1.getMonth(), monday1.getDate() + d + 7 * w);
