@@ -1172,8 +1172,11 @@ function renderReposicao(rp){
   // Card com a identidade dos painéis A3 (fundo + borda lateral), mas mantendo
   // a barra segmentada (sobra após a fila / consumido / falta para o mínimo)
   el.innerHTML = itens.map(function(d){
-    const sobra     = Math.max(0, (d.saldo || 0) - (d.pedido || 0));
-    const consumido = Math.min(d.pedido || 0, d.saldo || 0);
+    const saldo     = d.saldo || 0;
+    const minimo    = d.minimo || 0;
+    const pedido    = d.pedido || 0;
+    const sobra     = Math.max(0, saldo - pedido);
+    const consumido = Math.min(pedido, saldo);
     const falta     = d.necessidade || 0;
     const segs = [
       { valor: sobra,     cor: 'var(--verde)' },
@@ -1187,11 +1190,15 @@ function renderReposicao(rp){
     const cor = (d.saldo || 0) < (d.minimo || 0) ? 'vermelho' : 'ambar';
     const corCls = 'cor-' + cor;
     const barraCor = cor === 'vermelho' ? '#ef4444' : '#f59e0b';
+    // rodapé no mesmo estilo dos painéis de Estoque/Insumos
+    const rodape = (minimo > 0 ? Math.round(saldo / minimo * 100) + ' % do mínimo (' + fmt(minimo) + ')' : 'sem mínimo definido')
+      + ' · fila ' + fmt(pedido) + ' un';
     return '<div class="est-item" style="border-left-color:' + barraCor + '">'
       + '<div class="est-nome">' + nomeCurtoReposicao(d.descricao || d.sku) + '</div>'
       + '<div class="rep-linha">' + barra
       + '<span class="est-big ' + corCls + '">' + fmt(falta) + '</span><span class="est-un">un</span>'
       + '</div>'
+      + '<div class="est-cod">' + rodape + '</div>'
       + '</div>';
   }).join('')
     + '<div class="rep-leg">'
