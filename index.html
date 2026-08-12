@@ -518,7 +518,7 @@
         <div class="kpi amber"><div class="label" id="kpi1Label">PLANEJADO (ANO)</div><div class="value" id="kpiPlanejado">—</div></div>
         <div class="kpi aqua"><div class="label" id="kpi2Label">REALIZADO (ANO)</div><div class="value" id="kpiRealizado">—</div></div>
         <div class="kpi"><div class="label" id="kpi3Label">EFICIÊNCIA (ANO)</div><div class="value" id="kpiEficiencia" style="color:var(--text-hi)">—</div></div>
-        <div class="kpi"><div class="label" id="kpi4Label">OCUPAÇÃO (ANO)</div><div class="value" id="kpiExtra" style="color:var(--text-hi)">—</div></div>
+        <div class="kpi"><div class="label" id="kpi4Label">COBERTURA MÉDIA</div><div class="value" id="kpiExtra" style="color:var(--text-hi)">—</div></div>
       </div>
       <div class="kpis-row-2">
         <div class="kpi amber"><div class="label" id="kpi5Label">PLANEJADO (MÊS)</div><div class="value" id="kpiPlanejadoMes">—</div></div>
@@ -1349,8 +1349,6 @@ function renderKPIsOmie(k){
   setKpi('kpiEficiencia', pct(k.eficienciaAno));
   document.getElementById('kpiEficiencia').style.color = effColor(k.eficienciaAno);
   document.getElementById('kpi3Label').textContent = 'EFICIÊNCIA (ANO)';
-  document.getElementById('kpi4Label').textContent = 'OCUPAÇÃO (ANO)';
-  setKpi('kpiExtra', pct(k.ocupacaoAno));
   // Linha 2 — Mês
   setKpi('kpiPlanejadoMes', fmt(k.planejadoMes));
   document.getElementById('kpi5Label').textContent = 'PLANEJADO (MÊS)';
@@ -1367,21 +1365,27 @@ function nfmt(n){ return n.toLocaleString("pt-BR", {maximumFractionDigits:1}); }
 function renderCobertura(cob){
   var elLabel = document.getElementById('kpi4Label');
   var elVal = document.getElementById('kpiExtra');
-  if (!cob || cob.erro || !cob.critico) {
-    if (elLabel) elLabel.textContent = 'COBERTURA';
+  if (!elLabel) return;
+  // Cobertura média — média dos dias de cobertura não nulos (produtos acabados)
+  var dias = [];
+  if (cob && Array.isArray(cob.todos)) {
+    for (var i = 0; i < cob.todos.length; i++) {
+      var c = cob.todos[i];
+      if (c && c.cobertura !== null && c.cobertura !== undefined) dias.push(c.cobertura);
+    }
+  }
+  elLabel.textContent = 'COBERTURA MÉDIA';
+  if (!dias.length) {
     setKpi('kpiExtra', '—');
+    if (elVal) elVal.style.color = '';
     return;
   }
-  var c = cob.critico;
-  var leadStr = c.lead !== null ? ' / lead ' + c.lead + 'd' : '';
-  var valor = c.cobertura !== null ? nfmt(c.cobertura).replace('.',',') + 'd' + leadStr : 'sem giro';
-
-  if (elLabel) elLabel.textContent = 'COBERTURA CRÍTICA';
-  setKpi('kpiExtra', valor);
-
+  var media = dias.reduce(function(a, b){ return a + b; }, 0) / dias.length;
+  setKpi('kpiExtra', nfmt(media).replace('.', ',') + 'd');
+  // Cor pelos limiares de cobertura (vermelho <7d, âmbar <15d, verde)
   if (elVal) {
-    if (c.status === 'critico') elVal.style.color = '#ef4444';
-    else if (c.status === 'alerta') elVal.style.color = '#eab308';
+    if (media < 7) elVal.style.color = '#ef4444';
+    else if (media < 15) elVal.style.color = '#eab308';
     else elVal.style.color = '#22c55e';
   }
 }
@@ -1574,6 +1578,9 @@ async function refresh(){
     }
     if (dataOmie.kpis && !dataOmie.kpis.erro) {
       try { renderKPIsOmie(dataOmie.kpis); } catch(e) { console.error('KPIs Omie:', e); }
+    if (dataOmie.cobertura) {
+      try { renderCobertura(dataOmie.cobertura); } catch(e) { console.error('Cobertura média:', e); }
+    }
     }
     marcarFrescor(dataOmie.geradoEm, 'frescorOmie');
     try { renderResumoTurno(dataOmie, dashAtual); } catch(e) { console.error('Resumo:', e); }
