@@ -118,8 +118,6 @@
   .ped-chips .pt{ width:6px; height:6px; border-radius:2px; display:inline-block; }
   .fam-komb{ background:#ec4899; } .fam-cha{ background:#a855f7; }
   .fam-refri{ background:#f59e0b; } .fam-rtm{ background:#3b82f6; } .fam-outro{ background:#64748b; }
-  .ped-leg{ display:flex; gap:11px; font-size:clamp(9px,0.55vw,12px); color:#8b98a5; margin-top:8px; flex-wrap:wrap; }
-  .ped-leg span{ display:flex; align-items:center; gap:4px; }
 
   /* Lista de Estoque — mesmo modelo visual da Fila de Pedidos (borda + selo coloridos) */
   .estoque-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow:hidden; justify-content:space-evenly; }
@@ -1149,7 +1147,7 @@ function renderFila(fila){
   // Altura disponível no painel (menos cabeçalho e a legenda de famílias)
   const painel = el.closest ? el.closest('.panel') : null;
   const h2 = painel ? painel.querySelector('h2') : null;
-  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24 - 22; // -22 reserva a legenda de famílias
+  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24;
 
   // No mobile a rolagem é livre: lista completa; na TV, cabe por altura (mede o card real)
   const escolhidos = MOBILE ? ordenado : (function(){
@@ -1197,13 +1195,7 @@ function renderFila(fila){
       + '<div class="ped-seg">' + segHtml(p.itens) + '</div>'
       + '<div class="ped-chips">' + chipsHtml(p.itens) + '</div>'
       + '</div>';
-  }).join('')
-    + '<div class="ped-leg">'
-    + '<span><i class="pt fam-komb"></i>Kombucha</span>'
-    + '<span><i class="pt fam-cha"></i>Chá</span>'
-    + '<span><i class="pt fam-refri"></i>Refri</span>'
-    + '<span><i class="pt fam-rtm"></i>RTM</span>'
-    + '</div>';
+  }).join('');
 }
 
 // Mede a altura real de um card (estoque/insumos/reposição) no próprio painel
