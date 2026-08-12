@@ -147,7 +147,7 @@ export async function buscarEstoqueInsumos(env) {
         dias,
         pctMinimo,
         cor,
-        valor: parseFloat(p.valor_unitario) || 0,
+        valor: parseFloat(r.cmc) || 0,
       });
     } catch (e) {
       estoque.push({
