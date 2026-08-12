@@ -3,6 +3,7 @@
 // ============================================================================
 import { chamarOmie, buscarOPs, buscarTodasPaginas, consultarProduto } from "./omie.js";
 import { SKUS_ATIVOS, NOME_CURTO, MESES_ABREV, CODIGO_LOCAL_ESTOQUE_CD_DEVI } from "./constants.js";
+import { hojeBrasilDate } from "./fuso.js";
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -60,7 +61,7 @@ export async function construirCacheProdutos(env) {
 // ============================================================================
 
 export async function buscarRealizadoProducao(env, cacheProd) {
-  const hoje = new Date();
+  const hoje = hojeBrasilDate();
   const anoAtual = hoje.getFullYear();
   const inicioAno = new Date(anoAtual, 0, 1);
 
@@ -126,7 +127,7 @@ export async function buscarRealizadoProducao(env, cacheProd) {
 // ============================================================================
 
 export function calcularTendencia(movimentos) {
-  const hoje = new Date();
+  const hoje = hojeBrasilDate();
   const anoAtual = hoje.getFullYear();
   const meses = [], valores = [];
   const inicio = new Date(anoAtual, hoje.getMonth() - 7, 1);
@@ -152,7 +153,7 @@ export function calcularRanking(movimentos, descricoes) {
 // ============================================================================
 
 export async function buscarKPIsOmie(env, cacheProd, prefetched = {}) {
-  const hoje = new Date();
+  const hoje = hojeBrasilDate();
   const anoAtual = hoje.getFullYear(), mesAtual = hoje.getMonth();
   const inicioAno = new Date(anoAtual, 0, 1);
   const dDtInicioAno = `01/01/${anoAtual}`;

@@ -3,6 +3,7 @@
 // ============================================================================
 import { chamarOmie } from "./omie.js";
 import { SKUS_ATIVOS, CODIGO_LOCAL_ESTOQUE_CD_DEVI } from "./constants.js";
+import { hojeBrasilDate } from "./fuso.js";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -15,7 +16,7 @@ function dataParaStr(data) {
 }
 
 export async function buscarEstoque(env, cacheProd) {
-  const hoje = dataParaStr(new Date());
+  const hoje = dataParaStr(hojeBrasilDate());
 
   // ListarPosEstoque em batch para todos os SKUs
   const resultado = await chamarOmie(env, "/estoque/consulta/", "ListarPosEstoque", {

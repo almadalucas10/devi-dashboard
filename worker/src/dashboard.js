@@ -4,8 +4,8 @@
 // ============================================================================
 import { construirCacheProdutos } from "./kpis.js";
 import { buscarOPs, chamarOmie } from "./omie.js";
-
-const LOTE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0CiPxDF_WzXooUU_b7MgoyjvnIDp3kZ3KKMeEVVXEuE2ZIl5iYIoi1EjxuEIQMQ/pub?gid=1841448781&single=true&output=csv";
+import { hojeBrasil } from "./fuso.js";
+import { getAccessToken, getValues } from "./sheets.js";
 
 // ============================================================================
 // Mapa sigla → SKU (do Cadastro de SKU)
@@ -39,33 +39,20 @@ function parseNum(str) {
 }
 
 // ============================================================================
-// Calendário direto do CSV da Produção por Lote
+// Calendário direto da aba "Produção por Lote" (Sheets API)
 // ============================================================================
 
-async function buildCalendarFromCSV(ano, mes) {
-  const res = await fetch(LOTE_CSV_URL, { cf: { cacheTtl: 0 } });
-  if (!res.ok) throw new Error(`CSV Lote HTTP ${res.status}`);
-  const text = await res.text();
+async function buildCalendarFromPlanilha(env, ano, mes) {
+  const token = await getAccessToken(env);
+  const rows = await getValues(env, token, "'Produção por Lote'!A4:H2000");
 
-  // Parse CSV manual (simples — sem lib)
-  const rows = text.replace(/\r/g,"").split("\n").map(line => {
-    const cols = [];
-    let inQuotes = false, col = "";
-    for (const ch of line) {
-      if (ch === '"') { inQuotes = !inQuotes; continue; }
-      if (ch === ',' && !inQuotes) { cols.push(col); col = ""; continue; }
-      col += ch;
-    }
-    cols.push(col);
-    return cols;
-  });
-
-  // Mapa: chave "YYYY-M-D" → { sigla, planejada, produzida }
+  // Mapa: chave "YYYY-M-D" → { sigla, planejada, produzida, linha }
+  // A leitura começa na linha 4 → rows[0] é o cabeçalho; dados a partir de rows[1]
   const map = {};
-  for (let i = 4; i < rows.length; i++) {
+  for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (!row[0] || !row[0].includes("/")) continue;
-    const data = parseDataBr(row[0]);
+    if (!row[0] || !String(row[0]).includes("/")) continue;
+    const data = parseDataBr(String(row[0]));
     if (!data) continue;
     const sigla = String(row[1] || "").trim();
     if (!sigla) continue;
@@ -74,7 +61,7 @@ async function buildCalendarFromCSV(ano, mes) {
     const planejada = parseNum(row[6]) || 0;
     const produzida = parseNum(row[7]) || 0;
     const key = `${data.getFullYear()}-${data.getMonth()+1}-${data.getDate()}`;
-    map[key] = { sigla, sufixo: sufixoLimpo, planejada, produzida };
+    map[key] = { sigla, sufixo: sufixoLimpo, planejada, produzida, linha: 4 + i };
   }
 
   // Monta grid (5 ou 6 semanas conforme o mês)
@@ -86,6 +73,7 @@ async function buildCalendarFromCSV(ano, mes) {
 
   const dayNums = [];
   const weeksData = [];
+  const mapLinhas = {};
   let day = 1;
 
   for (let w = 0; w < numWeeks; w++) {
@@ -102,7 +90,10 @@ async function buildCalendarFromCSV(ano, mes) {
         const info = map[key];
         if (info && info.sigla) {
           const siglaCompleta = info.sigla + (info.sufixo || "");
-          wdRow.push([siglaCompleta, info.planejada, info.produzida > 0 ? info.produzida : null]);
+          // produzida NÃO vem da planilha (col H é destino do write-back, não fonte):
+          // só do casamento OP/OPE no enriquecimento, evitando feedback loop.
+          wdRow.push([siglaCompleta, info.planejada, null]);
+          mapLinhas[key] = info.linha;
         } else {
           wdRow.push(null);
         }
@@ -113,7 +104,62 @@ async function buildCalendarFromCSV(ano, mes) {
     weeksData.push(wdRow);
   }
 
-  return { dayNums, weeksData };
+  return { dayNums, weeksData, mapLinhas };
+}
+
+// ============================================================================
+// Preenche Nº do Lote (col F) e Qtd. Produzida (col H) na aba
+// "Produção por Lote", a partir da execução já calculada no calendário.
+// Chama 1x por sync (leve/pesado) — valores idempotentes.
+// ============================================================================
+
+export async function preencherLotesRealizado(env, calGrid, ano, mes) {
+  try {
+    const token = await getAccessToken(env);
+    const wd = calGrid.weeksData, dn = calGrid.dayNums;
+    const mapLinhas = calGrid.mapLinhas || {};
+    const dados = []; // { range, values } para batchUpdate
+
+    for (let wi = 0; wi < wd.length; wi++) {
+      for (let di = 0; di < 7; di++) {
+        const cell = wd[wi] && wd[wi][di];
+        const day = dn[wi] && dn[wi][di];
+        if (!cell || !day) continue;
+        const key = `${ano}-${mes}-${parseInt(day, 10)}`;
+        const linha = mapLinhas[key];
+        if (!linha) continue;
+
+        // Só escreve quando há valor real — nunca apaga o que já está na planilha
+        const lote = cell.execucao ? (cell.execucao.cNumero || "") : "";
+        const qtd = (cell.produzida || cell[2] || null);
+        if (!lote && qtd === null) continue;
+        if (lote) dados.push({ range: `'Produção por Lote'!F${linha}`, values: [[lote]] });
+        if (qtd !== null && qtd !== "") dados.push({ range: `'Produção por Lote'!H${linha}`, values: [[qtd]] });
+      }
+    }
+
+    if (dados.length === 0) return { atualizados: 0 };
+
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${env.SPREADSHEET_ID}/values:batchUpdate`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ valueInputOption: "RAW", data: dados }),
+      }
+    );
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`⚠️ Preenche Lote: ${res.status} ${err.slice(0, 150)}`);
+      return { erro: err.slice(0, 150) };
+    }
+    const r = await res.json();
+    console.log(`✅ Preenche Lote: ${r.totalUpdatedCells || 0} células (${dados.length / 2} lotes)`);
+    return { atualizados: r.totalUpdatedCells || 0 };
+  } catch (e) {
+    console.error(`⚠️ Preenche Lote: ${e.message}`);
+    return { erro: e.message };
+  }
 }
 
 // ============================================================================
@@ -351,12 +397,11 @@ export function extrairKPIsDoCalendario(calGrid, ano, mes) {
 // ============================================================================
 
 export async function buildDashboardCache(env) {
-  const hoje = new Date();
-  const ano = hoje.getFullYear(), mes = hoje.getMonth() + 1;
+  const { ano, mes } = hojeBrasil();
   const nomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
   const data = {
-    mesLabel: nomes[hoje.getMonth()],
+    mesLabel: nomes[mes - 1],
     geradoEm: new Date().toISOString(),
     planejado: null, realizado: null, eficiencia: null,
     extraLabel: null, extraValue: null,
@@ -365,9 +410,9 @@ export async function buildDashboardCache(env) {
     calGrid: null,
   };
 
-  // 1. Plano: CSV da Produção por Lote
+  // 1. Plano: aba "Produção por Lote" via Sheets API
   try {
-    data.calGrid = await buildCalendarFromCSV(ano, mes);
+    data.calGrid = await buildCalendarFromPlanilha(env, ano, mes);
     const celdas = data.calGrid.weeksData.flat().filter(Boolean).length;
     // Debug: mostra dias 6 e 10
     const wd = data.calGrid.weeksData;
@@ -416,9 +461,12 @@ export async function buildDashboardCache(env) {
     await enriquecerComRealizado(data.calGrid.weeksData, data.calGrid.dayNums, env, cacheProd, ano, mes);
     // Recalcula contagem
     const _celdas = data.calGrid.weeksData.flat().filter(Boolean).length;
-    console.log(`✅ Plano CSV: ${_celdas} células`);
+    console.log(`✅ Plano: ${_celdas} células`);
 
     console.log(`✅ Execução: ${resultado._lotesComExec} matches, ${resultado._lotesCount} lotes`);
+
+    // Preenche Nº do Lote + Qtd. Produzida na aba "Produção por Lote"
+    await preencherLotesRealizado(env, data.calGrid, ano, mes);
   } catch (e) {
     console.warn(`⚠️ Execução: ${e.message}`);
   }

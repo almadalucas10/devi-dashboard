@@ -12,7 +12,7 @@
 
   "vars": {
     "OMIE_BASE_URL": "https://app.omie.com.br/api/v1",
-    "SPREADSHEET_ID": "1dVTXuNhf9QWrz0kyh7i9S0SNJ43O5GZD",
+    "SPREADSHEET_ID": "1ZMvgDkPCU3CMpeS4R0A26xFJQGHJhBAXOTBi73NKs4o",
     "SKIP_SHEETS_MIRROR": "false"
   },
 

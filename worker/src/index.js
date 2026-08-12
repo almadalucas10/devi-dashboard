@@ -11,6 +11,7 @@ import { buscarEstoqueInsumos } from "./insumos.js";
 import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
 import { atualizarAgregadoVendas, recalcularCobertura } from "./cobertura.js";
 import { enriquecerEstoqueRuptura } from "./ruptura.js";
+import { hojeBrasil } from "./fuso.js";
 import { R2_KEYS } from "./constants.js";
 
 // ============================================================================
@@ -115,8 +116,8 @@ async function runLightSync(env) {
     try {
       const dashData = await readJson(env, R2_KEYS.dashboard);
       if (dashData && dashData.calGrid) {
-        const hoje = new Date();
-        const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
+        const h = hojeBrasil();
+        const kcal = extrairKPIsDoCalendario(dashData.calGrid, h.ano, h.mes);
         if (!partial.kpis || partial.kpis.erro) partial.kpis = {};
         Object.assign(partial.kpis, {
           planejadoMes: kcal.planejadoMes,
@@ -204,15 +205,15 @@ async function runHeavySync(env) {
     try {
       const dashData = await readJson(env, R2_KEYS.dashboard);
       if (dashData && dashData.calGrid) {
-        const hoje = new Date();
-        const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
+        const h = hojeBrasil();
+        const kcal = extrairKPIsDoCalendario(dashData.calGrid, h.ano, h.mes);
         if (data.kpis && !data.kpis.erro) {
           data.kpis.planejadoMes = kcal.planejadoMes;
           data.kpis.realizadoMes = kcal.realizadoMes;
           data.kpis.eficienciaMes = kcal.eficienciaMes;
           data.kpis.pendentesMes = kcal.pendentesMes;
           if (data.tendenciaProducao && data.tendenciaProducao.valores) {
-            const mesIdx = new Date().getMonth();
+            const mesIdx = h.mes - 1;
             data.tendenciaProducao.valores[mesIdx] = kcal.realizadoMes;
             data.kpis.realizadoAno = data.tendenciaProducao.valores.reduce((a,v)=>a+v,0);
           }
@@ -341,6 +342,15 @@ export default {
       } catch(e) { return json({ erro: e.message }, 500); }
     }
 
+    if (url.pathname === "/api/debug/sa-email") {
+      // E-mail do service account (para compartilhar a planilha com ele)
+      try {
+        const saJson = env.GOOGLE_SERVICE_ACCOUNT_JSON;
+        const sa = saJson ? JSON.parse(saJson) : null;
+        return json({ client_email: sa ? sa.client_email : null, temCredencial: !!saJson });
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/debug/sheets-tabs") {
       // Lista as abas da planilha (procurar ficha técnica / estruturas)
       try {
@@ -411,6 +421,17 @@ export default {
     if (url.pathname === "/api/sync" && request.method === "POST") {
       ctx.waitUntil(runHeavySync(env));
       return json({ ok: true, message: "sync pesado disparado em background" });
+    }
+
+    if (url.pathname === "/api/sync/vendas" && request.method === "POST") {
+      const t0 = Date.now();
+      try {
+        const agregado = await atualizarAgregadoVendas(env);
+        await writeSyncMeta(env, { vendas: Date.now() });
+        return json({ ok: true, janelaDias: agregado.janelaDias, skus: Object.keys(agregado.skus || {}).length, elapsedMs: Date.now() - t0 });
+      } catch (e) {
+        return json({ erro: e.message, elapsedMs: Date.now() - t0 }, 500);
+      }
     }
 
     if (url.pathname === "/api/sync/light" && request.method === "POST") {

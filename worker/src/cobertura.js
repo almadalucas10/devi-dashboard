@@ -8,8 +8,9 @@
 import { chamarOmie } from "./omie.js";
 import { readJson, writeJson } from "./r2.js";
 import { SKUS_ATIVOS, NOME_CURTO } from "./constants.js";
+import { hojeBrasilDate } from "./fuso.js";
 
-const DIAS_JANELA = 365;
+const DIAS_JANELA = 90;
 const LIMIAR_GIRO = 5; // un/dia
 const VENDAS_R2_KEY = "vendas-90d.json";
 
@@ -42,7 +43,7 @@ function dataParaStr(dt) {
 // ============================================================================
 
 export async function atualizarAgregadoVendas(env) {
-  const hoje = new Date();
+  const hoje = hojeBrasilDate();
   const dataInicial = new Date(hoje.getTime() - DIAS_JANELA * 24 * 60 * 60 * 1000);
   const dDtInicial = dataParaStr(dataInicial);
   const dDtFinal = dataParaStr(hoje);

@@ -2,6 +2,7 @@
 // Fila de Pedidos — port de buscarFilaDePedidos()
 // ============================================================================
 import { chamarOmie, buscarTodasPaginas } from "./omie.js";
+import { hojeBrasilDate } from "./fuso.js";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -38,7 +39,7 @@ async function construirCacheClientes(env, maxPaginas = 10) {
 }
 
 export async function buscarFilaDePedidos(env) {
-  const hoje = new Date();
+  const hoje = hojeBrasilDate();
   const dataInicial = new Date(hoje.getTime() - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000);
   const dDtInicial = dataParaStr(dataInicial);
   const dDtFinal = dataParaStr(hoje);
