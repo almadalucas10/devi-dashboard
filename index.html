@@ -158,6 +158,15 @@
   .cor-verde{ color:#4ade80; } .cor-ambar{ color:#fbbf24; }
   .cor-vermelho{ color:#f87171; } .cor-neutro{ color:#cfe0ee; }
 
+  /* Reposição de Estoque — barra segmentada (sobra/consumido/falta) dentro de card */
+  .rep-linha{ display:flex; align-items:center; gap:12px; }
+  .rep-seg{ flex:1; height:17px; background:#1c2733; border-radius:8px; overflow:hidden; display:flex; min-width:0; }
+  .rep-seg i{ display:block; height:100%; min-width:3px; }
+  .rep-val{ font-size:clamp(18.4px,1.2vw,27.3px); font-weight:800; min-width:62px; text-align:right; color:#ef4444; white-space:nowrap; }
+  .rep-leg{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:clamp(10.9px,0.68vw,15.6px); color:#8b98a5; margin-top:8px; }
+  .rep-leg span{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .rep-simbolo{ display:inline-block; width:10px; height:10px; border-radius:3px; }
+
   /* Ranking — top 5 em lista (mesmo modelo visual da fila e estoque) */
   .ranking-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow:hidden; justify-content:space-evenly; }
   .ranking-item{
@@ -1160,31 +1169,34 @@ function renderReposicao(rp){
     resumo.textContent = ' · ' + rp.itens.length + ' SKU' + (rp.itens.length > 1 ? 's' : '')
       + ' · repor ' + total.toLocaleString('pt-BR') + ' un';
   }
-  // Mesmo estilo A3 dos painéis de Estoque/Insumos: duo com divisor,
-  // barra de % do mínimo e rodapé (fila + mínimo)
+  // Card com a identidade dos painéis A3 (fundo + borda lateral), mas mantendo
+  // a barra segmentada (sobra após a fila / consumido / falta para o mínimo)
   el.innerHTML = itens.map(function(d){
-    const saldo     = d.saldo || 0;
-    const minimo    = d.minimo || 0;
-    const necessidade = d.necessidade || 0;
-    const pedido    = d.pedido || 0;
-    // cor: vermelho se abaixo do mínimo, senão âmbar (todos precisam repor)
-    const cor = saldo < minimo ? 'vermelho' : 'ambar';
-    const corCls = 'cor-' + cor;
+    const sobra     = Math.max(0, (d.saldo || 0) - (d.pedido || 0));
+    const consumido = Math.min(d.pedido || 0, d.saldo || 0);
+    const falta     = d.necessidade || 0;
+    const segs = [
+      { valor: sobra,     cor: 'var(--verde)' },
+      { valor: consumido, cor: 'var(--ambar)' },
+      { valor: falta,     cor: 'var(--vermelho)' }
+    ].filter(function(s){ return s.valor > 0; });
+    const barra = '<span class="rep-seg">'
+      + segs.map(function(s){ return '<i style="flex:' + s.valor + ';background:' + s.cor + '"></i>'; }).join('')
+      + '</span>';
+    // borda do card acompanha a urgência (vermelho abaixo do mínimo, senão âmbar)
+    const cor = (d.saldo || 0) < (d.minimo || 0) ? 'vermelho' : 'ambar';
     const barraCor = cor === 'vermelho' ? '#ef4444' : '#f59e0b';
-    const barraPct = minimo > 0 ? Math.min(100, Math.round(saldo / minimo * 100)) : 100;
-    const rodape = (minimo > 0 ? Math.round(saldo / minimo * 100) + ' % do mínimo (' + fmt(minimo) + ')' : 'sem mínimo definido')
-      + ' · fila ' + fmt(pedido);
     return '<div class="est-item" style="border-left-color:' + barraCor + '">'
       + '<div class="est-nome">' + nomeCurtoReposicao(d.descricao || d.sku) + '</div>'
-      + '<div class="est-duo">'
-      + '<span class="est-metade"><span class="est-big ' + corCls + '">' + fmt(necessidade) + '</span><span class="est-un">repor</span></span>'
-      + '<span class="est-sep"></span>'
-      + '<span class="est-metade"><span class="est-big ' + corCls + '">' + fmt(saldo) + '</span><span class="est-un">un</span></span>'
-      + '</div>'
-      + '<div class="est-barra"><i style="width:' + barraPct + '%;background:' + barraCor + '"></i></div>'
-      + '<div class="est-cod">' + rodape + '</div>'
+      + '<div class="rep-linha">' + barra
+      + '<div class="rep-val">' + fmt(falta) + '</div></div>'
       + '</div>';
-  }).join('');
+  }).join('')
+    + '<div class="rep-leg">'
+    + '<span><i class="rep-simbolo" style="background:var(--verde)"></i> sobra após a fila</span>'
+    + '<span><i class="rep-simbolo" style="background:var(--ambar)"></i> consumido pela fila</span>'
+    + '<span><i class="rep-simbolo" style="background:var(--vermelho)"></i> falta para o mínimo</span>'
+    + '</div>';
 }
 
 function setStatusDot(ok){
