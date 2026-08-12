@@ -77,7 +77,7 @@
   .bottom-pair .panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.3vh; }
 
   /* Fila de Pedidos — teste substituindo o painel da pizza */
-  .fila-lista{ flex:1; display:flex; flex-direction:column; gap:6px; overflow:hidden; justify-content:flex-start; }
+  .fila-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow:hidden; justify-content:flex-start; }
   .fila-item{
     display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:8px;
     background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:10px;
@@ -105,14 +105,14 @@
   .fila-valores .secundario{ font-size:clamp(11.5px,0.70vw,14.9px); color:var(--text-lo); white-space:nowrap; }
 
   /* Fila de Pedidos B2 — barra de composição + chips por SKU */
-  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:2px 6px 2px; }
-  .ped .l1{ display:flex; justify-content:space-between; align-items:baseline; gap:9px; }
-  .ped .cli{ font-size:clamp(13px,0.92vw,18px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .ped .un{ font-size:clamp(15px,1.05vw,21px); font-weight:700; color:#fbbf24; white-space:nowrap; }
-  .ped .meta{ font-size:clamp(9px,0.55vw,11px); color:#8b98a5; margin-top:0; }
-  .ped-seg{ height:6px; border-radius:5px; overflow:hidden; display:flex; margin-top:4px; gap:1px; }
+  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:1.5px 6px 2px; }
+  .ped .l1{ display:flex; justify-content:space-between; align-items:baseline; gap:9px; line-height:1.05; }
+  .ped .cli{ font-size:clamp(12px,0.85vw,16px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .ped .un{ font-size:clamp(13px,0.95vw,18px); font-weight:700; color:#fbbf24; white-space:nowrap; }
+  .ped .meta{ font-size:clamp(8.5px,0.5vw,10px); color:#8b98a5; margin-top:0; }
+  .ped-seg{ height:5px; border-radius:5px; overflow:hidden; display:flex; margin-top:3px; gap:1px; }
   .ped-seg i{ display:block; height:100%; min-width:3px; }
-  .ped-chips{ display:flex; gap:9px; margin-top:4px; flex-wrap:wrap; font-size:clamp(9.5px,0.6vw,12px); }
+  .ped-chips{ display:flex; gap:9px; margin-top:3px; flex-wrap:wrap; font-size:clamp(9px,0.55vw,11px); }
   .ped-chips .chip{ display:flex; align-items:center; gap:4px; color:#8b98a5; white-space:nowrap; }
   .ped-chips .chip b{ color:#cfe0ee; font-weight:700; }
   .ped-chips .pt{ width:6px; height:6px; border-radius:2px; display:inline-block; }
@@ -1147,7 +1147,7 @@ function renderFila(fila){
   // Altura disponível no painel (menos cabeçalho e a legenda de famílias)
   const painel = el.closest ? el.closest('.panel') : null;
   const h2 = painel ? painel.querySelector('h2') : null;
-  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24;
+  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 12;
 
   // No mobile a rolagem é livre: lista completa; na TV, cabe por altura (mede o card real)
   const escolhidos = MOBILE ? ordenado : (function(){
