@@ -915,8 +915,9 @@ function renderCalendar(calGrid, geradoEm){
       }
 
       const sigla = cell[0], planejado = cell[1];
-      // Remove sufixos de formato/embalagem para exibição (2K, /3, SAMS, 24K)
-      const siglaExib = sigla.replace(/(\/3|24K|2K|SAMS)+$/i, '');
+      // Remove sufixos de formato/embalagem para exibição (2K, /3, 24K),
+      // mas NÃO mexe nas variantes SAMS (são produtos distintos)
+      const siglaExib = /SAMS/i.test(sigla) ? sigla : sigla.replace(/(\/3|24K|2K)+$/i, '');
       const produzido = (cell.produzida !== undefined) ? cell.produzida : cell[2];
       const confianca = cell.confianca || null;
       const execucao = cell.execucao || null;
