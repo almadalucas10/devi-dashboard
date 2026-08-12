@@ -413,6 +413,13 @@
       gap:10px; justify-content:flex-start; }
     .est-item, .ped{ flex:0 0 auto; } /* altura natural — nada encolhe/sobrepõe */
 
+    /* Retração por toque no título — lê só o que está atrás */
+    .panel h2{ cursor:pointer; user-select:none; -webkit-user-select:none;
+      display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .panel h2::after{ content:'▾'; font-size:.7em; color:#8b98a5; flex-shrink:0; }
+    .panel.colapsado > *:not(h2){ display:none !important; }
+    .panel.colapsado h2::after{ content:'▸'; }
+
     /* Espaçamento entre painéis */
     .content-grid, .fila-estoque-col{ gap:14px; }
 
@@ -1564,6 +1571,16 @@ async function refresh(){
 
 refresh();
 setInterval(refresh, REFRESH_MS);
+
+// Mobile: toca no título do painel para retrair/expandir a lista
+if (MOBILE) {
+  document.querySelectorAll('.panel h2').forEach(function(h2){
+    h2.addEventListener('click', function(){
+      var panel = h2.closest('.panel');
+      if (panel) panel.classList.toggle('colapsado');
+    });
+  });
+}
 
 // ========================================================================
 // Zoom mobile — calendário com pinch e arraste
