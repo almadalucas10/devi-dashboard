@@ -1,5 +1,5 @@
 // ============================================================================
-// Painel de Insumos — 38 itens monitorados com consumo via calendário × BOM
+// Painel de Insumos — 37 itens monitorados com consumo via calendário × BOM
 // ============================================================================
 import { chamarOmie } from "./omie.js";
 import { readJson } from "./r2.js";
@@ -46,7 +46,6 @@ const INSUMOS = [
   { codigo: 'MPR023', desc: 'Extrato de Cranberry', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF002:.000323} },
   { codigo: 'MPC006', desc: 'Aroma de Maracujá', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {CH003:.000526} },
   { codigo: 'MPR004', desc: 'Extrato de Guaraná', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF003:.000323} },
-  { codigo: 'MPR009', desc: 'Aroma de Açaí', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {RF003:.003905} },
   { codigo: 'MP020', desc: 'Extrato de Abacaxi', un: 'KG', familia: 'Aromas e Extratos', skuQtd: {FX002:.000750} },
 ];
 
