@@ -34,7 +34,7 @@
   .modelbar{ background:#e8a33d; color:#07110f; text-align:center; font-weight:800; font-size:13px;
     padding:5px; border-radius:6px; font-family:monospace; }
 
-  header{ display:flex; align-items:center; justify-content:space-between; }
+  header{ display:flex; align-items:center; justify-content:space-between; width:983px; }
   .brand{ display:flex; align-items:center; gap:14px; }
   .mark{ width:44px;height:44px;border-radius:9px;background:#ffffff;
     display:flex;align-items:center;justify-content:center;padding:5px;box-shadow:0 4px 12px rgba(0,0,0,.25); }
@@ -73,7 +73,9 @@
   .cal-legenda .estado{ padding-left:5px; border-left:3px solid transparent; }
   .cal-legenda .sep{ opacity:.35; }
 
-  .fila-estoque-col{ grid-column:2; grid-row:1 / span 2; display:grid; grid-template-rows:1.5fr 1fr; gap:1vh; min-height:0; }
+  .fila-estoque-col{ grid-column:2; grid-row:1 / span 2; display:grid; grid-template-rows:1fr 1fr; gap:1vh; min-height:0;
+    margin-top:-69px; } /* Opção A: sobe a coluna direita para junto do header (y≈16) */
+  .top-pair .panel, .bottom-pair .panel{ height:100%; min-height:0; overflow:hidden; }
   .top-pair{ display:grid; grid-template-columns:1fr 1fr; gap:1.2vw; min-height:0; }
   .top-pair .panel{ padding:0.8vh 0.9vw; }
   .top-pair .panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.3vh; }
@@ -347,7 +349,7 @@
   @media (max-width: 900px){
     html,body{ overflow:auto; }
     .wrap{ height:auto; min-height:100vh; padding:2.5vh 4vw; gap:2vh; }
-    header{ flex-wrap:wrap; gap:1vh; }
+    header{ flex-wrap:wrap; gap:1vh; width:100%; }
     .meta{ justify-content:flex-start; }
     h1{ font-size:22px; }
     .sub{ font-size:12px; }
@@ -362,7 +364,7 @@
     .cal-panel{ grid-column:1; grid-row:auto; height:80vh; min-height:420px; }
     .panel h2{ font-size:16px; }
 
-    .fila-estoque-col{ grid-column:1; grid-row:auto; grid-template-rows:none; gap:1.5vh; }
+    .fila-estoque-col{ grid-column:1; grid-row:auto; grid-template-rows:none; gap:1.5vh; margin-top:0; }
     .top-pair{ grid-template-columns:1fr; gap:1.5vh; }
     .top-pair .panel{ height:320px; }
     .bottom-pair{ grid-template-columns:1fr; gap:1.5vh; }
@@ -1225,10 +1227,19 @@ function renderInsumos(insumos){
     const saldo = (p.saldo !== null && p.saldo !== undefined) ? (p.saldo || 0) : 0;
     return s + saldo * (p.valor || 0);
   }, 0);
-  if (resumoEl) resumoEl.textContent = '· ' + fmtMoeda(valorTotal);
-  const MAX = MOBILE ? 999 : 5; // cards A3 são mais altos
   // Ordenação já vem do worker (vermelho → âmbar → verde → sem uso); mantém
-  const ordenado = insumos.slice(0, MAX);
+  const ordenado = insumos.slice();
+  // Contagem pelo que cabe: TV ~92px por card; mobile rola tudo
+  let exibidos = ordenado.length;
+  if (!MOBILE) {
+    const painel = el.closest ? el.closest('.panel') : null;
+    const h2 = painel ? painel.querySelector('h2') : null;
+    const alt = (painel ? painel.clientHeight : 432) - (h2 ? h2.offsetHeight : 30) - 24;
+    const cabem = Math.max(1, Math.floor(alt / 92));
+    ordenado.length = Math.min(cabem, ordenado.length);
+    exibidos = ordenado.length;
+  }
+  if (resumoEl) resumoEl.textContent = '· ' + exibidos + ' de ' + insumos.length + ' · ' + fmtMoeda(valorTotal);
 
   el.innerHTML = ordenado.map(function(p, i){
     const cor = p.cor || 'neutro';
@@ -1282,15 +1293,24 @@ function renderEstoque(estoque, cobMap){
   const totalLatas = estoque.reduce(function(s, p){
     return s + ((p.saldo !== null && p.saldo !== undefined) ? (p.saldo || 0) : 0);
   }, 0);
-  if (resumoEl) resumoEl.textContent = '· ' + fmt(totalLatas) + ' un';
-  const MAX_ITENS = MOBILE ? 999 : 5; // cards A3 são mais altos
   const disponiveis = estoque.filter(function(p){ return p.saldo !== null && p.saldo !== undefined; });
   // Ordena por dias de cobertura ascendente (sem dias no final)
   const ordenado = [...disponiveis].sort(function(a, b){
     const da = (a.dias === null || a.dias === undefined) ? Infinity : a.dias;
     const db = (b.dias === null || b.dias === undefined) ? Infinity : b.dias;
     return da - db;
-  }).slice(0, MAX_ITENS);
+  });
+  // Contagem pelo que cabe: TV ~92px por card; mobile rola tudo
+  let exibidos = ordenado.length;
+  if (!MOBILE) {
+    const painel = el.closest ? el.closest('.panel') : null;
+    const h2 = painel ? painel.querySelector('h2') : null;
+    const alt = (painel ? painel.clientHeight : 432) - (h2 ? h2.offsetHeight : 30) - 24;
+    const cabem = Math.max(1, Math.floor(alt / 92));
+    ordenado.length = Math.min(cabem, ordenado.length);
+    exibidos = ordenado.length;
+  }
+  if (resumoEl) resumoEl.textContent = '· ' + exibidos + ' de ' + disponiveis.length + ' · ' + fmt(totalLatas) + ' un';
 
   el.innerHTML = ordenado.map(function(p, i){
     const cor = p.cor || 'neutro';
