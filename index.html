@@ -387,27 +387,44 @@
   .cal-zoom-btns{ display:none; position:fixed; bottom:12px; right:12px; z-index:100; gap:6px; }
   .cal-zoom-btns button{ width:40px; height:40px; border-radius:50%; border:1px solid #444; background:#1a2430; color:#fff; font-size:20px; cursor:pointer; }
   @media (max-width: 640px) {
-    /* Correção 1 — painéis com altura pelo conteúdo, sem sobreposição */
-    html, body{ overflow-x:hidden; }
-    .wrap{ padding:10px 12px; gap:10px; }
-    .panel, .panel.cal-panel{ height:auto; max-height:none; overflow:visible; margin-bottom:10px; }
-    .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:10px; }
+    /* Regra base — nada ultrapassa a largura da tela */
+    *{ max-width:100%; box-sizing:border-box; }
+    html, body{ overflow-x:hidden; margin:0; padding:0; }
 
-    /* Calendário agrupado por semana (zoom removido) */
-    .cal-semana{ font-size:12px; font-weight:700; color:#7dd3fc; margin:10px 0 2px;
-      padding:2px 4px; border-bottom:1px solid rgba(255,255,255,.1);
-      text-transform:uppercase; letter-spacing:.5px; }
-    .cal-cell .cal-sku{ overflow:hidden; text-overflow:ellipsis; }
+    /* Painéis: largura total, altura pelo conteúdo, sem posição fixa */
+    .panel, .panel.cal-panel{
+      width:100%; height:auto; max-height:none; overflow:visible;
+      position:static; margin:0 0 14px;
+    }
+    .wrap{ padding:12px; gap:14px; }
+    .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:14px; width:100%; }
 
-    /* Elementos seguem a margem do viewport — nada estoura a largura */
-    .content-grid, .fila-estoque-col, .panel, .cal-panel, .calendar,
-    .kpis-rows, .kpis-row-2, .top-pair, .bottom-pair,
-    .est-item, .ped, .cal-cell, .kpi, .resumo-turno{ min-width:0; max-width:100%; }
+    /* Listas: sem rolagem interna — a página rola inteira */
+    .estoque-lista, .fila-lista, .ranking-lista{ overflow:visible; max-height:none; }
 
-    /* Resumo do turno — o que exige ação agora */
-    .resumo-turno{ display:block; background:var(--panel); border:1px solid var(--line);
-      border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.65; }
-    .resumo-turno .rt-titulo{ font-weight:700; margin-bottom:3px; color:#fbbf24; }
+    /* Barras sempre em 100% da largura útil */
+    .est-barra, .rep-seg, .ped-seg{ width:100%; max-width:100%; }
+
+    /* Calendário — linha por dia, 4 colunas (dia | SKU | qtde | OP) */
+    .cal-semana{ font-size:11px; color:#7dd3fc; font-weight:700; letter-spacing:.5px;
+      margin:12px 0 6px; padding-left:2px; }
+    .cal-semana:first-child{ margin-top:0; }
+    .cal-cell{ display:flex; align-items:center; gap:9px; padding:7px 10px;
+      margin-bottom:5px; width:100%; min-width:0; }
+    .cal-cell .cal-dia{ min-width:38px; flex-shrink:0; font-size:16px; font-weight:700; line-height:1.05; }
+    .cal-cell .cal-dia .cal-dow{ display:block; font-size:9px; color:var(--text-lo); font-weight:400; }
+    .cal-cell .cal-sku{ flex:1; min-width:0; font-size:15px; font-weight:600;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cal-cell .cal-qtde{ font-size:14px; white-space:nowrap; flex-shrink:0; }
+    .cal-cell .cal-op{ position:static; font-size:11px; min-width:42px; text-align:right; flex-shrink:0; }
+    .cal-cell.t-vazio{ opacity:.5; }
+
+    /* Resumo do turno — linhas com rótulo */
+    .resumo-turno{ display:block; background:#17110d; border:1px solid #3a2a12;
+      border-radius:10px; padding:10px 12px; }
+    .resumo-turno .rt-titulo{ font-size:12px; color:var(--ambar); font-weight:600; margin-bottom:6px; }
+    .resumo-turno .rt-linha{ display:flex; gap:6px; font-size:12px; color:#cfe0ee; line-height:1.6; }
+    .resumo-turno .rt-linha b{ color:#8b98a5; min-width:62px; flex-shrink:0; font-weight:400; }
   }
 
   /* ======================================================================== */
@@ -1037,11 +1054,11 @@ function renderResumoTurno(dataOmie, dashData){
     }
   }
   if (andamento.length) {
-    linhas.push('Hoje: ' + andamento.slice(0, 3).map(function(x){
+    linhas.push(['Hoje', andamento.slice(0, 3).map(function(x){
       return x.sku + ' ' + fmt(x.n) + ' un' + (x.op ? ' · ' + formatarOP(x.op) : '');
-    }).join(' · '));
+    }).join(' · ')]);
   }
-  if (semOP > 0) linhas.push('Sem OP: ' + semOP + ' lote' + (semOP > 1 ? 's' : ''));
+  if (semOP > 0) linhas.push(['Sem OP', semOP + ' lote' + (semOP > 1 ? 's' : '')]);
 
   // Rompendo (cobertura crítica)
   const rompendo = [];
@@ -1051,9 +1068,9 @@ function renderResumoTurno(dataOmie, dashData){
     }
   }
   if (rompendo.length) {
-    linhas.push('Rompendo: ' + rompendo.slice(0, 3).map(function(c){
-      return c.codigo + ' em ' + nfmt(c.cobertura) + 'd';
-    }).join(' · '));
+    linhas.push(['Rompendo', rompendo.slice(0, 3).map(function(c){
+      return c.codigo + ' ' + nfmt(c.cobertura) + 'd';
+    }).join(' · ')]);
   }
 
   // Insumo crítico
@@ -1062,14 +1079,14 @@ function renderResumoTurno(dataOmie, dashData){
     insumoCrit = dataOmie.insumos.find(function(i){ return i.cor === 'vermelho'; });
   }
   if (insumoCrit) {
-    linhas.push('Insumo: ' + nomeCurtoReposicao(insumoCrit.descricao) + ' falta ' + nfmt(insumoCrit.falta) + ' ' + insumoCrit.unidade);
+    linhas.push(['Insumo', nomeCurtoReposicao(insumoCrit.descricao) + ' falta ' + nfmt(insumoCrit.falta) + ' ' + insumoCrit.unidade]);
   }
 
   if (!linhas.length) {
     el.innerHTML = '<div style="color:#4ade80;font-weight:700;">✓ Sem pontos de atenção</div>';
   } else {
     el.innerHTML = '<div class="rt-titulo">⚠ ' + linhas.length + ' ponto' + (linhas.length > 1 ? 's' : '') + ' de atenção</div>'
-      + '<div>' + linhas.join('<br>') + '</div>';
+      + linhas.map(function(l){ return '<div class="rt-linha"><b>' + l[0] + '</b><span>' + l[1] + '</span></div>'; }).join('');
   }
 }
 
