@@ -82,7 +82,7 @@
   .bottom-pair .panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.3vh; }
 
   /* Fila de Pedidos — teste substituindo o painel da pizza */
-  .fila-lista{ flex:1; display:flex; flex-direction:column; gap:8px; overflow:hidden; justify-content:space-evenly; }
+  .fila-lista{ flex:1; display:flex; flex-direction:column; gap:6px; overflow:hidden; justify-content:flex-start; }
   .fila-item{
     display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:8px;
     background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:10px;
@@ -108,6 +108,23 @@
   .fila-valores{ text-align:right; flex-shrink:0; }
   .fila-valores .principal{ font-size:clamp(16.1px,1.05vw,22.1px); font-weight:800; color:var(--amber); line-height:1.15; white-space:nowrap; }
   .fila-valores .secundario{ font-size:clamp(11.5px,0.70vw,14.9px); color:var(--text-lo); white-space:nowrap; }
+
+  /* Fila de Pedidos B2 — barra de composição + chips por SKU */
+  .ped{ background:#141d27; border-left:4px solid #fbbf24; border-radius:7px; padding:6px 10px 7px; }
+  .ped .l1{ display:flex; justify-content:space-between; align-items:baseline; gap:9px; }
+  .ped .cli{ font-size:clamp(13px,0.85vw,18px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .ped .un{ font-size:clamp(15px,0.95vw,20px); font-weight:700; color:#fbbf24; white-space:nowrap; }
+  .ped .meta{ font-size:clamp(9.5px,0.6vw,13px); color:#8b98a5; margin-top:1px; }
+  .ped-seg{ height:8px; border-radius:5px; overflow:hidden; display:flex; margin-top:6px; gap:1px; }
+  .ped-seg i{ display:block; height:100%; min-width:3px; }
+  .ped-chips{ display:flex; gap:9px; margin-top:5px; flex-wrap:wrap; font-size:clamp(10px,0.65vw,13.5px); }
+  .ped-chips .chip{ display:flex; align-items:center; gap:4px; color:#8b98a5; white-space:nowrap; }
+  .ped-chips .chip b{ color:#cfe0ee; font-weight:700; }
+  .ped-chips .pt{ width:6px; height:6px; border-radius:2px; display:inline-block; }
+  .fam-komb{ background:#ec4899; } .fam-cha{ background:#a855f7; }
+  .fam-refri{ background:#f59e0b; } .fam-rtm{ background:#3b82f6; } .fam-outro{ background:#64748b; }
+  .ped-leg{ display:flex; gap:11px; font-size:clamp(9px,0.55vw,12px); color:#8b98a5; margin-top:8px; flex-wrap:wrap; }
+  .ped-leg span{ display:flex; align-items:center; gap:4px; }
 
   /* Lista de Estoque — mesmo modelo visual da Fila de Pedidos (borda + selo coloridos) */
   .estoque-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow:hidden; justify-content:space-evenly; }
@@ -962,39 +979,90 @@ const ETAPA_CLASSES = {
 
 function fmtMoeda(n){ if(n===null||n===undefined||isNaN(n)) return "—"; return "R$ " + n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+// Agrega os itens de um pedido por código (o payload traz linhas repetidas do
+// mesmo SKU) e ordena por quantidade decrescente — chips e segmentos seguem a
+// mesma ordem.
+function agregarItens(itens){
+  const mapa = new Map();
+  for (const it of itens || []) {
+    const cod = String(it.codigo).trim();
+    mapa.set(cod, (mapa.get(cod) || 0) + (it.qtde || 0));
+  }
+  return [...mapa.entries()]
+    .map(([codigo, qtde]) => ({ codigo, qtde }))
+    .sort((a, b) => b.qtde - a.qtde);
+}
+
+// Cor por família pelo prefixo do código. RTM testado ANTES de RF/R.
+function familiaDe(codigo){
+  if (/^(FX|K)/.test(codigo)) return 'komb';
+  if (/^(CH|C)/.test(codigo)) return 'cha';
+  if (/^RTM/.test(codigo)) return 'rtm';
+  if (/^(RF|R)/.test(codigo)) return 'refri';
+  return 'outro';
+}
+
 function renderFila(fila){
   const el = document.getElementById('filaLista');
   if(!el) return;
+  const fc = document.getElementById('filaCount');
   if(!Array.isArray(fila) || fila.length === 0){
     var msg = 'Sem dados da fila';
     if (fila && fila.erro) msg += ' — erro Omie: ' + fila.erro;
+    if (fc) fc.textContent = '';
     el.innerHTML = '<div style="opacity:.5; text-align:center; padding:12px; font-size:12px;">' + msg + '</div>';
     return;
   }
-  const MAX_ITENS = 5; // espaço reduzido no bottom-pair
-  const ordenado = [...fila].sort((a,b) => (b.valorTotal||0) - (a.valorTotal||0)).slice(0, MAX_ITENS);
-  // Atualiza contador
-  var fc = document.getElementById('filaCount');
-  if (fc && fila.length > MAX_ITENS) fc.textContent = MAX_ITENS + ' de ' + fila.length;
-  else if (fc) fc.textContent = '';
-  el.innerHTML = ordenado.map(function(p, i){
+  // Ordena por valor total (maior primeiro)
+  const ordenado = [...fila].sort((a,b) => (b.valorTotal||0) - (a.valorTotal||0));
+
+  // Altura disponível no painel (menos cabeçalho e a legenda de famílias)
+  const painel = el.closest ? el.closest('.panel') : null;
+  const h2 = painel ? painel.querySelector('h2') : null;
+  const altDisponivel = (painel ? painel.clientHeight : 420) - (h2 ? h2.offsetHeight : 32) - 24;
+
+  // Cabe pedidos por altura estimada: 62px p/ 1 linha de chips, +14 por linha extra
+  let acumulado = 0;
+  const escolhidos = [];
+  for (const pedido of ordenado) {
+    const nSkus = agregarItens(pedido.itens).length;
+    const linhas = Math.ceil(nSkus / 3);
+    const altura = 62 + (linhas - 1) * 14;
+    if (acumulado + altura > altDisponivel) break;
+    acumulado += altura;
+    escolhidos.push(pedido);
+  }
+
+  // Cabeçalho reflete o que coube (sem corte)
+  if (fc) fc.textContent = escolhidos.length + ' de ' + fila.length;
+
+  const chipsHtml = function(itens){
+    return agregarItens(itens).map(function(a){
+      return '<span class="chip"><i class="pt fam-' + familiaDe(a.codigo) + '"></i>' + a.codigo + ' <b>' + fmt(a.qtde) + '</b></span>';
+    }).join('');
+  };
+  const segHtml = function(itens){
+    return agregarItens(itens).map(function(a){
+      return '<i class="fam-' + familiaDe(a.codigo) + '" style="flex:' + a.qtde + '"></i>';
+    }).join('');
+  };
+
+  el.innerHTML = escolhidos.map(function(p){
     const etapaLabel = ETAPA_LABELS[p.etapa] || ("Etapa " + p.etapa);
-    const etapaCls = ETAPA_CLASSES[p.etapa] || "";
-    const nomePrincipal = p.cliente || ("Pedido #" + p.numero);
-    // Mesmo degradê do ranking e das latas: âmbar (1º) → rosa (último)
-    var estilo = "";
-    try {
-      const t = MAX_ITENS <= 1 ? 1 : 1 - i/(MAX_ITENS - 1);
-      const cor = corDoDegrade(t); // "rgb(250,204,21)"
-      const rgb = cor.slice(4, -1); // extrai "250,204,21"
-      estilo = 'border-left:4px solid ' + cor + '; background:linear-gradient(90deg, rgba(' + rgb + ',0.10), transparent 70%);';
-    } catch(e) { /* fallback: sem degradê, mantém só a classe CSS */ }
-    return '<div class="fila-item ' + etapaCls + '" style="' + estilo + '">'
-      + '<div class="fila-pos">' + String(i+1).padStart(2,'0') + '</div>'
-      + '<div class="fila-info"><div class="pedido">' + nomePrincipal + '</div><div class="cliente"><span class="etapa-badge">' + etapaLabel + '</span> <span class="fila-num">#' + p.numero + '</span>' + ((p.quantidadeSkus > 0) ? ' <span class="fila-skus">· ' + p.quantidadeSkus + ' SKU' + (p.quantidadeSkus > 1 ? 's' : '') + '</span>' : '') + '</div></div>'
-      + '<div class="fila-valores"><div class="principal">' + fmt(p.totalUnidades) + ' un</div></div>'
+    const nSkus = agregarItens(p.itens).length;
+    return '<div class="ped">'
+      + '<div class="l1"><span class="cli">' + (p.cliente || ("Pedido #" + p.numero)) + '</span><span class="un">' + fmt(p.totalUnidades) + ' un</span></div>'
+      + '<div class="meta">' + etapaLabel + ' · #' + p.numero + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '') + '</div>'
+      + '<div class="ped-seg">' + segHtml(p.itens) + '</div>'
+      + '<div class="ped-chips">' + chipsHtml(p.itens) + '</div>'
       + '</div>';
-  }).join('');
+  }).join('')
+    + '<div class="ped-leg">'
+    + '<span><i class="pt fam-komb"></i>Kombucha</span>'
+    + '<span><i class="pt fam-cha"></i>Chá</span>'
+    + '<span><i class="pt fam-refri"></i>Refri</span>'
+    + '<span><i class="pt fam-rtm"></i>RTM</span>'
+    + '</div>';
 }
 
 function renderInsumos(insumos){
