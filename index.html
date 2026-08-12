@@ -391,10 +391,13 @@
     *{ max-width:100%; box-sizing:border-box; }
     html, body{ overflow-x:hidden; margin:0; padding:0; }
 
-    /* Painéis: largura total, altura pelo conteúdo, sem posição fixa */
-    .panel, .panel.cal-panel{
+    /* Painéis: largura total, altura pelo conteúdo, sem posição fixa.
+       Inclui .top-pair/.bottom-pair .panel (o bloco ≤900 fixa 320/260px
+       com especificidade maior — era isso que fazia as listas vazarem) */
+    .panel, .panel.cal-panel,
+    .top-pair .panel, .bottom-pair .panel{
       width:100%; height:auto; max-height:none; overflow:visible;
-      position:static; margin:0 0 14px;
+      position:static; margin:0 0 14px; padding:11px 12px;
     }
     .wrap{ padding:12px; gap:14px; max-width:100%; }
     .top-pair, .bottom-pair{ display:flex; flex-direction:column; gap:14px; width:100%; }
