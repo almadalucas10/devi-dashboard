@@ -1130,6 +1130,17 @@ function familiaDe(codigo){
   return 'outro';
 }
 
+// Cor individual por SKU (não por família) — paleta curada para TV
+const COR_SKU = {
+  CH001:'#a78bfa', CH002:'#c084fc', CH003:'#8b5cf6', CH004:'#2dd4bf',
+  FX001:'#ec4899', FX002:'#fde047', FX003:'#f97316', FX006:'#fb7185', FX007:'#f9a8d4',
+  RF001:'#a3e635', RF002:'#ef4444', RF003:'#4ade80', RF004:'#a855f7', RF005:'#f59e0b',
+  RTM001:'#3b82f6', RTM002:'#60a5fa', RTM003:'#0ea5e9'
+};
+function corDeSku(codigo){
+  return COR_SKU[codigo] || '#64748b';
+}
+
 function renderFila(fila){
   const el = document.getElementById('filaLista');
   if(!el) return;
@@ -1177,12 +1188,12 @@ function renderFila(fila){
 
   const chipsHtml = function(itens){
     return agregarItens(itens).map(function(a){
-      return '<span class="chip"><i class="pt fam-' + familiaDe(a.codigo) + '"></i>' + a.codigo + ' <b>' + fmt(a.qtde) + '</b></span>';
+      return '<span class="chip"><i class="pt" style="background:' + corDeSku(a.codigo) + '"></i>' + a.codigo + ' <b>' + fmt(a.qtde) + '</b></span>';
     }).join('');
   };
   const segHtml = function(itens){
     return agregarItens(itens).map(function(a){
-      return '<i class="fam-' + familiaDe(a.codigo) + '" style="flex:' + a.qtde + '"></i>';
+      return '<i style="background:' + corDeSku(a.codigo) + ';flex:' + a.qtde + '"></i>';
     }).join('');
   };
 
