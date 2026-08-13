@@ -54,6 +54,9 @@
   .kpi .label{ font-size:clamp(14.5px,0.92vw,24px); color:var(--text-lo); font-weight:600; }
   .kpi .value{ font-size:clamp(31px,2.6vw,65px); font-weight:800; margin-top:1px; }
   .kpi.amber .value{ color:var(--amber); } .kpi.aqua .value{ color:var(--aqua); } .kpi.bad .value{ color:var(--bad); }
+  .ader-barra{ height:6px; background:#1c2733; border-radius:3px; overflow:hidden; margin-top:5px; }
+  .ader-barra i{ display:block; height:100%; }
+  .kpi-sub{ font-size:10px; color:#8b98a5; margin-top:4px; }
 
   .panel{ background:linear-gradient(180deg,var(--panel),rgba(15,36,32,.55)); border:1px solid var(--line);
     border-radius:16px; padding:0.6vh 0.8vw; display:flex; flex-direction:column; min-height:0;
@@ -516,7 +519,7 @@
         <div class="kpi amber"><div class="label" id="kpi5Label">PLANEJADO (MÊS)</div><div class="value" id="kpiPlanejadoMes">—</div></div>
         <div class="kpi aqua"><div class="label" id="kpi6Label">REALIZADO (MÊS)</div><div class="value" id="kpiRealizadoMes">—</div></div>
         <div class="kpi"><div class="label" id="kpi7Label">EFICIÊNCIA (MÊS)</div><div class="value" id="kpiEficienciaMes" style="color:var(--text-hi)">—</div></div>
-        <div class="kpi bad"><div class="label" id="kpi8Label">PENDENTES (MÊS)</div><div class="value" id="kpiPendentesMes">—</div></div>
+        <div class="kpi"><div class="label" id="kpi8Label">ADERÊNCIA AO PLANO</div><div class="value" id="kpiAderenciaVal" style="color:var(--text-hi)">—</div><div class="ader-barra"><i id="kpiAderenciaBarra"></i></div><div class="kpi-sub" id="kpiAderenciaSub"></div></div>
       </div>
     </div>
 
@@ -673,6 +676,37 @@ function effColor(eff){
   if(eff>=0.93) return "#22c55e";
   if(eff>=0.90) return "#eab308";
   return "#ef4444";
+}
+
+// Aderência ao plano — limiar único (verde/âmbar/vermelho), cor aplicada à barra e ao número
+const LIMIARES_ADERENCIA = { verde: 0.98, ambar: 0.90 };
+function corAderencia(a){
+  if (a === null || a === undefined || isNaN(a)) return 'neutro';
+  if (a >= LIMIARES_ADERENCIA.verde) return 'verde';
+  if (a >= LIMIARES_ADERENCIA.ambar) return 'ambar';
+  return 'vermelho';
+}
+function corAderenciaHex(c){
+  return { verde:'#22c55e', ambar:'#eab308', vermelho:'#ef4444', neutro:'#8b98a5' }[c] || '#8b98a5';
+}
+function renderAderencia(a){
+  const elVal = document.getElementById('kpiAderenciaVal');
+  if (!elVal) return;
+  const elBarra = document.getElementById('kpiAderenciaBarra');
+  const elSub = document.getElementById('kpiAderenciaSub');
+  if (!a || a.percentual === null || a.percentual === undefined || isNaN(a.percentual)) {
+    elVal.textContent = '—';
+    elVal.style.color = 'var(--text-hi)';
+    if (elBarra) elBarra.style.width = '0%';
+    if (elSub) elSub.textContent = '';
+    return;
+  }
+  const cor = corAderencia(a.percentual);
+  const hex = corAderenciaHex(cor);
+  elVal.textContent = pct(a.percentual);
+  elVal.style.color = hex;
+  if (elBarra) { elBarra.style.width = Math.min(100, a.percentual * 100) + '%'; elBarra.style.background = hex; }
+  if (elSub) elSub.textContent = fmt(a.realizado) + ' de ' + fmt(a.previsto) + ' até hoje';
 }
 
 let famChartInstance=null, pieChartInstance=null, trendChartInstance=null, rankingChartInstance=null;
@@ -1012,7 +1046,6 @@ function applyData(d){
   setKpi('kpiRealizadoMes', fmt(mes.realizado));
   setKpi('kpiEficienciaMes', pct(mes.eficiencia));
   document.getElementById('kpiEficienciaMes').style.color = effColor(mes.eficiencia);
-  setKpi('kpiPendentesMes', fmt(mes.pendentes));
 
   document.getElementById('mesAtual').textContent = d.mesLabel || "—";
   document.getElementById('calMonthLabel').textContent = d.mesLabel || "—";
@@ -1377,8 +1410,8 @@ function renderKPIsOmie(k){
   setKpi('kpiEficienciaMes', pct(k.eficienciaMes));
   document.getElementById('kpiEficienciaMes').style.color = effColor(k.eficienciaMes);
   document.getElementById('kpi7Label').textContent = 'EFICIÊNCIA (MÊS)';
-  document.getElementById('kpi8Label').textContent = 'PENDENTES (MÊS)';
-  setKpi('kpiPendentesMes', fmt(k.pendentesMes));
+  document.getElementById('kpi8Label').textContent = 'ADERÊNCIA AO PLANO';
+  renderAderencia(k.aderencia);
 }
 
 function nfmt(n){ return n.toLocaleString("pt-BR", {maximumFractionDigits:1}); }
