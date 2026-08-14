@@ -86,3 +86,11 @@ curl https://devi-dashboard-worker.almadalucas.workers.dev/api/omie
 ## Contexto completo
 
 Ver `context/features.md` — documenta todas as decisões de arquitetura, mapeamentos SKU↔planilha, estratégia de rate limit, e lições aprendidas.
+
+## Sistema de Qualidade — formulário do tablet
+
+- **Ficha da OP** (`docs/qualidade/ficha-qualidade-com-insumos.html` + worker `/api/qualidade/*`): mostra **todos** os itens da OP (itensDetalhes) com nome/código reais resolvidos via `ConsultarProduto { codigo_produto }` e saldo de **todos** os itens via `PosicaoEstoque` (local ALMOXARIFADO `3125326654`). Critério: o operador pesa/conferência tudo que a OP consome — **não filtrar por lista monitorada** (intencional; o `itensDetalhes` só traz `nIdProdutoMalha` + `nQtde`, sem nome/código).
+- **Painel de Insumos** (dashboard, `worker/src/insumos.js`): lista **curada** (~38 itens com indicador de cobertura/consumo). Critério diferente da ficha — **intencional**, não unificar.
+- Saldo vem da mesma fonte nos dois (mesmo local de estoque + `PosicaoEstoque`).
+- Caches de qualidade (`qualidade-ficha-*`, `qualidade-fichas`) são invalidadas automaticamente no `deploy.sh` após deploy do worker (passo 3.1).
+- Debug: `GET /api/qualidade/ficha/:nCodOP?raw=1` devolve o retorno bruto do Omie.

@@ -253,6 +253,8 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
 
   // 3) Saldo do almoxarifado — TODOS os itens da OP (rótulo, tampa, aroma, concentrado…),
   //    lotes de 4 com pausa. Itens sem produto/sem posição no local ficam com saldo null.
+  //    Critério diferente do painel de insumos (insumos.js: subconjunto curado com
+  //    indicador de cobertura) — aqui o operador precisa do saldo de tudo. Intencional.
   if (comSaldo && itens.length) {
     const cache = new Map();
     for (let i = 0; i < itens.length; i += 4) {

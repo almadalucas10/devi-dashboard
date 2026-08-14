@@ -1,5 +1,8 @@
 // ============================================================================
-// Painel de Insumos — 37 itens monitorados com consumo via calendário × BOM
+// Painel de Insumos — lista CURADA de itens monitorados com indicador de
+// cobertura/consumo no dashboard. Critério DIFERENTE da ficha de qualidade:
+// a ficha mostra TODOS os itens da OP (o operador pesa/conferência cada um),
+// sem filtro por esta lista. A diferença é intencional.
 // ============================================================================
 import { chamarOmie } from "./omie.js";
 import { readJson } from "./r2.js";
