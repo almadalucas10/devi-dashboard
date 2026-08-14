@@ -105,6 +105,39 @@
     background:#fff; font-size:13px}
   .folha .chk.on{background:#22c55e; border-color:#22c55e; color:#fff}
 
+  /* ---------- cards estilo papel (mesmo visual da folha do Omie) ---------- */
+  .sec.paper{background:#f4f1e8; color:#1c1c1c; border:1px solid #d8d2c0; border-radius:6px;
+    box-shadow:0 1px 5px rgba(0,0,0,.35); overflow:hidden}
+  .sec.paper .cab h2{color:#222}
+  .sec.paper .chev{color:#777}
+  .sec.paper .est{background:#e6e1cf; color:#555}
+  .sec.paper .est.done{background:#d7e8d4; color:#1c5c2a}
+  .sec.paper .est.parc{background:#f2e2b8; color:#8a6414}
+  .sec.paper .est.err{background:#f3d3cf; color:#a03028}
+  .sec.paper .est.info{background:#dbe6f0; color:#22557a}
+  .sec.paper label{color:#555; font-weight:600}
+  .sec.paper input, .sec.paper select, .sec.paper textarea{background:#fff; border-color:#b8b2a0; color:#222}
+  .sec.paper textarea{font-size:15px; padding:11px 12px; font-family:inherit; resize:vertical; border-radius:8px}
+  .sec.paper input:focus, .sec.paper select:focus, .sec.paper textarea:focus{border-color:#3b82f6}
+  .sec.paper input.ok{border-color:#22c55e}
+  .sec.paper input.al{border-color:#f59e0b}
+  .sec.paper input.er{border-color:#ef4444; background:#fdecec}
+  .sec.paper input.info{border-color:#3b82f6}
+  .sec.paper .msg{color:#666}
+  .sec.paper .msg.ok{color:#15803d}
+  .sec.paper .msg.al{color:#b45309}
+  .sec.paper .msg.er{color:#b91c1c}
+  .sec.paper .msg.info{color:#2563eb}
+  .sec.paper .avi{background:#f7f1dc; border-left-color:#f59e0b; color:#6b5a2a}
+  .sec.paper .avi b{color:#b45309}
+  .sec.paper .avi.az{background:#e8eef5; border-left-color:#3b82f6}
+  .sec.paper .avi.az b{color:#2563eb}
+  .sec.paper .btn{background:#fff; border-color:#b8b2a0; color:#444}
+  .sec.paper .btn:active{background:#ece8da}
+  .sec.paper .btn.pri{background:#3b82f6; border-color:#3b82f6; color:#fff}
+  .sec.paper .bx{color:#8a7f6a}
+  .sec.paper .cb-cab, .sec.paper .es-cab, .sec.paper .fb-cab, .sec.paper .rc-cab{color:#666}
+
   /* ---------- mobile (cabe dentro do viewport, sem cortar a direita) ---------- */
   @media (max-width: 480px){
     .topo{padding:8px 10px}
@@ -243,7 +276,7 @@
   </div>
 
   <!-- ============ CARBONATAÇÃO ============ -->
-  <div class="sec" data-sec="carbonatacao">
+  <div class="sec paper" data-sec="carbonatacao">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Carbonatação</h2><span class="est" data-est>—</span>
     </div>
@@ -255,7 +288,7 @@
   </div>
 
   <!-- ============ PRÉ-ENVASE ============ -->
-  <div class="sec" data-sec="preenvase">
+  <div class="sec paper" data-sec="preenvase">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Parâmetros pré-envase</h2><span class="est" data-est>—</span>
     </div>
@@ -279,7 +312,7 @@
   </div>
 
   <!-- ============ RECRAVAÇÃO — 1 medição por lote ============ -->
-  <div class="sec" data-sec="recravacao">
+  <div class="sec paper" data-sec="recravacao">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Recravação</h2><span class="est" data-est>—</span>
     </div>
@@ -303,7 +336,7 @@
   </div>
 
   <!-- ============ ESTOQUE ============ -->
-  <div class="sec" data-sec="estoque">
+  <div class="sec paper" data-sec="estoque">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Envio para estoque</h2><span class="est" data-est>—</span>
     </div>
@@ -315,7 +348,7 @@
   </div>
 
   <!-- ============ BASE KOMBUCHA (FX000) — PC04 Qualidade Kombucha V2 ============ -->
-  <div class="sec hid" data-sec="starter">
+  <div class="sec paper hid" data-sec="starter">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Starter da Fermentação</h2><span class="est" data-est>—</span>
     </div>
@@ -337,7 +370,7 @@
     </div>
   </div>
 
-  <div class="sec hid" data-sec="fermentacao">
+  <div class="sec paper hid" data-sec="fermentacao">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Fermentação</h2><span class="est" data-est>—</span>
     </div>
@@ -348,7 +381,7 @@
     </div>
   </div>
 
-  <div class="sec hid" data-sec="filtracao">
+  <div class="sec paper hid" data-sec="filtracao">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Filtração</h2><span class="est" data-est>—</span>
     </div>
@@ -362,7 +395,7 @@
     </div>
   </div>
 
-  <div class="sec hid" data-sec="produtoAcabado">
+  <div class="sec paper hid" data-sec="produtoAcabado">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Produto Acabado</h2><span class="est" data-est>—</span>
     </div>
@@ -382,14 +415,12 @@
     </div>
   </div>
 
-  <div class="sec hid" data-sec="observacoes">
+  <div class="sec paper hid" data-sec="observacoes">
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span><h2>Observações do Processo</h2><span class="est" data-est>—</span>
     </div>
     <div class="corpo">
-      <textarea data-c="obs" data-req style="width:100%; min-height:70px; background:var(--campo);
-        border:1.5px solid var(--linha); border-radius:8px; color:var(--txt); font-size:15px;
-        padding:11px 12px; font-family:inherit; outline:none; resize:vertical"></textarea>
+      <textarea data-c="obs" data-req style="width:100%; min-height:70px"></textarea>
     </div>
   </div>
 
