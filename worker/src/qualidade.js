@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { chamarOmie, buscarOPs, buscarTodasPaginas, consultarProduto } from "./omie.js";
+import { construirCacheProdutos } from "./kpis.js";
 import { ESTRUTURAS, porUnidadeComEstruturas } from "./estruturas.js";
 
 export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumos.js)
@@ -73,18 +74,21 @@ const r3 = x => Math.round(x * 1000) / 1000;
 
 /** Lista as OPs abertas (fichas do dia) — ListarOrdemProducao, cConcluida=N */
 export async function listarFichasDoDia(env, dataIso) {
-  const [abertas, mapa] = await Promise.all([
+  const [abertas, cacheProd] = await Promise.all([
     buscarOPs(env, { cConcluida: "N" }),
-    mapaProdutoParaSku(env),
+    construirCacheProdutos(env),
   ]);
+  const idParaSku = {};
+  for (const [s, info] of Object.entries(cacheProd)) idParaSku[String(info.codigo_produto)] = s;
   const fichas = (abertas || []).map((op) => {
     const ident = op.identificacao || {};
     const nCodProduto = get(ident, "nCodProduto");
+    const sku = idParaSku[String(nCodProduto)] ?? null;
     return {
       op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? ""),
       nCodOP: get(ident, "nCodOP") ?? null,
-      sku: (mapa.get(String(nCodProduto)) || {}).sku ?? null,
-      produto: get(ident, "cDescricaoProduto", "cDescricao") ?? (mapa.get(String(nCodProduto)) || {}).descricao ?? "",
+      sku,
+      produto: get(ident, "cDescricaoProduto", "cDescricao") ?? (sku ? cacheProd[sku].descricao : "") ?? "",
       nCodProduto,
       qtd: get(ident, "nQtde") ?? 0,
       status: "sem ficha",
@@ -104,6 +108,25 @@ async function mapaProdutoParaSku(env) {
     if (id !== undefined && p.codigo) mapa.set(String(id), { sku: String(p.codigo), descricao: p.descricao || "" });
   }
   return mapa;
+}
+
+
+/** Resolve produto (codigo/descricao) por id numérico — ConsultarProduto por codigo ou nCodProduto. */
+const cacheProdutosResolvidos = new Map();
+async function resolveProduto(env, id) {
+  if (id === null || id === undefined) return { codigo: "", descricao: "" };
+  const chave = String(id);
+  if (cacheProdutosResolvidos.has(chave)) return cacheProdutosResolvidos.get(chave);
+  let r = null;
+  try { r = await consultarProduto(env, chave); } catch (e) { /* tenta nCodProduto */ }
+  if (!r || !r.codigo_produto) {
+    try { r = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { nCodProduto: id }); } catch (e) {}
+  }
+  const out = r && r.codigo_produto
+    ? { codigo: r.codigo || "", descricao: r.descricao || r.cDescricao || "" }
+    : { codigo: "", descricao: "" };
+  cacheProdutosResolvidos.set(chave, out);
+  return out;
 }
 
 /** PosicaoEstoque individual — saldo do almoxarifado. null se falhar. */
@@ -136,8 +159,13 @@ export async function fichaDaOp(env, op, comSaldo = true) {
   const ident = r.identificacao || {};
   const nCodProduto = get(ident, "nCodProduto");
   const qtdOP = get(ident, "nQtde") ?? 0;
-  const m = (await mapaProdutoParaSku(env)).get(String(nCodProduto)) || {};
-  const sku = m.sku ?? null;
+  let sku = null, produtoDesc = "";
+  if (nCodProduto) {
+    const cacheProd = await construirCacheProdutos(env); // { SKU: { codigo_produto, descricao } }
+    for (const [s, info] of Object.entries(cacheProd)) {
+      if (String(info.codigo_produto) === String(nCodProduto)) { sku = s; produtoDesc = info.descricao || ""; break; }
+    }
+  }
 
   // 1) Fonte verdadeira: itensDetalhes da OP (msg 382)
   let itens = (Array.isArray(r.itensDetalhes) ? r.itensDetalhes : []).map((d) => ({
@@ -145,7 +173,24 @@ export async function fichaDaOp(env, op, comSaldo = true) {
     nome: get(d, "cDescricao", "cNomeProduto", "cDescricaoItem") ?? "",
     un: get(d, "cUnidade", "nUnidade") ?? "",
     quantidade: get(d, "nQtde") ?? null,
+    _id: get(d, "nIdProdutoMalha", "nCodProduto"),
   })).filter((i) => i.codigo || i.nome);
+
+  // nomes reais: itens vêm com id numérico → casa a quantidade por unidade
+  // com a folha da estrutura (ex.: 2,7/450 = 0,006 = MP0 CO₂)
+  const porUn = sku ? porUnidadeComEstruturas(sku, ESTRUTURAS) : null;
+  for (const item of itens) {
+    if (!item.nome && porUn && qtdOP > 0 && item.quantidade != null) {
+      const alvo = item.quantidade / qtdOP;
+      const casal = Object.entries(porUn).find(([, q]) => Math.abs(q - alvo) < Math.max(alvo, 1e-6) * 0.02);
+      if (casal) {
+        item.codigo = casal[0];
+        item.nome = NOMES[casal[0]] || casal[0];
+        item.un = UN[casal[0]] || item.un;
+      }
+    }
+    delete item._id;
+  }
 
   // remove itens sem indicador (EMB08 filme, MP0 CO2, INS024 ribbon)
   itens = itens.filter((i) => !excluido(i.codigo));
@@ -184,7 +229,7 @@ export async function fichaDaOp(env, op, comSaldo = true) {
 
   return {
     op, nCodOP: get(ident, "nCodOP") ?? null, sku,
-    produto: get(ident, "cDescricaoProduto", "cDescricao") ?? m.descricao ?? "",
+    produto: get(ident, "cDescricaoProduto", "cDescricao") ?? produtoDesc,
     nCodProduto, qtd: qtdOP, origem, itens,
   };
 }
