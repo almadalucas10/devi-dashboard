@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Qualidade — Dêvi</title>
+<style>
+  :root{
+    --bg:#0a0f16; --painel:#0d141c; --cell:#141d27; --trilho:#1c2733; --linha:#1b2430;
+    --txt:#e8eef4; --txt2:#cfe0ee; --txt3:#8b98a5;
+    --ok:#22c55e; --al:#f59e0b; --er:#ef4444;
+    --ok2:#4ade80; --al2:#fbbf24; --er2:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--txt); padding:14px;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow-x:hidden}
+
+  .topo{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px}
+  .topo h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
+  .topo .sub{font-size:12px; color:var(--txt3)}
+  .rel{font-size:13px; color:var(--txt2)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:5px}
+
+  .grade{display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:11px; align-items:start}
+  .col{display:flex; flex-direction:column; gap:11px}
+
+  .pn{background:var(--painel); border:1px solid var(--linha); border-radius:11px; padding:11px 13px}
+  .pn-cab{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:10px}
+  .pn-cab .t{font-size:14px; font-weight:600}
+  .pn-cab .s{font-size:11px; color:var(--txt3); white-space:nowrap}
+
+  .kpis{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+  .kpi{background:var(--painel); border:1px solid var(--linha); border-radius:10px; padding:9px 11px}
+  .kpi .r{font-size:9px; color:var(--txt3); letter-spacing:.5px}
+  .kpi .v{font-size:25px; font-weight:700; letter-spacing:-.8px; line-height:1.2}
+  .kpi .d{font-size:10px; color:var(--txt3)}
+
+  .col-lin{margin-bottom:9px}
+  .col-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px}
+  .col-l1 b{font-size:15px; font-weight:700}
+  .tr{height:7px; background:var(--trilho); border-radius:4px; overflow:hidden; margin-top:4px}
+  .tr i{display:block; height:100%}
+
+  .it{background:var(--cell); border-left:3px solid var(--ok); border-radius:7px;
+    padding:7px 10px; margin-bottom:6px}
+  .it.a{border-left-color:var(--al)} .it.e{border-left-color:var(--er)}
+  .it:last-child{margin-bottom:0}
+  .it-l1{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+  .it-nm{font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .it-v{font-size:15px; font-weight:700; white-space:nowrap}
+  .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
+
+  .carta{height:96px; margin:4px 0}
+  .carta svg{width:100%; height:100%; display:block}
+
+  .rec{margin-bottom:10px}
+  .rec-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:4px}
+  .rec-l1 .nm{color:var(--txt2)}
+  .rec-l1 .vl{font-size:15px; font-weight:700}
+  .faixa{position:relative; height:20px; background:var(--trilho); border-radius:4px}
+  .faixa .zona{position:absolute; top:0; bottom:0; background:#16351f; border-radius:4px}
+  .faixa .alvo{position:absolute; top:-3px; bottom:-3px; width:2px; background:#ffffff66}
+  .faixa .pt{position:absolute; top:3px; width:9px; height:14px; border-radius:3px; margin-left:-4px}
+  .faixa-esc{display:flex; justify-content:space-between; font-size:9px; color:#5f6d7c; margin-top:3px}
+
+  .leg{display:flex; gap:11px; font-size:10px; color:var(--txt3); margin-top:8px; flex-wrap:wrap}
+  .leg span{display:flex; align-items:center; gap:4px}
+  .pt-l{width:8px;height:8px;border-radius:2px}
+
+  @media (max-width:900px){ .grade{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div>
+    <h1>QUALIDADE · Dêvi</h1>
+    <div class="sub" id="sub">—</div>
+  </div>
+  <div class="rel"><span class="dot"></span><span id="rel">—</span></div>
+</div>
+
+<div class="grade">
+
+  <!-- ================= COLUNA 1 ================= -->
+  <div class="col">
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t">🧪 Índice de Coleta</span>
+        <span class="s" id="coletaSub">—</span></div>
+      <div id="coleta"></div>
+      <div style="margin-top:11px">
+        <div style="font-size:11px;color:var(--txt3);margin-bottom:5px">Evolução mensal — coleta média (pH·Brix·ABV, kombucha) · série real 2025–2026</div>
+        <div id="evol"></div>
+      </div>
+      <div class="leg"><span>Percentual de lotes com a análise registrada</span>
+        <span><i class="pt-l" style="background:#cfe0ee"></i>≥95%</span>
+        <span><i class="pt-l" style="background:var(--al2)"></i>90–95%</span>
+        <span><i class="pt-l" style="background:var(--er2)"></i>&lt;90%</span></div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t">📉 pH · Komb Frutas Vermelhas</span>
+        <span class="s">últimos 14 lotes</span></div>
+
+      <div class="carta">
+        <svg viewBox="0 0 400 96" preserveAspectRatio="none">
+          <rect x="0" y="24" width="400" height="46" fill="#16351f" opacity=".4"/>
+          <line x1="0" y1="47" x2="400" y2="47" stroke="#ffffff30" stroke-width="1" stroke-dasharray="4 4"/>
+          <polyline fill="none" stroke="#60a5fa" stroke-width="2"
+            points="12,40 40,52 68,34 96,60 124,44 152,38 180,64 208,50 236,42 264,58 292,30 320,46 348,78 376,54"/>
+          <g fill="#60a5fa">
+            <circle cx="12" cy="40" r="3"/><circle cx="40" cy="52" r="3"/><circle cx="68" cy="34" r="3"/>
+            <circle cx="96" cy="60" r="3"/><circle cx="124" cy="44" r="3"/><circle cx="152" cy="38" r="3"/>
+            <circle cx="180" cy="64" r="3"/><circle cx="208" cy="50" r="3"/><circle cx="236" cy="42" r="3"/>
+            <circle cx="264" cy="58" r="3"/><circle cx="292" cy="30" r="3"/><circle cx="320" cy="46" r="3"/>
+            <circle cx="376" cy="54" r="3"/>
+          </g>
+          <circle cx="348" cy="78" r="4.5" fill="#f87171"/>
+        </svg>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt3)">
+        <span>#448</span><span>média 3,23 · dp 0,21</span><span>#527</span>
+      </div>
+      <div class="leg" style="margin-top:6px">
+        <span><i class="pt-l" style="background:#16351f"></i>faixa de especificação</span>
+        <span><i class="pt-l" style="background:var(--er)"></i>fora</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= COLUNA 2 ================= -->
+  <div class="col">
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t" id="recTitulo">🔧 Recravação</span>
+        <span class="s" id="recSub">—</span></div>
+      <div id="recrava"></div>
+      <div class="leg"><span>1 medição por lote — altura, espessura e transpasse da mesma lata</span></div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t">📋 Lotes do mês</span>
+        <span class="s" id="lotesSub">—</span></div>
+      <div id="lotes"></div>
+      <div class="leg"></div>
+    </div>
+
+  </div>
+
+  <!-- ================= COLUNA 3 ================= -->
+  <div class="col">
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t">⚠ Ocorrências</span><span class="s" id="occSub">—</span></div>
+      <div id="ocorrencias"></div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t">🗓 Vida de prateleira</span><span class="s" id="vidaSub">—</span></div>
+      <div id="vida"></div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-cab"><span class="t">🫧 Fermentação ativa</span><span class="s" id="fermSub">—</span></div>
+      <div id="fermentacao"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Dados de demonstração — em produção vêm de GET /api/qualidade/mes/:aaaa-mm
+// (agregado mensal no R2, ver fase2-painel-e-anexo.md §2)
+// ---------------------------------------------------------------------------
+const DADOS = {
+  mes: '2026-08',
+  mesNome: 'Agosto de 2026',
+  atualizadoEm: '08:14',
+  indiceColeta: { pH: 1.00, brix: 1.00, carbonatacao: 0.92, recravacao: 0.25, abv: 0.42 },
+  lotes: {
+    total: 12, conformes: 10, naoConformes: 2, semDado: 1,
+    lista: [
+      { op: '#527', sigla: 'KFV', status: 'nc', txt: '12/08 · transpasse 0,78 abaixo do mínimo' },
+      { op: '#518', sigla: 'KABX/3', status: 'sd', txt: '11/08 · análise não registrada' },
+      { op: '#517', sigla: 'RFV2K', status: 'ok', txt: '13/08 · pH 3,42 · Brix 5,0' },
+      { op: '#512', sigla: 'RLSSAMS2K', status: 'ok', txt: '10/08 · pH 3,35 · Brix 4,8' },
+      { op: '#500', sigla: 'KMÇ', status: 'ok', txt: '10/08 · pH 3,38 · Brix 5,9' }
+    ]
+  },
+  ocorrencias: [
+    { op: '#527', sigla: 'KFV', data: '12/08', txt: 'Transpasse fora de especificação — 0,78 mm' },
+    { op: '#505', sigla: 'RGA2K', data: '06/08', txt: 'Lata oxidada' },
+    { op: '#498', sigla: 'KPL', data: '03/08', txt: 'Coloração fraca e pouco doce' }
+  ],
+  analisesVencidas: { total: 4, lista: [
+    { op: '#471', sigla: 'CML', dias: '30 dias', txt: 'vencida há 4 dias · lote de 09/07', cor: 'e' },
+    { op: '#477', sigla: 'CVP', dias: '30 dias', txt: 'vencida há 2 dias · lote de 10/07', cor: 'e' },
+    { op: '#517', sigla: 'RFV2K', dias: '7 dias', txt: 'vence amanhã', cor: 'a' },
+    { op: '#448', sigla: 'KMIR', dias: '6 meses', txt: 'em 17/01/2027', cor: 'ok' }
+  ] },
+  fermentacao: [
+    { tanque: 'T5', nome: 'Frutas Vermelhas', dia: 'dia 6', txt: 'pH 3,1 → 2,9 · Brix 6,0 → 4,2 · 28 °C', cor: '' },
+    { tanque: 'T3', nome: 'Abacaxi', dia: 'dia 11', txt: 'pH 3,3 → 3,1 · lento · 22 °C', cor: 'a' },
+    { tanque: 'T1', nome: 'Pink Lemonade', dia: 'dia 3', txt: 'pH 3,6 → 3,4 · Brix 6,8 → 6,0 · 30 °C', cor: '' }
+  ],
+  recravacao: {
+    op: '#527', sigla: 'KFV', data: '12/08',
+    medidas: [
+      { nome: 'Altura',     valor: 2.58, un: 'mm', spec: { min: 2.50, alvo: 2.60, max: 2.65 } },
+      { nome: 'Espessura',  valor: 1.08, un: 'mm', spec: { min: 1.00, alvo: 1.05, max: 1.10 } },
+      { nome: 'Transpasse', valor: 0.78, un: 'mm', spec: { min: 0.80, alvo: 0.85, max: 0.90 } }
+    ]
+  },
+  // Série real da aba Estatísticas Indicadores Kombuc — coleta média mensal (pH·Brix·ABV)
+  evolucao: [
+    ['Jan/25', 75], ['Fev/25', 51], ['Mar/25', 100], ['Abr/25', 100], ['Mai/25', 75],
+    ['Jun/25', 100], ['Jul/25', 100], ['Ago/25', 92], ['Set/25', 66], ['Out/25', 50],
+    ['Nov/25', 78], ['Dez/25', 36], ['Jan/26', 100], ['Fev/26', 100], ['Mar/26', 100],
+    ['Abr/26', 100], ['Mai/26', 100], ['Jun/26', 83], ['Jul/26', 100]
+  ]
+};
+
+// ---------------------------------------------------------------------------
+// Limiar de coleta (fase 2 §3.3): ≥95% neutro · 90–95% âmbar · <90% vermelho
+// ---------------------------------------------------------------------------
+const fmtPct = p => Math.round(p * 100) + '%';
+function corColeta(p){
+  if(p === null || p === undefined) return 'var(--txt3)';
+  if(p >= 0.95) return '#cfe0ee';
+  if(p >= 0.90) return '#fbbf24';
+  return '#f87171';
+}
+
+const el = id => document.getElementById(id);
+
+function renderKpis(){
+  const ic = DADOS.indiceColeta;
+  const vals = Object.values(ic);
+  const media = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const nc = DADOS.ocorrencias.length;
+  el('kpis').innerHTML = `
+    <div class="kpi"><div class="r">COLETA DO MÊS</div>
+      <div class="v" style="color:${corColeta(media)}">${fmtPct(media)}</div>
+      <div class="d">média dos 5 indicadores</div></div>
+    <div class="kpi"><div class="r">LOTES CONFORMES</div>
+      <div class="v" style="color:var(--ok2)">${DADOS.lotes.conformes}/${DADOS.lotes.total}</div>
+      <div class="d">${fmtPct(DADOS.lotes.conformes / DADOS.lotes.total)} no mês</div></div>
+    <div class="kpi"><div class="r">NÃO-CONFORMIDADES</div>
+      <div class="v" style="color:var(--er2)">${nc}</div>
+      <div class="d">${nc ? 'ver "Ocorrências"' : 'nenhuma no mês'}</div></div>
+    <div class="kpi"><div class="r">ANÁLISES VENCIDAS</div>
+      <div class="v" style="color:var(--al2)">${DADOS.analisesVencidas.total}</div>
+      <div class="d">vida de prateleira</div></div>`;
+}
+
+function renderColeta(){
+  const nomes = { pH: 'pH', brix: 'Brix', carbonatacao: 'Carbonatação', recravacao: 'Recravação', abv: 'ABV' };
+  el('coletaSub').textContent = `${DADOS.lotes.total} lotes no mês`;
+  el('coleta').innerHTML = Object.entries(nomes).map(([k, nome]) => {
+    const p = DADOS.indiceColeta[k];
+    const cor = corColeta(p);
+    return `<div class="col-lin">
+      <div class="col-l1"><span>${nome}</span><b style="color:${cor}">${fmtPct(p)}</b></div>
+      <div class="tr"><i style="width:${Math.round(p * 100)}%;background:${cor}"></i></div></div>`;
+  }).join('');
+}
+
+function renderEvol(){
+  el('evol').innerHTML = '<div style="display:flex;align-items:flex-end;gap:3px;height:52px">' +
+    DADOS.evolucao.map(([mes, v]) => {
+      const cor = v >= 95 ? '#cfe0ee' : v >= 90 ? '#fbbf24' : '#f87171';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"
+        title="${mes} · ${v}%">
+        <div style="width:100%;background:${cor};height:${Math.max(2, v / 100 * 40)}px;border-radius:2px;opacity:.9"></div>
+        <span style="font-size:7.5px;color:var(--txt3)">${mes}</span></div>`;
+    }).join('') + '</div>';
+}
+
+function renderRecravacao(){
+  const r = DADOS.recravacao;
+  el('recTitulo').textContent = `🔧 Recravação · OP ${r.op}`;
+  el('recSub').textContent = `1 lata · ${r.data}`;
+  el('recrava').innerHTML = r.medidas.map(m => {
+    const { min, alvo, max } = m.spec;
+    const pos = v => Math.max(0, Math.min(100, (v - min) / (max - min) * 100));
+    const cor = (m.valor >= min && m.valor <= max) ? 'var(--ok2)' : 'var(--er2)';
+    return `<div class="rec">
+      <div class="rec-l1"><span class="nm">${m.nome}</span>
+        <span class="vl" style="color:${cor}">${String(m.valor).replace('.', ',')} <span style="font-size:10px;color:var(--txt3)">${m.un}</span></span></div>
+      <div class="faixa">
+        <div class="zona" style="left:${pos(min)}%;right:${100 - pos(max)}%"></div>
+        <div class="alvo" style="left:${pos(alvo)}%"></div>
+        <div class="pt" style="left:${pos(m.valor)}%;background:${cor}"></div>
+      </div>
+      <div class="faixa-esc"><span>${String(min).replace('.', ',')}</span><span>alvo ${String(alvo).replace('.', ',')}</span><span>${String(max).replace('.', ',')}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderLotes(){
+  const L = DADOS.lotes;
+  el('lotesSub').textContent = `${L.conformes} de ${L.total} conformes`;
+  const status = {
+    ok: ['ok', 'conforme', 'var(--ok2)'],
+    nc: ['e', 'não conforme', 'var(--er2)'],
+    sd: ['a', 'sem recravação', 'var(--al2)']
+  };
+  el('lotes').innerHTML = L.lista.map(x => {
+    const [cls, label, cor] = status[x.status] || status.ok;
+    return `<div class="it ${cls}">
+      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${x.op.replace('#','')}" style="color:inherit;text-decoration:none;flex:1;min-width:0"><span class="it-nm">${x.op} · ${x.sigla}</span></a>
+        <span class="it-v" style="font-size:12px;color:${cor}">${label}</span></div>
+      <div class="it-l2">${x.txt}</div></div>`;
+  }).join('');
+  const leg = el('lotes').parentElement.querySelector('.leg');
+  if(leg) leg.innerHTML = '<span>toque no lote para abrir a ficha de qualidade</span>';
+}
+
+function renderOcorrencias(){
+  el('occSub').textContent = `${DADOS.ocorrencias.length} no mês`;
+  el('ocorrencias').innerHTML = DADOS.ocorrencias.map((o, i) => `
+    <div class="it ${i === 0 ? 'e' : 'a'}">
+      <div class="it-l1"><span class="it-nm">${o.op} · ${o.sigla}</span>
+        <span class="it-v" style="font-size:12px;color:${i === 0 ? 'var(--er2)' : 'var(--al2)'}">${o.data}</span></div>
+      <div class="it-l2">${o.txt}</div></div>`).join('');
+}
+
+function renderVida(){
+  const V = DADOS.analisesVencidas;
+  el('vidaSub').textContent = `${V.total} vencidas`;
+  const cor = { e: 'var(--er2)', a: 'var(--al2)', ok: 'var(--ok2)' };
+  el('vida').innerHTML = V.lista.map(x => `
+    <div class="it ${x.cor === 'ok' ? '' : x.cor}">
+      <div class="it-l1"><span class="it-nm">${x.op} · ${x.sigla}</span>
+        <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${x.dias}</span></div>
+      <div class="it-l2">${x.txt}</div></div>`).join('');
+}
+
+function renderFerm(){
+  el('fermSub').textContent = `${DADOS.fermentacao.length} tanques`;
+  el('fermentacao').innerHTML = DADOS.fermentacao.map(f => `
+    <div class="it ${f.cor}">
+      <div class="it-l1"><span class="it-nm">${f.tanque} · ${f.nome}</span>
+        <span class="it-v" style="font-size:14px;${f.cor ? 'color:var(--al2)' : ''}">${f.dia}</span></div>
+      <div class="it-l2">${f.txt}</div></div>`).join('');
+}
+
+el('sub').textContent = `${DADOS.mesNome} · ${DADOS.lotes.total} lotes produzidos`;
+el('rel').textContent = DADOS.atualizadoEm;
+renderKpis();
+renderColeta();
+renderEvol();
+renderRecravacao();
+renderLotes();
+renderOcorrencias();
+renderVida();
+renderFerm();
+</script>
+</body>
+</html>

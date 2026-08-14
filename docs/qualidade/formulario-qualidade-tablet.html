@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>PR1 · Registro de Ordem de Produção — Qualidade</title>
+<style>
+  :root{
+    --bg:#0a0f16; --painel:#0d141c; --campo:#141d27; --linha:#1f2a36;
+    --txt:#e8eef4; --txt2:#cfe0ee; --txt3:#8b98a5;
+    --ok:#22c55e; --alerta:#f59e0b; --erro:#ef4444; --azul:#3b82f6;
+    --ok2:#4ade80; --al2:#fbbf24; --er2:#f87171;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overflow-x:hidden; -webkit-text-size-adjust:100%}
+
+  /* ---------- cabeçalho fixo ---------- */
+  .topo{position:sticky; top:0; z-index:20; background:#0c1219;
+    border-bottom:1px solid var(--linha); padding:10px 14px}
+  .topo-l1{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+  .op{font-size:22px; font-weight:700; letter-spacing:-.5px}
+  .op span{color:var(--azul)}
+  .prod{font-size:13px; color:var(--txt3); margin-top:1px}
+  .meta{font-size:12px; color:var(--txt3); text-align:right; white-space:nowrap}
+  .barra-prog{height:4px; background:var(--linha); border-radius:2px; margin-top:9px; overflow:hidden}
+  .barra-prog i{display:block; height:100%; background:var(--ok); width:0%; transition:width .3s}
+  .prog-txt{font-size:11px; color:var(--txt3); margin-top:4px}
+
+  .wrap{padding:14px; display:flex; flex-direction:column; gap:14px; max-width:820px; margin:0 auto}
+
+  /* ---------- secção ---------- */
+  .sec{background:var(--painel); border:1px solid var(--linha); border-radius:12px; overflow:hidden}
+  .sec-cab{display:flex; align-items:center; gap:10px; padding:12px 14px;
+    cursor:pointer; user-select:none}
+  .sec-cab h2{font-size:15px; font-weight:600; margin:0; flex:1}
+  .estado{font-size:11px; padding:2px 9px; border-radius:20px; white-space:nowrap;
+    background:var(--linha); color:var(--txt3)}
+  .estado.done{background:#12241a; color:var(--ok2)}
+  .estado.parcial{background:#2a2412; color:var(--al2)}
+  .chev{color:var(--txt3); font-size:13px; transition:transform .2s}
+  .sec.aberta .chev{transform:rotate(90deg)}
+  .sec-corpo{display:none; padding:0 14px 14px}
+  .sec.aberta .sec-corpo{display:block}
+
+  /* ---------- campos ---------- */
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .campo{display:flex; flex-direction:column; gap:4px}
+  .campo label{font-size:11px; color:var(--txt3); letter-spacing:.2px}
+  .campo .spec{font-size:10px; color:#5f6d7c}
+  input,select{background:var(--campo); border:1.5px solid var(--linha); border-radius:8px;
+    color:var(--txt); font-size:17px; padding:11px 12px; width:100%; min-height:46px;
+    font-family:inherit; outline:none; transition:border-color .15s}
+  input:focus,select:focus{border-color:var(--azul)}
+  input.ok{border-color:var(--ok)}
+  input.alerta{border-color:var(--alerta)}
+  input.erro{border-color:var(--erro); background:#1c1214}
+  .msg{font-size:11px; min-height:14px}
+  .msg.ok{color:var(--ok2)} .msg.alerta{color:var(--al2)} .msg.erro{color:var(--er2)}
+
+  /* ---------- tabela recravação ---------- */
+  .rec-cab{display:grid; grid-template-columns:62px 1fr 1fr 1fr; gap:8px;
+    font-size:11px; color:var(--txt3); padding:0 2px 6px}
+  .rec-lin{display:grid; grid-template-columns:62px 1fr 1fr 1fr; gap:8px; margin-bottom:8px;
+    align-items:start}
+  .rec-pos{font-size:12px; color:var(--txt2); padding-top:14px; font-weight:600}
+
+  /* ---------- carbonatação ---------- */
+  .carb-cab{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+  .carb-lin{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .carb-lin input{font-size:15px; padding:9px 8px; min-height:42px}
+  .btn-x{background:none; border:none; color:#6c7d8c; font-size:19px; cursor:pointer}
+
+  .btn{background:var(--campo); border:1.5px solid var(--linha); color:var(--txt2);
+    border-radius:8px; padding:11px 16px; font-size:14px; cursor:pointer; font-family:inherit;
+    min-height:46px}
+  .btn:active{background:#1c2733}
+  .btn-full{width:100%}
+  .btn-primario{background:var(--azul); border-color:var(--azul); color:#fff; font-weight:600}
+
+  .aviso{background:#1a1410; border-left:3px solid var(--alerta); border-radius:6px;
+    padding:9px 12px; font-size:12px; color:var(--txt2); line-height:1.5; margin-bottom:12px}
+  .aviso b{color:var(--al2)}
+
+  .rodape{padding:0 14px 30px; max-width:820px; margin:0 auto}
+  pre{background:#0c1219; border:1px solid var(--linha); border-radius:9px; padding:12px;
+    font-size:11px; color:var(--txt2); overflow-x:auto; white-space:pre-wrap; word-break:break-all}
+</style>
+</head>
+<body>
+
+<div style="background:#2a1216; border-bottom:1px solid var(--linha); color:var(--er2);
+  font-size:12px; padding:8px 14px; text-align:center">
+  ⚠ PROTÓTIPO SUBSTITUÍDO — versão atual: <b>ficha-qualidade-com-insumos.html</b>
+  (recravação: 1 medição por lote). Este arquivo fica só como histórico.
+</div>
+
+<div class="topo">
+  <div class="topo-l1">
+    <div>
+      <div class="op">OP <span>#527</span></div>
+      <div class="prod">KFV · Kombucha Frutas Vermelhas</div>
+    </div>
+    <div class="meta">12/08/2026<br>4.464 un previstas</div>
+  </div>
+  <div class="barra-prog"><i id="prog"></i></div>
+  <div class="prog-txt" id="progTxt">0 de 5 blocos preenchidos</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ FORMULAÇÃO ============ -->
+  <div class="sec aberta" data-sec="formulacao">
+    <div class="sec-cab" onclick="alterna(this)">
+      <span class="chev">▸</span>
+      <h2>Formulação</h2>
+      <span class="estado" data-estado>—</span>
+    </div>
+    <div class="sec-corpo">
+      <div class="grid">
+        <div class="campo">
+          <label>Volume saborização (L)</label>
+          <input type="text" inputmode="decimal" data-campo="volSabor" data-req>
+          <div class="msg"></div>
+        </div>
+        <div class="campo">
+          <label>Volume kombucha (L)</label>
+          <input type="text" inputmode="decimal" data-campo="volKomb" data-req>
+          <div class="msg"></div>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:10px">
+        <label>Responsável</label>
+        <input type="text" data-campo="respForm" data-req>
+        <div class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CARBONATAÇÃO ============ -->
+  <div class="sec" data-sec="carbonatacao">
+    <div class="sec-cab" onclick="alterna(this)">
+      <span class="chev">▸</span>
+      <h2>Carbonatação</h2>
+      <span class="estado" data-estado>—</span>
+    </div>
+    <div class="sec-corpo">
+      <div class="carb-cab">
+        <span>Horário</span><span>Temp °C</span><span>P. cilindro</span><span>P. tanque</span><span></span>
+      </div>
+      <div id="carbLinhas"></div>
+      <button class="btn btn-full" onclick="addCarb()">+ Adicionar leitura</button>
+    </div>
+  </div>
+
+  <!-- ============ PRÉ-ENVASE ============ -->
+  <div class="sec" data-sec="preenvase">
+    <div class="sec-cab" onclick="alterna(this)">
+      <span class="chev">▸</span>
+      <h2>Parâmetros pré-envase</h2>
+      <span class="estado" data-estado>—</span>
+    </div>
+    <div class="sec-corpo">
+      <div class="aviso">
+        <b>Sem especificação cadastrada</b> para pH, Brix e carbonatação deste produto.
+        Os valores são registrados, mas não há validação automática até as faixas serem definidas.
+      </div>
+      <div class="grid-3">
+        <div class="campo">
+          <label>pH</label>
+          <input type="text" inputmode="decimal" data-campo="pH" data-spec="pH" data-req>
+          <div class="msg"></div>
+        </div>
+        <div class="campo">
+          <label>Brix</label>
+          <input type="text" inputmode="decimal" data-campo="brix" data-spec="brix" data-req>
+          <div class="msg"></div>
+        </div>
+        <div class="campo">
+          <label>Carbonatação</label>
+          <input type="text" inputmode="decimal" data-campo="carb" data-spec="carbonatacao" data-req>
+          <div class="msg"></div>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:10px">
+        <label>Responsável</label>
+        <input type="text" data-campo="respPre" data-req>
+        <div class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RECRAVAÇÃO ============ -->
+  <div class="sec" data-sec="recravacao">
+    <div class="sec-cab" onclick="alterna(this)">
+      <span class="chev">▸</span>
+      <h2>Recravação</h2>
+      <span class="estado" data-estado>—</span>
+    </div>
+    <div class="sec-corpo">
+      <div class="aviso" style="border-left-color:var(--azul); background:#0f1721">
+        Uma lata em cada momento do envase. Lata sleek 269 ml —
+        altura <b style="color:var(--txt2)">2,50–2,65</b> ·
+        espessura <b style="color:var(--txt2)">1,00–1,10</b> ·
+        transpasse <b style="color:var(--txt2)">0,80–0,90</b> mm
+      </div>
+      <div class="rec-cab">
+        <span></span><span>Altura</span><span>Espessura</span><span>Transpasse</span>
+      </div>
+      <div id="recLinhas"></div>
+    </div>
+  </div>
+
+  <!-- ============ ESTOQUE ============ -->
+  <div class="sec" data-sec="estoque">
+    <div class="sec-cab" onclick="alterna(this)">
+      <span class="chev">▸</span>
+      <h2>Envio para estoque</h2>
+      <span class="estado" data-estado>—</span>
+    </div>
+    <div class="sec-corpo">
+      <div class="grid">
+        <div class="campo">
+          <label>Quantidade produzida</label>
+          <input type="text" inputmode="numeric" data-campo="qtdeProd" data-req>
+          <div class="msg"></div>
+        </div>
+        <div class="campo">
+          <label>Tipo</label>
+          <select data-campo="tipoEst" data-req>
+            <option value="">—</option>
+            <option>Lata</option>
+            <option>Barril</option>
+            <option>Growler</option>
+          </select>
+          <div class="msg"></div>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:10px">
+        <label>Responsável</label>
+        <input type="text" data-campo="respEst" data-req>
+        <div class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="rodape">
+  <button class="btn btn-primario btn-full" onclick="salvar()">Salvar registro</button>
+  <pre id="saida" style="display:none"></pre>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Especificações — viriam do backend, nunca fixas no código de produção
+// ---------------------------------------------------------------------------
+const SPEC = {
+  recravacao: {
+    altura:     { min: 2.50, alvo: 2.60, max: 2.65 },
+    espessura:  { min: 1.00, alvo: 1.05, max: 1.10 },
+    transpasse: { min: 0.80, alvo: 0.85, max: 0.90 }
+  },
+  // faixas por produto ainda não definidas — ver pendência
+  produto: { pH: null, brix: null, carbonatacao: null }
+};
+
+const POSICOES = ['Início', 'Meio', 'Fim'];
+
+const n = v => {
+  const x = parseFloat(String(v).replace(',', '.'));
+  return isNaN(x) ? null : x;
+};
+
+// ---------------------------------------------------------------------------
+// Validação
+// ---------------------------------------------------------------------------
+function validar(input, spec) {
+  const msg = input.parentElement.querySelector('.msg');
+  const v = n(input.value);
+  input.classList.remove('ok', 'alerta', 'erro');
+  if (msg) { msg.textContent = ''; msg.className = 'msg'; }
+
+  if (input.value.trim() === '') return null;
+  if (v === null) {
+    input.classList.add('erro');
+    if (msg) { msg.textContent = 'valor inválido'; msg.className = 'msg erro'; }
+    return 'erro';
+  }
+  if (!spec) { input.classList.add('ok'); return 'ok'; }
+
+  if (v < spec.min || v > spec.max) {
+    input.classList.add('erro');
+    if (msg) {
+      msg.textContent = `fora — ${spec.min.toFixed(2)} a ${spec.max.toFixed(2)}`;
+      msg.className = 'msg erro';
+    }
+    return 'erro';
+  }
+  // dentro da faixa, mas nas bordas
+  const folga = (spec.max - spec.min) * 0.15;
+  if (v < spec.min + folga || v > spec.max - folga) {
+    input.classList.add('alerta');
+    if (msg) { msg.textContent = 'no limite'; msg.className = 'msg alerta'; }
+    return 'alerta';
+  }
+  input.classList.add('ok');
+  if (msg) { msg.textContent = 'ok'; msg.className = 'msg ok'; }
+  return 'ok';
+}
+
+// ---------------------------------------------------------------------------
+// Recravação — 3 latas, uma medição cada
+// ---------------------------------------------------------------------------
+function montarRec() {
+  const alvo = document.getElementById('recLinhas');
+  alvo.innerHTML = POSICOES.map((p, i) => `
+    <div class="rec-lin">
+      <span class="rec-pos">${p}</span>
+      ${['altura','espessura','transpasse'].map(d => `
+        <div class="campo">
+          <input type="text" inputmode="decimal"
+                 data-campo="rec_${i}_${d}" data-rec="${d}"
+                 placeholder="${SPEC.recravacao[d].alvo.toFixed(2)}">
+          <div class="msg"></div>
+        </div>`).join('')}
+    </div>`).join('');
+
+  alvo.querySelectorAll('input[data-rec]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      validar(inp, SPEC.recravacao[inp.dataset.rec]);
+      atualizar();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Carbonatação — linhas dinâmicas
+// ---------------------------------------------------------------------------
+let nCarb = 0;
+function addCarb() {
+  const alvo = document.getElementById('carbLinhas');
+  const id = nCarb++;
+  const div = document.createElement('div');
+  div.className = 'carb-lin';
+  div.innerHTML = `
+    <input type="time" data-campo="carb_${id}_hora" data-carb>
+    <input type="text" inputmode="decimal" data-campo="carb_${id}_temp" data-carb placeholder="°C">
+    <input type="text" inputmode="decimal" data-campo="carb_${id}_pcil" data-carb placeholder="cil">
+    <input type="text" inputmode="decimal" data-campo="carb_${id}_ptan" data-carb placeholder="tan">
+    <button class="btn-x" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  alvo.appendChild(div);
+  div.querySelectorAll('input').forEach(i => i.addEventListener('input', atualizar));
+  atualizar();
+}
+
+// ---------------------------------------------------------------------------
+// Estado das secções e progresso
+// ---------------------------------------------------------------------------
+function alterna(cab) { cab.parentElement.classList.toggle('aberta'); }
+
+function atualizar() {
+  let completas = 0;
+  document.querySelectorAll('.sec').forEach(sec => {
+    const badge = sec.querySelector('[data-estado]');
+    const nome = sec.dataset.sec;
+    let preenchidos = 0, total = 0, erro = false;
+
+    if (nome === 'carbonatacao') {
+      const linhas = sec.querySelectorAll('.carb-lin');
+      total = linhas.length;
+      linhas.forEach(l => {
+        const vals = [...l.querySelectorAll('input')].filter(i => i.value.trim() !== '');
+        if (vals.length === 4) preenchidos++;
+      });
+      badge.textContent = total === 0 ? '—' : `${preenchidos} de ${total}`;
+    } else if (nome === 'recravacao') {
+      const inputs = sec.querySelectorAll('input[data-rec]');
+      total = POSICOES.length;
+      POSICOES.forEach((_, i) => {
+        const trio = [...inputs].filter(x => x.dataset.campo.startsWith(`rec_${i}_`));
+        if (trio.every(x => x.value.trim() !== '')) preenchidos++;
+        if (trio.some(x => x.classList.contains('erro'))) erro = true;
+      });
+      badge.textContent = `${preenchidos} de ${total}`;
+    } else {
+      const reqs = sec.querySelectorAll('[data-req]');
+      total = reqs.length;
+      reqs.forEach(r => { if (r.value.trim() !== '') preenchidos++; });
+      badge.textContent = preenchidos === 0 ? '—' : `${preenchidos} de ${total}`;
+    }
+
+    badge.className = 'estado';
+    if (total > 0 && preenchidos === total) {
+      badge.classList.add('done');
+      badge.textContent = erro ? 'fora de spec' : 'completo';
+      if (erro) badge.className = 'estado parcial';
+      completas++;
+    } else if (preenchidos > 0) {
+      badge.classList.add('parcial');
+    }
+  });
+
+  const pct = (completas / 5) * 100;
+  document.getElementById('prog').style.width = pct + '%';
+  document.getElementById('progTxt').textContent =
+    `${completas} de 5 blocos preenchidos`;
+}
+
+// ---------------------------------------------------------------------------
+// Salvar — monta o payload que iria ao Worker
+// ---------------------------------------------------------------------------
+function salvar() {
+  const dados = { op: '2026/00527', sku: 'KFV', data: '2026-08-12', blocos: {} };
+
+  const pega = c => {
+    const el = document.querySelector(`[data-campo="${c}"]`);
+    return el && el.value.trim() !== '' ? el.value.trim() : null;
+  };
+
+  dados.blocos.formulacao = {
+    volumeSaborizacao: n(pega('volSabor')),
+    volumeKombucha: n(pega('volKomb')),
+    responsavel: pega('respForm')
+  };
+
+  dados.blocos.carbonatacao = [...document.querySelectorAll('.carb-lin')].map(l => {
+    const v = [...l.querySelectorAll('input')].map(i => i.value.trim());
+    return { hora: v[0] || null, temperatura: n(v[1]), pressaoCilindro: n(v[2]), pressaoTanque: n(v[3]) };
+  }).filter(x => x.hora || x.temperatura);
+
+  dados.blocos.preEnvase = {
+    pH: n(pega('pH')), brix: n(pega('brix')),
+    carbonatacao: n(pega('carb')), responsavel: pega('respPre')
+  };
+
+  dados.blocos.recravacao = POSICOES.map((p, i) => ({
+    posicao: p.toLowerCase(),
+    altura: n(pega(`rec_${i}_altura`)),
+    espessura: n(pega(`rec_${i}_espessura`)),
+    transpasse: n(pega(`rec_${i}_transpasse`))
+  })).filter(x => x.altura !== null || x.espessura !== null || x.transpasse !== null);
+
+  dados.blocos.estoque = {
+    quantidade: n(pega('qtdeProd')), tipo: pega('tipoEst'), responsavel: pega('respEst')
+  };
+
+  // marca não-conformidades
+  const fora = [];
+  dados.blocos.recravacao.forEach(r => {
+    ['altura','espessura','transpasse'].forEach(d => {
+      const v = r[d], s = SPEC.recravacao[d];
+      if (v !== null && (v < s.min || v > s.max)) {
+        fora.push(`${d} ${v} (${r.posicao}) — spec ${s.min}–${s.max}`);
+      }
+    });
+  });
+  dados.naoConformidades = fora;
+  dados.registradoEm = new Date().toISOString();
+
+  const saida = document.getElementById('saida');
+  saida.style.display = 'block';
+  saida.textContent =
+    (fora.length ? '⚠ ' + fora.length + ' não-conformidade(s)\n\n' : '✓ Sem não-conformidades\n\n')
+    + JSON.stringify(dados, null, 2);
+  saida.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---------------------------------------------------------------------------
+montarRec();
+addCarb();
+document.querySelectorAll('input[data-req], select[data-req]').forEach(inp => {
+  const chave = inp.dataset.spec;
+  inp.addEventListener('input', () => {
+    if (chave && SPEC.produto[chave]) validar(inp, SPEC.produto[chave]);
+    atualizar();
+  });
+  inp.addEventListener('change', atualizar);
+});
+atualizar();
+</script>
+</body>
+</html>

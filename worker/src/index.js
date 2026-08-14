@@ -417,6 +417,23 @@ export default {
         });
       } catch(e) { return json({ erro: e.message.slice(0, 150) }, 500); }
     }
+
+    // ================= QUALIDADE — fichas do dia e ficha de uma OP =================
+    if (url.pathname === "/api/qualidade/fichas") {
+      try {
+        const { listarFichasDoDia } = await import("./qualidade.js");
+        const data = url.searchParams.get("data") || new Date().toISOString().slice(0, 10);
+        return json(await listarFichasDoDia(env, data));
+      } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/ficha/")) {
+      try {
+        const { fichaDaOp } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const comSaldo = url.searchParams.get("saldo") !== "0";
+        return json(await fichaDaOp(env, op, comSaldo));
+      } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
+    }
 if (url.pathname === "/api/health") {
       const dash = await readJson(env, R2_KEYS.dashboard);
       const omie = await readJson(env, R2_KEYS.omie);
