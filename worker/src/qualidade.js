@@ -7,7 +7,7 @@
 // ficha técnica (ESTRUTURAS) × quantidade da OP.
 // ============================================================================
 
-import { chamarOmie, buscarOPs, buscarProdutos, consultarProduto } from "./omie.js";
+import { chamarOmie, buscarOPs, buscarTodasPaginas, consultarProduto } from "./omie.js";
 import { ESTRUTURAS, porUnidadeComEstruturas } from "./estruturas.js";
 
 export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumos.js)
@@ -83,8 +83,8 @@ export async function listarFichasDoDia(env, dataIso) {
     return {
       op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? ""),
       nCodOP: get(ident, "nCodOP") ?? null,
-      sku: mapa.get(String(nCodProduto)) ?? null,
-      produto: get(ident, "cDescricaoProduto", "cDescricao") ?? "",
+      sku: (mapa.get(String(nCodProduto)) || {}).sku ?? null,
+      produto: get(ident, "cDescricaoProduto", "cDescricao") ?? (mapa.get(String(nCodProduto)) || {}).descricao ?? "",
       nCodProduto,
       qtd: get(ident, "nQtde") ?? 0,
       status: "sem ficha",
@@ -93,13 +93,15 @@ export async function listarFichasDoDia(env, dataIso) {
   return { data: dataIso, fichas };
 }
 
-/** Mapa codigo_produto → cCodigo (SKU) via ListarProdutos (1 chamada). */
+/** Mapa codigo_produto → { sku, descricao } via ListarProdutos (chave real: produto_servico_cadastro). */
 async function mapaProdutoParaSku(env) {
-  const produtos = await buscarProdutos(env);
+  const produtos = await buscarTodasPaginas(env, "/geral/produtos/", "ListarProdutos",
+    (p) => ({ pagina: p, registros_por_pagina: 100 }),
+    { arrayKey: "produto_servico_cadastro", maxPages: 10 });
   const mapa = new Map();
   for (const p of produtos || []) {
     const id = p.codigo_produto;
-    if (id !== undefined && p.codigo) mapa.set(String(id), String(p.codigo));
+    if (id !== undefined && p.codigo) mapa.set(String(id), { sku: String(p.codigo), descricao: p.descricao || "" });
   }
   return mapa;
 }
@@ -134,7 +136,8 @@ export async function fichaDaOp(env, op, comSaldo = true) {
   const ident = r.identificacao || {};
   const nCodProduto = get(ident, "nCodProduto");
   const qtdOP = get(ident, "nQtde") ?? 0;
-  const sku = (await mapaProdutoParaSku(env)).get(String(nCodProduto)) ?? null;
+  const m = (await mapaProdutoParaSku(env)).get(String(nCodProduto)) || {};
+  const sku = m.sku ?? null;
 
   // 1) Fonte verdadeira: itensDetalhes da OP (msg 382)
   let itens = (Array.isArray(r.itensDetalhes) ? r.itensDetalhes : []).map((d) => ({
@@ -147,7 +150,7 @@ export async function fichaDaOp(env, op, comSaldo = true) {
   // remove itens sem indicador (EMB08 filme, MP0 CO2, INS024 ribbon)
   itens = itens.filter((i) => !excluido(i.codigo));
 
-  const origem = itens.length ? "op_itens" : null;
+  let origem = itens.length ? "op_itens" : null;
 
   // 2) Fallback: explosão da ficha técnica × quantidade da OP
   if (!itens.length && sku) {
@@ -181,7 +184,7 @@ export async function fichaDaOp(env, op, comSaldo = true) {
 
   return {
     op, nCodOP: get(ident, "nCodOP") ?? null, sku,
-    produto: get(ident, "cDescricaoProduto", "cDescricao") ?? "",
+    produto: get(ident, "cDescricaoProduto", "cDescricao") ?? m.descricao ?? "",
     nCodProduto, qtd: qtdOP, origem, itens,
   };
 }

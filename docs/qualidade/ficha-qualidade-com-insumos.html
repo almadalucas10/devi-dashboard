@@ -389,7 +389,7 @@ function abrirOp(op){
   aplicarSku();
   resetarFicha();
   mostrarFicha();
-  carregarInsumosReais(op);
+  carregarInsumosReais(op, o.nCodOP);
 }
 
 // ---- integração com o endpoint do worker (mock quando file:// ou offline) ----
@@ -402,7 +402,7 @@ async function carregarOPS(){
         OPS.length = 0;
         j.fichas.forEach(f => OPS.push({
           op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
-          sigla: SIGLA[f.sku] || ''
+          nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || ''
         }));
         OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
       }
@@ -411,10 +411,10 @@ async function carregarOPS(){
   mostrarLista();
 }
 
-async function carregarInsumosReais(op){
+async function carregarInsumosReais(op, nCodOP){
   if(location.protocol === 'file:') return;
   try{
-    const r = await fetch('/api/qualidade/ficha/' + encodeURIComponent(op));
+    const r = await fetch('/api/qualidade/ficha/' + encodeURIComponent(nCodOP || op));
     const j = await r.json();
     if(j.itens && j.itens.length){
       receitaReal = j.itens.map(i => ({
