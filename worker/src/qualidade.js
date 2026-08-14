@@ -77,11 +77,13 @@ export async function listarFichasDoDia(env, dataIso) {
     const info = mapa.get(String(nCodProduto));
     let sku = info?.sku ?? null;
     let produto = get(ident, "cDescricaoProduto", "cDescricao") ?? (info?.descricao ?? "") ?? "";
+    let un = info?.un ?? "";
     if (!sku && nCodProduto) {
       // Último recurso: ConsultarProduto por id (ex.: produto além das páginas do mapa)
       const rp = await resolveProduto(env, nCodProduto);
       sku = rp.codigo || null;
       if (!produto) produto = rp.descricao || "";
+      un = rp.un || un;
     }
     fichas.push({
       op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? ""),
@@ -90,6 +92,7 @@ export async function listarFichasDoDia(env, dataIso) {
       produto,
       nCodProduto,
       qtd: get(ident, "nQtde") ?? 0,
+      un,
       status: "sem ficha",
     });
   }
@@ -117,11 +120,11 @@ async function catalogoProdutos(env) {
   return _cat;
 }
 
-/** Mapa codigo_produto → { sku, descricao } via ListarProdutos (chave real: produto_servico_cadastro). */
+/** Mapa codigo_produto → { sku, descricao, un } via ListarProdutos (chave real: produto_servico_cadastro). */
 async function mapaProdutoParaSku(env) {
   const cat = await catalogoProdutos(env);
   const mapa = new Map();
-  for (const [id, p] of cat.porId) mapa.set(id, { sku: p.codigo, descricao: p.descricao });
+  for (const [id, p] of cat.porId) mapa.set(id, { sku: p.codigo, descricao: p.descricao, un: p.un });
   return mapa;
 }
 
@@ -176,19 +179,20 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   const ident = r.identificacao || {};
   const nCodProduto = get(ident, "nCodProduto");
   const qtdOP = get(ident, "nQtde") ?? 0;
-  let sku = null, produtoDesc = "";
+  let sku = null, produtoDesc = "", un = "";
   if (nCodProduto) {
     // mapaProdutoParaSku (arrayKey correto) cobre produtos fora de SKUS_ATIVOS,
     // ex.: FX000 Base Kombucha — construirCacheProdutos não resolve esses.
     const mapa = await mapaProdutoParaSku(env);
     const info = mapa.get(String(nCodProduto));
-    if (info) { sku = info.sku || null; produtoDesc = info.descricao || ""; }
+    if (info) { sku = info.sku || null; produtoDesc = info.descricao || ""; un = info.un || ""; }
   }
   if (!sku && nCodProduto) {
     // Último recurso: ConsultarProduto por id (ex.: produto além das páginas do mapa)
     const rp = await resolveProduto(env, nCodProduto);
     sku = rp.codigo || null;
     if (!produtoDesc) produtoDesc = rp.descricao || "";
+    un = rp.un || un;
   }
 
   // 1) Fonte verdadeira: itensDetalhes da OP (msg 382)
@@ -272,7 +276,7 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   return {
     op, nCodOP: get(ident, "nCodOP") ?? null, sku,
     produto: get(ident, "cDescricaoProduto", "cDescricao") ?? produtoDesc,
-    nCodProduto, qtd: qtdOP, origem, itens,
+    nCodProduto, qtd: qtdOP, un, origem, itens,
     // campos da folha (clone do modelo impresso pelo Omie)
     previsao: get(ident, "dDtPrevisao") ?? "",
     situacao: "Em andamento",            // lista só traz OPs abertas

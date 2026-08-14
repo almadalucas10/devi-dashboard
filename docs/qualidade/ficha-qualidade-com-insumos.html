@@ -378,6 +378,7 @@ const FICHAS = {
 };
 let opAtual = null;
 let opQtd = 4464; // quantidade da OP aberta — escala a lista de insumos
+let opUn = 'UND';  // unidade da OP aberta (ex.: L para Base Kombucha)
 let receitaReal = null;          // insumos reais da OP (endpoint) — substitui o mock
 let folhaInfo = null;            // campos do cabeçalho da folha (previsao/situacao/tipoProduto)
 const receitasCache = {};        // op → insumos reais já carregados
@@ -394,7 +395,7 @@ function renderLista(){
     return `<div class="opc" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
         <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div></div>
-      <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} un</div>
+      <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}</div>
         <span class="st ${cls}">${label}</span></div></div>`;
   }).join('');
 }
@@ -425,10 +426,11 @@ function abrirOp(op){
   if(!o) return;
   opAtual = op;
   opQtd = o.qtd || 4464;
+  opUn = o.un || (o.sku === 'FX000' ? 'L' : 'UND');
   receitaReal = receitasCache[op] || null;
   document.getElementById('opNum').textContent = '#' + op;
   document.getElementById('opMeta').innerHTML =
-    `12/08/2026<br>${o.qtd.toLocaleString('pt-BR')} un previstas`;
+    `12/08/2026<br>${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'} previstas`;
   skuAtual = o.sku || skuAtual; // SKU vem do worker (autoritativo) — sem herdar o da OP anterior
   aplicarSku();
   resetarFicha();
@@ -450,7 +452,7 @@ async function carregarOPS(){
       OPS.length = 0;
       j.fichas.forEach(f => OPS.push({
         op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
-        nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || ''
+        nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || ''
       }));
       OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
       renderLista();
@@ -795,7 +797,7 @@ function montarInsumos(){
         <div class="fl-linha">
           <span>Tipo de Produto: <b>${info.tipoProduto || '04 - Produto Acabado'}</b></span>
           <span>Família: <b>${fam || '—'}</b></span>
-          <span>Quantidade a Produzir: <b>${fmt(qtd)} UND</b></span>
+          <span>Quantidade a Produzir: <b>${fmt(qtd)} ${opUn}</b></span>
         </div>
       </div>
       <div class="fl-titulo">Itens da Ordem de Produção</div>
