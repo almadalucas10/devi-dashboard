@@ -177,6 +177,12 @@
   .fb{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
   .fb input{font-size:15px; padding:9px 8px; min-height:42px}
 
+  /* ---------- recravacao (leituras dinâmicas, sem data) ---------- */
+  .rc{display:grid; grid-template-columns:1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .rc input{font-size:15px; padding:9px 8px; min-height:42px}
+  .rc-cab{display:grid; grid-template-columns:1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+
   /* ---------- estoque (envios) ---------- */
   .es-cab{display:grid; grid-template-columns:70px 1fr 1fr 1fr 34px; gap:7px;
     font-size:10px; color:var(--txt3); padding:0 2px 6px}
@@ -325,20 +331,12 @@
     </div>
     <div class="corpo">
       <div class="avi az">
-        <b>1 medição por lote</b> — uma lata, logo após o fechamento. Sleek 269 ml:
+        <b>Uma leitura por lata</b> — durante o envase. Sleek 269 ml:
         altura <b>2,50–2,65</b> · espessura <b>1,00–1,10</b> · transpasse <b>0,80–0,90</b> mm
       </div>
-      <div class="g3">
-        <div class="campo"><label>Altura (mm)</label>
-          <input type="text" inputmode="decimal" data-c="rec_altura" data-rec="altura"
-                 placeholder="2,60"><div class="msg"></div></div>
-        <div class="campo"><label>Espessura (mm)</label>
-          <input type="text" inputmode="decimal" data-c="rec_espessura" data-rec="espessura"
-                 placeholder="1,05"><div class="msg"></div></div>
-        <div class="campo"><label>Transpasse (mm)</label>
-          <input type="text" inputmode="decimal" data-c="rec_transpasse" data-rec="transpasse"
-                 placeholder="0,85"><div class="msg"></div></div>
-      </div>
+      <div class="rc-cab"><span>Altura</span><span>Espessura</span><span>Transpasse</span><span></span></div>
+      <div id="rcLin"></div>
+      <button class="btn" onclick="addRec()">+ Adicionar leitura</button>
     </div>
   </div>
 
@@ -530,7 +528,7 @@ function voltarLista(){ mostrarLista(); }
 
 function resetarFicha(){
   conferidos.clear();
-  nc = 0; nEs = 0; nf = 0; // reinicia os contadores de linha (carbonatação/estoque/fermentação)
+  nc = 0; nEs = 0; nf = 0; nr = 0; // reinicia os contadores de linha
   document.querySelectorAll('.sec input, .sec select, .sec textarea').forEach(e => {
     e.value = ''; e.classList.remove('ok', 'al', 'er', 'info');
   });
@@ -538,10 +536,12 @@ function resetarFicha(){
   document.getElementById('cbLin').innerHTML = '';
   document.getElementById('esLin').innerHTML = '';
   document.getElementById('ferLin').innerHTML = '';
+  document.getElementById('rcLin').innerHTML = '';
   montarInsumos();
   addCarb();
   addEstoque();
   addFer();
+  addRec();
   document.getElementById('resumo').style.display = 'none';
   document.getElementById('saida').style.display = 'none';
   try { window.scrollTo(0, 0); } catch(e) {}
@@ -1064,6 +1064,24 @@ function addFer(){
   atualizar();
 }
 
+// Recravação — leituras dinâmicas sem data: Altura | Espessura | Transpasse
+let nr = 0;
+function addRec(){
+  const el = document.getElementById('rcLin');
+  const id = nr++;
+  const d = document.createElement('div');
+  d.className='rc';
+  d.innerHTML=`<input type="text" inputmode="decimal" data-c="rec_${id}_altura" data-rec="altura" placeholder="2,60">
+    <input type="text" inputmode="decimal" data-c="rec_${id}_espessura" data-rec="espessura" placeholder="1,05">
+    <input type="text" inputmode="decimal" data-c="rec_${id}_transpasse" data-rec="transpasse" placeholder="0,85">
+    <button class="bx" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  el.appendChild(d);
+  d.querySelectorAll('input[data-rec]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{ validar(inp, SPEC.recravacao[inp.dataset.rec]); atualizar(); });
+  });
+  atualizar();
+}
+
 function alterna(c){ c.parentElement.classList.toggle('ab'); }
 
 // ---------------------------------------------------------------------------
@@ -1083,8 +1101,8 @@ function secPreenchida(sec){
     return linhas.length > 0 && [...linhas].every(linhaOk);
   }
   if(nome === 'recravacao'){
-    const ins = sec.querySelectorAll('input[data-rec]');
-    return ins.length > 0 && [...ins].every(x => x.value.trim() !== '');
+    const l = sec.querySelectorAll('.rc');
+    return l.length > 0 && [...l].every(x => [...x.querySelectorAll('input[data-rec]')].every(i => i.value.trim() !== ''));
   }
   const req = sec.querySelectorAll('[data-req]');
   return req.length > 0 && [...req].every(x => x.value.trim() !== '');
@@ -1155,9 +1173,13 @@ function atualizar(){
       l.forEach(x=>{ if([...x.querySelectorAll('input')].every(i=>i.value.trim()!=='')) feito++; });
       b.textContent = total===0 ? '—' : `${feito} de ${total}`;
     } else if(nome==='recravacao'){
-      const ins = sec.querySelectorAll('input[data-rec]'); total = ins.length;
-      ins.forEach(x=>{ if(x.value.trim()!=='') feito++; if(x.classList.contains('er')) erro=true; });
-      b.textContent = feito===0 ? '—' : `${feito} de ${total}`;
+      const l = sec.querySelectorAll('.rc'); total = l.length;
+      l.forEach(x=>{
+        const ins = [...x.querySelectorAll('input[data-rec]')];
+        if(ins.every(i=>i.value.trim()!=='')) feito++;
+        if(ins.some(i=>i.classList.contains('er'))) erro=true;
+      });
+      b.textContent = total===0 ? '—' : `${feito} de ${total}`;
     } else {
       const r = sec.querySelectorAll('[data-req]'); total = r.length;
       r.forEach(x=>{ if(x.value.trim()!=='') feito++; });
@@ -1222,8 +1244,10 @@ function salvar(){
       d.blocos.preEnvase = { pH:n(g('pH')), brix:n(g('brix')),
                              carbonatacao:n(g('carb')), responsavel:g('respPre') };
     } else if(nome==='recravacao'){
-      d.blocos.recravacao = { altura:n(g('rec_altura')), espessura:n(g('rec_espessura')),
-                              transpasse:n(g('rec_transpasse')) };
+      d.blocos.recravacao = [...document.querySelectorAll('.rc')].map(l=>{
+        const v=[...l.querySelectorAll('input[data-rec]')].map(i=>i.value.trim());
+        return { altura:n(v[0]), espessura:n(v[1]), transpasse:n(v[2]) };
+      }).filter(x=>x.altura!==null||x.espessura!==null||x.transpasse!==null);
     } else if(nome==='estoque'){
       d.blocos.estoque = [...document.querySelectorAll('.es')].map(l=>{
         const v=[...l.querySelectorAll('input, select')].map(i=>i.value.trim());
@@ -1248,11 +1272,12 @@ function salvar(){
   });
 
   const fora=[];
-  const rec = d.blocos.recravacao||{};
-  ['altura','espessura','transpasse'].forEach(k=>{
-    const v=rec[k], s=SPEC.recravacao[k];
-    if(v!==null && (v<s.min||v>s.max))
-      fora.push({ bloco:'recravacao', campo:k, valor:v, spec:{min:s.min,max:s.max} });
+  (d.blocos.recravacao||[]).forEach((rec, i)=>{
+    ['altura','espessura','transpasse'].forEach(k=>{
+      const v=rec[k], s=SPEC.recravacao[k];
+      if(v!==null && (v<s.min||v>s.max))
+        fora.push({ bloco:'recravacao', leitura:i+1, campo:k, valor:v, spec:{min:s.min,max:s.max} });
+    });
   });
   // pré-envase — contra a spec do SKU selecionado (se houver)
   const prodSpec = produtoAtual();
@@ -1273,7 +1298,7 @@ function salvar(){
         temperatura: !!g('fer_0_tp'), abv: !!g('abvPA') || !!g('fer_0_ab'),
         carbonatacao: false, recravacao: false }
     : { pH:!!g('pH'), brix:!!g('brix'), carbonatacao:!!g('carb'),
-        recravacao: rec.altura != null || rec.espessura != null || rec.transpasse != null,
+        recravacao: (d.blocos.recravacao||[]).length > 0,
         abv:false };
   d.status = 'completa';
   d.registradoEm = new Date().toISOString();
@@ -1311,6 +1336,7 @@ montarInsumos();
 addCarb();
 addEstoque();
 addFer();
+addRec();
 // SKU da ficha vem da OP aberta — sem seletor no cabeçalho
 skuAtual = 'FX001';
 aplicarSku();
