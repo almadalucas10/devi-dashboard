@@ -463,6 +463,8 @@ export default {
         const { fichaDaOp } = await import("./qualidade.js");
         const op = decodeURIComponent(url.pathname.split("/").pop());
         const comSaldo = url.searchParams.get("saldo") !== "0";
+        const raw = url.searchParams.get("raw") === "1";
+        if (raw) return json(await fichaDaOp(env, op, false, true));
         const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
         const FRESCO_MS = 60 * 60 * 1000;
         const cached = await readJson(env, KEY);

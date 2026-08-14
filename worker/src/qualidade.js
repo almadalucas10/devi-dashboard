@@ -105,34 +105,48 @@ export async function listarFichasDoDia(env, dataIso) {
   return { data: dataIso, fichas: fichas.filter((f) => f.op || f.nCodOP) };
 }
 
-/** Mapa codigo_produto → { sku, descricao } via ListarProdutos (chave real: produto_servico_cadastro). */
-async function mapaProdutoParaSku(env) {
+/** Catálogo completo de produtos Omie (ListarProdutos, arrayKey correto) — cache 10 min. */
+let _cat = null, _catTs = 0;
+async function catalogoProdutos(env) {
+  if (_cat && Date.now() - _catTs < 10 * 60 * 1000) return _cat;
   const produtos = await buscarTodasPaginas(env, "/geral/produtos/", "ListarProdutos",
     (p) => ({ pagina: p, registros_por_pagina: 100 }),
     { arrayKey: "produto_servico_cadastro", maxPages: 10 });
-  const mapa = new Map();
+  const porId = new Map(), porCod = new Map(), porUn = new Map();
   for (const p of produtos || []) {
-    const id = p.codigo_produto;
-    if (id !== undefined && p.codigo) mapa.set(String(id), { sku: String(p.codigo), descricao: p.descricao || "" });
+    if (p.codigo_produto !== undefined && p.codigo_produto !== null)
+      porId.set(String(p.codigo_produto), { codigo: String(p.codigo ?? ""), descricao: p.descricao || "", un: p.unidade || "" });
+    if (p.codigo) {
+      porCod.set(String(p.codigo), p.descricao || "");
+      if (p.unidade) porUn.set(String(p.codigo), p.unidade);
+    }
   }
+  _cat = { porId, porCod, porUn };
+  _catTs = Date.now();
+  return _cat;
+}
+
+/** Mapa codigo_produto → { sku, descricao } via ListarProdutos (chave real: produto_servico_cadastro). */
+async function mapaProdutoParaSku(env) {
+  const cat = await catalogoProdutos(env);
+  const mapa = new Map();
+  for (const [id, p] of cat.porId) mapa.set(id, { sku: p.codigo, descricao: p.descricao });
   return mapa;
 }
 
 
-/** Resolve produto (codigo/descricao) por id numérico — ConsultarProduto por codigo ou codigo_produto. */
+/** Resolve produto (codigo/descricao) — por codigo_produto (id numérico) ou codigo. */
 const cacheProdutosResolvidos = new Map();
 async function resolveProduto(env, id) {
   if (id === null || id === undefined) return { codigo: "", descricao: "" };
   const chave = String(id);
   if (cacheProdutosResolvidos.has(chave)) return cacheProdutosResolvidos.get(chave);
   let r = null;
-  try { r = await consultarProduto(env, chave); } catch (e) { /* tenta por id numérico */ }
-  if (!r || !r.codigo_produto) {
-    try { r = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo_produto: id }); } catch (e) {}
-  }
-  if (!r || !r.codigo_produto) {
-    try { r = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { nCodProduto: id }); } catch (e) {}
-  }
+  try {
+    r = /^\d+$/.test(chave)
+      ? await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo_produto: Number(chave) })
+      : await consultarProduto(env, chave);
+  } catch (e) { /* não encontrado */ }
   const out = r && r.codigo_produto
     ? { codigo: r.codigo || "", descricao: r.descricao || r.cDescricao || "" }
     : { codigo: "", descricao: "" };
@@ -161,12 +175,13 @@ async function saldoDo(env, codigo, cacheProduto) {
 }
 
 /** Ficha de uma OP — itens reais (itensDetalhes) + saldo (opcional). */
-export async function fichaDaOp(env, op, comSaldo = true) {
+export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   const n = parseInt(op, 10);
   const consulta = Number.isInteger(n) && String(n) === String(op)
     ? { nCodOP: n } : { cCodIntOP: op };
 
   const r = await chamarOmie(env, "/produtos/op/", "ConsultarOrdemProducao", consulta);
+  if (raw) return { op, nCodOP: n, raw: r };
   const ident = r.identificacao || {};
   const nCodProduto = get(ident, "nCodProduto");
   const qtdOP = get(ident, "nQtde") ?? 0;
@@ -194,17 +209,31 @@ export async function fichaDaOp(env, op, comSaldo = true) {
     _id: get(d, "nIdProdutoMalha", "nCodProduto"),
   })).filter((i) => i.codigo || i.nome);
 
-  // nomes reais: itens vêm com id numérico → casa a quantidade por unidade
-  // com a folha da estrutura (ex.: 2,7/450 = 0,006 = MP0 CO₂)
+  // Código + nome reais via ConsultarProduto pelo id numérico (itensDetalhes só traz
+  // nIdProdutoMalha). O casamento por quantidade é só último recurso — itens 1:1
+  // (lata/rótulo/tampa) e quantidades idênticas colidem e produziam duplicados.
   const porUn = sku ? porUnidadeComEstruturas(sku, ESTRUTURAS) : null;
+  const qtdUsadas = new Set();
   for (const item of itens) {
+    // 1) cadastro Omie: codigo_produto → codigo + descricao reais (como no PDF da OP)
+    if (!item.nome && item._id != null) {
+      const rp = await resolveProduto(env, item._id);
+      if (rp.codigo || rp.descricao) {
+        item.codigo = rp.codigo || item.codigo;
+        item.nome = rp.descricao || item.nome;
+        item.un = UN[item.codigo] || item.un;
+      }
+    }
+    // 2) último recurso: casamento por quantidade — só sem código e sem repetir código
     if (!item.nome && porUn && qtdOP > 0 && item.quantidade != null) {
       const alvo = item.quantidade / qtdOP;
-      const casal = Object.entries(porUn).find(([, q]) => Math.abs(q - alvo) < Math.max(alvo, 1e-6) * 0.02);
+      const casal = Object.entries(porUn).find(([cod, q]) =>
+        !qtdUsadas.has(cod) && Math.abs(q - alvo) < Math.max(alvo, 1e-6) * 0.02);
       if (casal) {
-        item.codigo = casal[0];
+        if (!item.codigo) item.codigo = casal[0];
         item.nome = NOMES[casal[0]] || casal[0];
-        item.un = UN[casal[0]] || item.un;
+        item.un = UN[item.codigo] || item.un;
+        qtdUsadas.add(casal[0]);
       }
     }
     delete item._id;
