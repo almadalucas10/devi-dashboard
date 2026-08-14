@@ -9,6 +9,7 @@
 
 import { chamarOmie, buscarOPs, buscarTodasPaginas, consultarProduto } from "./omie.js";
 import { ESTRUTURAS, porUnidadeComEstruturas } from "./estruturas.js";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumos.js)
 
@@ -237,21 +238,38 @@ function zipStore(arquivos) {
   return Buffer.concat([...chunks, cdData, eocd]);
 }
 
-/** PDF da ficha — estilo da Ordem de Produção do Omie (tabelas, cabeçalho, rodapé) */
-function pdfDaFicha(ficha) {
+/** PDF da ficha — estilo da Ordem de Produção do Omie, gerado com pdf-lib (renderiza em qualquer leitor) */
+async function pdfDaFicha(ficha) {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595, 842]);
+  const F1 = await doc.embedFont(StandardFonts.Helvetica);
+  const F2 = await doc.embedFont(StandardFonts.HelveticaBold);
+  const PRETO = rgb(0.1, 0.1, 0.1);
+  const CINZA = rgb(0.45, 0.45, 0.45);
+  const VERMELHO = rgb(0.8, 0.1, 0.1);
+  const CAB = rgb(0.93, 0.93, 0.93);
   const W = 595, M = 50, CW = W - 2 * M;
-  // WinAnsi (cp1252) — o PDF exige esses bytes; a fonte declara WinAnsiEncoding
-  const ESP = { "—": "\x97", "–": "\x96", "•": "\x95", "°": "\xB0" };
-  const esc = s => {
-    let out = "";
-    for (const ch of String(s ?? "")) {
-      const cp = ch.codePointAt(0);
-      out += cp <= 0xFF ? ch : (ESP[ch] || "?");
-    }
-    return out.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  let y = 808;
+
+  // pdf-lib usa WinAnsi nas fontes padrão — caracteres fora viram "?"
+  const san = s => String(s ?? "").replace(/[\u2014\u2013]/g, "-").replace(/[•…]/g, ".")
+    .replace(/[^\x20-\xFF]/g, "?");
+
+  const largura = (s, size, bold) => (bold ? F2 : F1).widthOfTextAtSize(san(s), size);
+  const texto = (s, o = {}) => {
+    if (y < 40) return;
+    const size = o.size || 10;
+    const font = o.bold ? F2 : F1;
+    let x = o.x ?? M;
+    if (o.center) x = Math.max(M, (W - largura(s, size, o.bold)) / 2);
+    page.drawText(san(s), { x, y, size, font, color: o.color || PRETO });
+    y -= size * 1.5;
   };
-  const largura = (s, size) => String(s).length * size * 0.52;
-  const fmtN = v => (v === null || v === undefined || isNaN(v)) ? "—" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+  const regra = (grossa = false) => {
+    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: grossa ? 1.6 : 0.5, color: PRETO });
+    y -= 10;
+  };
+  const espaco = n => { y -= n; };
   const FAM = { kombucha: "Kombuchas", refri: "Refrigerantes", cha: "Chás", barril: "Barril" };
   const LAB = {
     starter: "Starter da Fermentação", fermentacao: "Fermentação", filtracao: "Filtração",
@@ -259,26 +277,8 @@ function pdfDaFicha(ficha) {
     preenvase: "Pré-envase", recravacao: "Recravação", carbonatacao: "Carbonatação",
     estoque: "Envio para Estoque", formulacao: "Formulação",
   };
+  const fmtN = v => (v === null || v === undefined || isNaN(v)) ? "—" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 
-  const ops = [];
-  let y = 810;
-
-  const texto = (s, o = {}) => {
-    if (y < 45) return;
-    const size = o.size || 10;
-    let x = o.x ?? M;
-    if (o.center) x = Math.max(M, (W - largura(s, size)) / 2);
-    const col = o.color ? o.color + " rg " : "";
-    ops.push(`${col}BT ${o.bold ? "/F2" : "/F1"} ${size} Tf ${x} ${y} Td (${esc(s)}) Tj ET`);
-    y -= size * 1.5;
-  };
-  const regra = (grossa = false) => {
-    ops.push(`${grossa ? "1.6 w" : "0.5 w"} ${M} ${y} m ${W - M} ${y} l S`);
-    y -= 10;
-  };
-  const espaco = n => { y -= n; };
-
-  // tabela com bordas (estilo OP): colunas, larguras, linhas
   const tabela = (colunas, largs, linhas, opt = {}) => {
     const rh = opt.rh || 14, fs = opt.fs || 9, fsH = opt.fsH || 9;
     const x0 = M;
@@ -286,55 +286,46 @@ function pdfDaFicha(ficha) {
     for (let i = 0; i < colunas.length; i++) { xs.push(x0 + acc); acc += largs[i]; }
     const right = x0 + acc;
     const yTop = y;
-    if (y - rh < 45) return false;
-    // cabeçalho com fundo
-    ops.push(`0.92 0.92 0.92 rg ${x0} ${y - rh} ${right - x0} ${rh} re f`);
-    colunas.forEach((c, i) => ops.push(`BT /F2 ${fsH} Tf ${xs[i] + 4} ${y - 9} Td (${esc(c)}) Tj ET`));
+    if (y - rh < 40) return false;
+    page.drawRectangle({ x: x0, y: y - rh, width: right - x0, height: rh, color: CAB });
+    colunas.forEach((c, i) => page.drawText(san(c), { x: xs[i] + 4, y: y - 9, size: fsH, font: F2, color: PRETO }));
     y -= rh;
-    ops.push(`0.9 w ${x0} ${y} m ${right} ${y} l S`);
+    page.drawLine({ start: { x: x0, y }, end: { x: right, y }, thickness: 0.9, color: PRETO });
     for (const linha of linhas) {
-      if (y - rh < 45) { y = 30; return false; }
+      if (y - rh < 40) { y = 30; return false; }
       linha.forEach((c, i) => {
-        let t = String(c ?? "");
+        let t = san(c);
         const max = largs[i] - 7;
         while (largura(t, fs) > max && t.length > 1) t = t.slice(0, -1);
-        if (t !== String(c ?? "")) t += "…";
-        ops.push(`BT /F1 ${fs} Tf ${xs[i] + 4} ${y - 9} Td (${esc(t)}) Tj ET`);
+        if (t !== san(c)) t += "...";
+        page.drawText(t, { x: xs[i] + 4, y: y - 9, size: fs, font: F1, color: PRETO });
       });
       y -= rh;
-      ops.push(`0.5 w ${x0} ${y} m ${right} ${y} l S`);
+      page.drawLine({ start: { x: x0, y }, end: { x: right, y }, thickness: 0.5, color: PRETO });
     }
-    for (let i = 1; i < colunas.length; i++) ops.push(`${xs[i]} ${y} m ${xs[i]} ${yTop} l S`);
+    for (let i = 1; i < colunas.length; i++)
+      page.drawLine({ start: { x: xs[i], y }, end: { x: xs[i], y: yTop }, thickness: 0.5, color: PRETO });
     y -= 7;
     return true;
   };
-  const titulo = t => {
-    espaco(2);
-    texto(t.toUpperCase(), { bold: true, size: 10.5 });
-    y -= 1;
-  };
+  const titulo = t => { espaco(2); texto(t.toUpperCase(), { bold: true, size: 10.5 }); y -= 1; };
 
-  // ================= cabeçalho (como a OP do Omie) =================
+  // ================= cabeçalho =================
   texto("DEVI PRODUCAO DE BEBIDAS LTDA", { bold: true, size: 16, center: true });
   texto("FICHA DE QUALIDADE", { size: 11, center: true });
   espaco(7);
   texto(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
-  const previsao = ficha.previsao || "—";
-  const situacao = ficha.situacao || "Em andamento";
-  texto(`Previsão de Conclusão: ${previsao}      Situação: ${situacao}`, { size: 10 });
+  texto(`Previsão de Conclusão: ${ficha.previsao || "—"}      Situação: ${ficha.situacao || "Em andamento"}`, { size: 10 });
   texto(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`, { size: 11 });
   texto(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}`, { size: 10 });
   regra(true);
   espaco(4);
 
-  // ================= resumo (família × quantidade) =================
+  // ================= resumo =================
   titulo("Resumo da Ordem de Produção");
-  tabela(
-    ["Família", "Quantidade a Produzir"],
-    [CW * 0.45, CW * 0.55],
+  tabela(["Família", "Quantidade a Produzir"], [CW * 0.45, CW * 0.55],
     [[FAM[ficha.familia] || ficha.familia || "—", `${fmtN(ficha.qtd)} ${ficha.un || ""}`]],
-    { rh: 15, fs: 10, fsH: 10 }
-  );
+    { rh: 15, fs: 10, fsH: 10 });
 
   // ================= blocos =================
   titulo("Itens e Medições");
@@ -342,28 +333,20 @@ function pdfDaFicha(ficha) {
     if (y < 120) break;
     titulo(LAB[bloco] || bloco);
     if (bloco === "recravacao") {
-      const linhas = (Array.isArray(dados) ? dados : []).map((r, i) =>
-        [`#${i + 1}`, fmtN(r.altura), fmtN(r.espessura), fmtN(r.transpasse)]);
-      if (linhas.length) tabela(["Leitura", "Altura (mm)", "Espessura (mm)", "Transpasse (mm)"],
-        [0.18, 0.28, 0.28, 0.26].map(v => v * CW), linhas);
+      const linhas = (Array.isArray(dados) ? dados : []).map((r, i) => [`#${i + 1}`, fmtN(r.altura), fmtN(r.espessura), fmtN(r.transpasse)]);
+      if (linhas.length) tabela(["Leitura", "Altura (mm)", "Espessura (mm)", "Transpasse (mm)"], [0.18, 0.28, 0.28, 0.26].map(v => v * CW), linhas);
       else texto("  (sem leituras)");
     } else if (bloco === "carbonatacao") {
-      const linhas = (Array.isArray(dados) ? dados : []).map(r =>
-        [r.hora || "—", fmtN(r.temperatura), fmtN(r.pressaoCilindro), fmtN(r.pressaoTanque)]);
-      if (linhas.length) tabela(["Horário", "Temp (°C)", "P. cilindro", "P. tanque"],
-        [0.22, 0.26, 0.26, 0.26].map(v => v * CW), linhas);
+      const linhas = (Array.isArray(dados) ? dados : []).map(r => [r.hora || "—", fmtN(r.temperatura), fmtN(r.pressaoCilindro), fmtN(r.pressaoTanque)]);
+      if (linhas.length) tabela(["Horário", "Temp (°C)", "P. cilindro", "P. tanque"], [0.22, 0.26, 0.26, 0.26].map(v => v * CW), linhas);
       else texto("  (sem leituras)");
     } else if (bloco === "fermentacao") {
-      const linhas = (Array.isArray(dados) ? dados : []).map(r =>
-        [r.data || "—", fmtN(r.pH), fmtN(r.brix), fmtN(r.temperatura), fmtN(r.abv)]);
-      if (linhas.length) tabela(["Data", "pH", "°Brix", "Temp (°C)", "ABV (%)"],
-        [0.26, 0.18, 0.18, 0.19, 0.19].map(v => v * CW), linhas);
+      const linhas = (Array.isArray(dados) ? dados : []).map(r => [r.data || "—", fmtN(r.pH), fmtN(r.brix), fmtN(r.temperatura), fmtN(r.abv)]);
+      if (linhas.length) tabela(["Data", "pH", "°Brix", "Temp (°C)", "ABV (%)"], [0.26, 0.18, 0.18, 0.19, 0.19].map(v => v * CW), linhas);
       else texto("  (sem leituras)");
     } else if (bloco === "estoque") {
-      const linhas = (Array.isArray(dados) ? dados : []).map(r =>
-        [r.hora || "—", fmtN(r.quantidade), r.tipo || "—", r.responsavel || "—"]);
-      if (linhas.length) tabela(["Horário", "Quantidade", "Tipo", "Responsável"],
-        [0.2, 0.28, 0.26, 0.26].map(v => v * CW), linhas);
+      const linhas = (Array.isArray(dados) ? dados : []).map(r => [r.hora || "—", fmtN(r.quantidade), r.tipo || "—", r.responsavel || "—"]);
+      if (linhas.length) tabela(["Horário", "Quantidade", "Tipo", "Responsável"], [0.2, 0.28, 0.26, 0.26].map(v => v * CW), linhas);
       else texto("  (sem envios)");
     } else if (bloco === "preenvase" || bloco === "starter" || bloco === "filtracao" || bloco === "produtoAcabado") {
       const mapa = bloco === "preenvase" ? [["pH", dados.pH], ["°Brix", dados.brix], ["Carbonatação", dados.carbonatacao], ["Responsável", dados.responsavel]]
@@ -381,65 +364,35 @@ function pdfDaFicha(ficha) {
     espaco(3);
   }
 
-  // ================= não-conformidades (vermelho) =================
+  // ================= NC =================
   const ncs = ficha.naoConformidades || [];
   if (ncs.length) {
     espaco(2);
-    texto(`NAO CONFORMIDADES (${ncs.length})`, { bold: true, size: 10.5, color: "0.8 0.1 0.1" });
-    const linhas = ncs.map(nc => [
-      `${nc.bloco || ""}${nc.leitura ? " #" + nc.leitura : ""}`,
-      nc.campo || "", fmtN(nc.valor),
-      `${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)}`,
-    ]);
-    if (y > 90) {
-      ops.push(`1 w ${M} ${y} m ${W - M} ${y} l S`); // realça a seção
-      tabela(["Bloco", "Campo", "Valor", "Faixa"], [0.3, 0.25, 0.2, 0.25].map(v => v * CW), linhas,
-        { color: "0.8 0.1 0.1" });
-    }
+    texto(`NAO CONFORMIDADES (${ncs.length})`, { bold: true, size: 10.5, color: VERMELHO });
+    const linhas = ncs.map(nc => [`${nc.bloco || ""}${nc.leitura ? " #" + nc.leitura : ""}`, nc.campo || "", fmtN(nc.valor), `${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)}`]);
+    if (y > 90) tabela(["Bloco", "Campo", "Valor", "Faixa"], [0.3, 0.25, 0.2, 0.25].map(v => v * CW), linhas);
   }
 
-  // ================= outras informações =================
+  // ================= outras informações + rodapé =================
   espaco(4);
   regra(true);
   titulo("Outras Informações");
   tabela(["Campo", "Valor"], [0.4, 0.6].map(x => x * CW),
     [["Registrado em", ficha.registradoEm || "—"], ["Status da ficha", ficha.status || "completa"]],
     { rh: 13, fs: 9.5 });
-
-  // ================= rodapé =================
-  espaco(6);
+  espaco(8);
   regra();
   y += 12;
-  ops.push(`0.5 0.5 0.5 rg BT /F1 8 Tf ${M} ${y} Td (Documento gerado automaticamente pelo sistema de qualidade - Dêvi) Tj ET`);
-  ops.push(`0.5 0.5 0.5 rg BT /F1 8 Tf ${W - M - 60} ${y} Td (Página 1 de 1) Tj ET`);
+  page.drawText("Documento gerado automaticamente pelo sistema de qualidade - Dêvi", { x: M, y, size: 8, font: F1, color: CINZA });
+  page.drawText("Página 1 de 1", { x: W - M - 60, y, size: 8, font: F1, color: CINZA });
 
-  // ================= monta o PDF =================
-  let out = "%PDF-1.4\n";
-  const objs = [];
-  objs.push("<< /Type /Catalog /Pages 2 0 R >>");
-  objs.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-  const stream = ops.join("\n");
-  objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`);
-  // WinAnsiEncoding — corrige os acentos (antes a fonte usava StandardEncoding)
-  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
-  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
-  objs.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
-  const offsets = [0];
-  for (let i = 0; i < objs.length; i++) {
-    offsets.push(out.length);
-    out += `${i + 1} 0 obj\n${objs[i]}\nendobj\n`;
-  }
-  const xref = out.length;
-  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
-  for (let i = 1; i <= objs.length; i++) out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
-  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return Buffer.from(out, "latin1");
+  return Buffer.from(await doc.save());
 }
 
 /** Anexa (ou substitui) o PDF da ficha na OP — zip + base64 conforme o Omie exige */
 export async function anexarFichaNaOp(env, nCodOP, ficha, debug = false) {
   const nomePdf = `${PREFIXO_ANEXO}${String(ficha.op || nCodOP).replace(/\D/g, "")}.pdf`;
-  const pdf = pdfDaFicha(ficha);
+  const pdf = await pdfDaFicha(ficha);
   const zip = zipStore([{ nome: nomePdf, dados: pdf }]);
   const cArquivo = zip.toString("base64");
   // cMd5 = MD5 da string base64 (verificado com o Omie em 14/08/2026 — não dos bytes)
