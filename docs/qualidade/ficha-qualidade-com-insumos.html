@@ -105,6 +105,27 @@
     background:#fff; font-size:13px}
   .folha .chk.on{background:#22c55e; border-color:#22c55e; color:#fff}
 
+  /* ---------- mobile (cabe dentro do viewport, sem cortar a direita) ---------- */
+  @media (max-width: 480px){
+    .topo{padding:8px 10px}
+    .t1{flex-wrap:wrap; row-gap:4px}
+    .wrap{padding:10px; gap:10px}
+    .folha{padding:10px 8px; font-size:12px}
+    .fl-op{font-size:14px; margin:6px 0 4px}
+    .fl-linha{font-size:11px}
+    .folha table{table-layout:fixed; font-size:11px}
+    .folha col:nth-child(2){width:72px}
+    .folha col:nth-child(3){width:36px}
+    .folha col:nth-child(4){width:82px}
+    .folha col:nth-child(5){width:26px}
+    .folha thead th{padding:3px 4px; font-size:9.5px}
+    .folha tbody td{padding:4px 4px}
+    .fl-desc{font-size:10.5px; word-break:break-word}
+    .fl-q{font-size:11px}
+    .fl-est{font-size:10.5px}
+    .folha .fl-chk{width:26px}
+  }
+
   /* ---------- carbonatacao ---------- */
   .cb-cab{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 34px; gap:7px;
     font-size:10px; color:var(--txt3); padding:0 2px 6px}
@@ -779,6 +800,7 @@ function montarInsumos(){
       </div>
       <div class="fl-titulo">Itens da Ordem de Produção</div>
       <table>
+        <colgroup><col><col><col><col><col></colgroup>
         <thead><tr><th>Descrição do Item</th><th style="text-align:right">Quantidade</th><th>Unidade</th><th style="text-align:right">Estoque</th><th class="fl-chk"></th></tr></thead>
         <tbody>
           ${lista.map(i => {
