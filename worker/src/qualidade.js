@@ -230,40 +230,120 @@ function zipStore(arquivos) {
   return Buffer.concat([...chunks, cdData, eocd]);
 }
 
-/** PDF texto mínimo (Helvetica) com o conteúdo da ficha */
+/** PDF da ficha — layout em folha: cabeçalho, blocos formatados por tipo, NC em vermelho */
 function pdfDaFicha(ficha) {
-  const linhas = [];
-  const add = t => linhas.push(t);
-  add("DEVI PRODUCAO DE BEBIDAS LTDA");
-  add(`Ficha de Qualidade - OP ${ficha.op || ""}`);
-  add(`Produto: ${ficha.sku || ""} - ${ficha.produto || ""}`);
-  add(`Quantidade: ${ficha.qtd ?? ""} ${ficha.un || ""}  |  Registrado: ${ficha.registradoEm || ""}`);
-  add("");
-  for (const [bloco, dados] of Object.entries(ficha.blocos || {})) {
-    add(`${bloco.toUpperCase()}:`);
-    add(JSON.stringify(dados));
-    add("");
-  }
+  const esc = s => {
+    // WinAnsi (cp1252) — o PDF não usa UTF-8; acentos viram o byte correto
+    const ESP = { "—": "\x97", "–": "\x96", "•": "\x95", "°": "\xB0" };
+    let out = "";
+    for (const ch of String(s ?? "")) {
+      const cp = ch.codePointAt(0);
+      if (cp <= 0xFF) { out += ch; continue; }
+      out += ESP[ch] || "?";
+    }
+    return out.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  };
+  const fmtN = v => (v === null || v === undefined || isNaN(v)) ? "—" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+  const W = 595, M = 50;
+  const ops = [];
+  let y = 800;
+  const linha = (txt, o = {}) => {
+    if (y < 60) return;
+    const size = o.size || 10;
+    let x = M;
+    if (o.center) x = Math.max(M, (W - txt.length * size * 0.5) / 2);
+    const col = o.color ? o.color + " rg " : "";
+    ops.push(`${col}BT ${o.bold ? "/F2" : "/F1"} ${size} Tf ${x} ${y} Td (${esc(txt)}) Tj ET`);
+    y -= size * 1.5;
+  };
+  const regra = (grossa = false) => {
+    ops.push(`${grossa ? "2 w" : "0.6 w"} ${M} ${y} m ${W - M} ${y} l S`);
+    y -= 10;
+  };
+  const espaco = n => { y -= n; };
+  const LAB = {
+    starter: "Starter da Fermentação", fermentacao: "Fermentação", filtracao: "Filtração",
+    produtoAcabado: "Produto Acabado", observacoes: "Observações do Processo",
+    preenvase: "Pré-envase", recravacao: "Recravação", carbonatacao: "Carbonatação",
+    estoque: "Envio para Estoque", formulacao: "Formulação",
+  };
+  const fmtBloco = (bloco, dados) => {
+    const L = [];
+    if (bloco === "recravacao") {
+      (Array.isArray(dados) ? dados : []).forEach((r, i) =>
+        L.push(`  #${i + 1}   Altura ${fmtN(r.altura)}   Espessura ${fmtN(r.espessura)}   Transpasse ${fmtN(r.transpasse)} mm`));
+    } else if (bloco === "carbonatacao") {
+      (Array.isArray(dados) ? dados : []).forEach(r =>
+        L.push(`  ${r.hora || "—"}   Temp ${fmtN(r.temperatura)}°C   P.cil ${fmtN(r.pressaoCilindro)}   P.tan ${fmtN(r.pressaoTanque)}`));
+    } else if (bloco === "fermentacao") {
+      (Array.isArray(dados) ? dados : []).forEach(r =>
+        L.push(`  ${r.data || "—"}   pH ${fmtN(r.pH)}   Brix ${fmtN(r.brix)}   Temp ${fmtN(r.temperatura)}°C   ABV ${fmtN(r.abv)}%`));
+    } else if (bloco === "estoque") {
+      (Array.isArray(dados) ? dados : []).forEach(r =>
+        L.push(`  ${r.hora || "—"}   ${fmtN(r.quantidade)} ${r.tipo || ""}   ${r.responsavel || ""}`));
+    } else if (bloco === "starter") {
+      L.push(`  Tanque: ${dados.tanque || "—"}   Fonte: ${dados.fonte || "—"}   pH ${fmtN(dados.pH)}   Brix ${fmtN(dados.brix)}   Volume ${fmtN(dados.volume)} L`);
+    } else if (bloco === "preenvase") {
+      L.push(`  pH ${fmtN(dados.pH)}   Brix ${fmtN(dados.brix)}   Carbonatação ${fmtN(dados.carbonatacao)}   Resp: ${dados.responsavel || "—"}`);
+    } else if (bloco === "filtracao") {
+      L.push(`  Volume ${fmtN(dados.volume)} L   Tempo ${fmtN(dados.tempo)} min`);
+    } else if (bloco === "produtoAcabado") {
+      L.push(`  Produto: ${dados.produto || "—"}   Brix ${fmtN(dados.brix)}   pH ${fmtN(dados.pH)}   ABV ${fmtN(dados.abv)}%   Brix Suco ${fmtN(dados.brixSuco)}`);
+    } else if (bloco === "observacoes") {
+      L.push(`  ${String(dados || "").slice(0, 160) || "—"}`);
+    } else {
+      L.push("  " + Object.entries(dados || {}).map(([k, v]) => `${k}: ${fmtN(v)}`).join("   "));
+    }
+    return L.length ? L : ["  (vazio)"];
+  };
+
+  // ---- cabeçalho da folha ----
+  linha("DEVI PRODUCAO DE BEBIDAS LTDA", { bold: true, size: 15, center: true });
+  linha("FICHA DE QUALIDADE", { size: 11, center: true });
+  espaco(6);
+  linha(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 12 });
+  linha(`Produto: ${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`);
+  linha(`Quantidade: ${fmtN(ficha.qtd)} ${ficha.un || ""}    Registrado em: ${ficha.registradoEm || "—"}`);
+  regra(true);
+  espaco(4);
+
+  // ---- blocos ----
   const ncs = ficha.naoConformidades || [];
-  add(`NAO CONFORMIDADES (${ncs.length}):`);
-  for (const nc of ncs) {
-    add(`- ${nc.bloco}/${nc.campo}${nc.leitura ? " (leitura " + nc.leitura + ")" : ""}: ${nc.valor} (spec ${nc.spec.min} a ${nc.spec.max})`);
+  for (const [bloco, dados] of Object.entries(ficha.blocos || {})) {
+    if (y < 110) { linha("(documento longo — restante omitido nesta página)", { color: "0.5 0.5 0.5" }); break; }
+    linha((LAB[bloco] || bloco).toUpperCase(), { bold: true, size: 10.5 });
+    for (const l of fmtBloco(bloco, dados)) linha(l, { size: 9.5 });
+    espaco(3);
   }
-  const esc = s => String(s ?? "").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7E]/g, "?");
+
+  // ---- não-conformidades (vermelho) ----
+  if (ncs.length) {
+    if (y < 120) { linha("(NC na página seguinte — omitido)", { color: "0.5 0.5 0.5" }); }
+    else {
+      espaco(4);
+      regra();
+      linha(`NAO CONFORMIDADES (${ncs.length})`, { bold: true, size: 10.5, color: "0.75 0.1 0.1" });
+      for (const nc of ncs) {
+        const rotulo = `${nc.bloco || ""}${nc.leitura ? " #" + nc.leitura : ""}/${nc.campo || ""}`;
+        linha(`  • ${rotulo}: ${fmtN(nc.valor)}  (faixa ${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)})`,
+          { size: 9.5, color: "0.75 0.1 0.1" });
+      }
+    }
+  }
+
+  // ---- rodapé ----
+  regra(true);
+  linha("Documento gerado automaticamente pelo sistema de qualidade — Dêvi", { size: 8.5, color: "0.45 0.45 0.45" });
+
+  // ---- monta o PDF ----
   let out = "%PDF-1.4\n";
   const objs = [];
   objs.push("<< /Type /Catalog /Pages 2 0 R >>");
   objs.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-  const conteudo = [];
-  let y = 790;
-  for (const l of linhas) {
-    conteudo.push(`BT /F1 10 Tf 50 ${y} Td (${esc(l)}) Tj ET`);
-    y -= 14;
-    if (y < 40) { conteudo.push(`BT /F1 10 Tf 50 40 Td (continua...) Tj ET`); break; }
-  }
-  const stream = conteudo.join("\n");
-  objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`);
+  const stream = ops.join("\n");
+  objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`);
   objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
   objs.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
   const offsets = [0];
   for (let i = 0; i < objs.length; i++) {
@@ -274,7 +354,7 @@ function pdfDaFicha(ficha) {
   out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
   for (let i = 1; i <= objs.length; i++) out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
   out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return out;
+  return Buffer.from(out, "latin1"); // bytes WinAnsi — o ZIP recebe o Buffer direto
 }
 
 /** Anexa (ou substitui) o PDF da ficha na OP — zip + base64 conforme o Omie exige */
@@ -291,7 +371,7 @@ export async function anexarFichaNaOp(env, nCodOP, ficha, debug = false) {
     const cand = {
       md5Zip: md5hex(zip),
       md5B64: md5hex(new TextEncoder().encode(cArquivo)),
-      md5Pdf: md5hex(new TextEncoder().encode(pdf)),
+      md5Pdf: md5hex(pdf),
       lenZip: zip.length, lenB64: cArquivo.length, lenPdf: pdf.length,
     };
     try {
