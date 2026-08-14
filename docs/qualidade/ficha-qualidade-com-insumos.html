@@ -515,7 +515,7 @@ function renderLista(){
     return `<div class="opc" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
         <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div></div>
-      <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}</div>
+      <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
         <span class="st ${cls}">${label}</span></div></div>`;
   }).join('');
 }
@@ -552,7 +552,7 @@ function abrirOp(op){
   receitaReal = receitasCache[op] || null;
   document.getElementById('opNum').textContent = '#' + op;
   document.getElementById('opMeta').innerHTML =
-    `12/08/2026<br>${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'} previstas`;
+    `12/08/2026<br>${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)} previstas`;
   skuAtual = o.sku || skuAtual; // SKU vem do worker (autoritativo) — sem herdar o da OP anterior
   aplicarSku();
   resetarFicha();
@@ -899,6 +899,9 @@ function insumosDaOp(){
 
 const FAMILIA_NOME = { kombucha: 'Kombuchas', refri: 'Refrigerantes', cha: 'Chás', barril: 'Barril' };
 const fmtFolha = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 6 });
+// Litros equivalentes — lata sleek 269 ml (0,269 L/un). Base (un 'L') já vem em litros.
+const litrosOP = (qtd, un) => (un === 'L') ? null : Math.round((qtd || 0) * 0.269);
+const sufixoL = (qtd, un) => { const l = litrosOP(qtd, un); return l ? ' · ' + l.toLocaleString('pt-BR') + ' L' : ''; };
 
 function montarInsumos(){
   const el = document.getElementById('insumos');
@@ -920,7 +923,7 @@ function montarInsumos(){
         <div class="fl-linha">
           <span>Tipo de Produto: <b>${info.tipoProduto || '04 - Produto Acabado'}</b></span>
           <span>Família: <b>${fam || '—'}</b></span>
-          <span>Quantidade a Produzir: <b>${fmt(qtd)} ${opUn}</b></span>
+          <span>Quantidade a Produzir: <b>${fmt(qtd)} ${opUn}${sufixoL(qtd, opUn)}</b></span>
         </div>
       </div>
       <div class="fl-titulo">Itens da Ordem de Produção</div>
