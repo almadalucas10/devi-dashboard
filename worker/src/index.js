@@ -466,7 +466,7 @@ export default {
         const raw = url.searchParams.get("raw") === "1";
         if (raw) return json(await fichaDaOp(env, op, false, true));
         const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
-        const FRESCO_MS = 60 * 60 * 1000;
+        const FRESCO_MS = 20 * 60 * 1000;
         const cached = await readJson(env, KEY);
         if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
           return json(cached.dados);
