@@ -105,16 +105,18 @@
     background:#fff; font-size:13px}
   .folha .chk.on{background:#22c55e; border-color:#22c55e; color:#fff}
 
-  /* ---------- cards estilo papel (mesmo visual da folha do Omie) ---------- */
-  .sec.paper{background:#f4f1e8; color:#1c1c1c; border:1px solid #d8d2c0; border-radius:6px;
-    box-shadow:0 1px 5px rgba(0,0,0,.35); overflow:hidden}
-  .sec.paper .cab h2{color:#222}
-  .sec.paper .chev{color:#777}
-  .sec.paper .est{background:#e6e1cf; color:#555}
-  .sec.paper .est.done{background:#d7e8d4; color:#1c5c2a}
-  .sec.paper .est.parc{background:#f2e2b8; color:#8a6414}
-  .sec.paper .est.err{background:#f3d3cf; color:#a03028}
-  .sec.paper .est.info{background:#dbe6f0; color:#22557a}
+  /* ---------- cards: aba escura como o de insumos; conteúdo interno em painel de papel ---------- */
+  .sec.paper{background:var(--painel); border:1px solid var(--linha); border-radius:12px; overflow:hidden}
+  .sec.paper .corpo{background:#f4f1e8; color:#1c1c1c; border:1px solid #d8d2c0; border-radius:8px;
+    padding:12px; margin:0 6px 8px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .sec.paper .cab h2{color:var(--txt)}
+  .sec.paper .chev{color:var(--txt3)}
+  .sec.paper .est{background:var(--linha); color:var(--txt3)}
+  .sec.paper .est.done{background:#12241a; color:var(--ok2)}
+  .sec.paper .est.parc{background:#2a2412; color:var(--al2)}
+  .sec.paper .est.err{background:#2a1216; color:var(--er2)}
+  .sec.paper .est.info{background:#0f1a24; color:#7dd3fc}
+  /* dentro do painel de papel: campos claros */
   .sec.paper label{color:#555; font-weight:600}
   .sec.paper input, .sec.paper select, .sec.paper textarea{background:#fff; border-color:#b8b2a0; color:#222}
   .sec.paper textarea{font-size:15px; padding:11px 12px; font-family:inherit; resize:vertical; border-radius:8px}
@@ -144,6 +146,7 @@
     .t1{flex-wrap:wrap; row-gap:4px}
     .wrap{padding:10px; gap:10px}
     .folha{padding:10px 8px; font-size:12px}
+    .sec.paper .corpo{padding:10px; margin:0 4px 6px}
     .fl-op{font-size:14px; margin:6px 0 4px}
     .fl-linha{font-size:11px}
     .folha table{table-layout:fixed; font-size:11px}
