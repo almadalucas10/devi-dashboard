@@ -8,7 +8,6 @@
 // ============================================================================
 
 import { chamarOmie, buscarOPs, buscarTodasPaginas, consultarProduto } from "./omie.js";
-import { construirCacheProdutos } from "./kpis.js";
 import { ESTRUTURAS, porUnidadeComEstruturas } from "./estruturas.js";
 
 export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumos.js)
@@ -74,27 +73,36 @@ const r3 = x => Math.round(x * 1000) / 1000;
 
 /** Lista as OPs abertas (fichas do dia) — ListarOrdemProducao, cConcluida=N */
 export async function listarFichasDoDia(env, dataIso) {
-  const [abertas, cacheProd] = await Promise.all([
+  // mapaProdutoParaSku usa o arrayKey correto (produto_servico_cadastro) e cobre
+  // produtos fora de SKUS_ATIVOS (ex.: FX000 Base Kombucha) — construirCacheProdutos não.
+  const [abertas, mapa] = await Promise.all([
     buscarOPs(env, { cConcluida: "N" }),
-    construirCacheProdutos(env),
+    mapaProdutoParaSku(env),
   ]);
-  const idParaSku = {};
-  for (const [s, info] of Object.entries(cacheProd)) idParaSku[String(info.codigo_produto)] = s;
-  const fichas = (abertas || []).map((op) => {
+  const fichas = [];
+  for (const op of abertas || []) {
     const ident = op.identificacao || {};
     const nCodProduto = get(ident, "nCodProduto");
-    const sku = idParaSku[String(nCodProduto)] ?? null;
-    return {
+    const info = mapa.get(String(nCodProduto));
+    let sku = info?.sku ?? null;
+    let produto = get(ident, "cDescricaoProduto", "cDescricao") ?? (info?.descricao ?? "") ?? "";
+    if (!sku && nCodProduto) {
+      // Último recurso: ConsultarProduto por id (ex.: produto além das páginas do mapa)
+      const rp = await resolveProduto(env, nCodProduto);
+      sku = rp.codigo || null;
+      if (!produto) produto = rp.descricao || "";
+    }
+    fichas.push({
       op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? ""),
       nCodOP: get(ident, "nCodOP") ?? null,
       sku,
-      produto: get(ident, "cDescricaoProduto", "cDescricao") ?? (sku ? cacheProd[sku].descricao : "") ?? "",
+      produto,
       nCodProduto,
       qtd: get(ident, "nQtde") ?? 0,
       status: "sem ficha",
-    };
-  }).filter((f) => f.op || f.nCodOP);
-  return { data: dataIso, fichas };
+    });
+  }
+  return { data: dataIso, fichas: fichas.filter((f) => f.op || f.nCodOP) };
 }
 
 /** Mapa codigo_produto → { sku, descricao } via ListarProdutos (chave real: produto_servico_cadastro). */
@@ -111,14 +119,17 @@ async function mapaProdutoParaSku(env) {
 }
 
 
-/** Resolve produto (codigo/descricao) por id numérico — ConsultarProduto por codigo ou nCodProduto. */
+/** Resolve produto (codigo/descricao) por id numérico — ConsultarProduto por codigo ou codigo_produto. */
 const cacheProdutosResolvidos = new Map();
 async function resolveProduto(env, id) {
   if (id === null || id === undefined) return { codigo: "", descricao: "" };
   const chave = String(id);
   if (cacheProdutosResolvidos.has(chave)) return cacheProdutosResolvidos.get(chave);
   let r = null;
-  try { r = await consultarProduto(env, chave); } catch (e) { /* tenta nCodProduto */ }
+  try { r = await consultarProduto(env, chave); } catch (e) { /* tenta por id numérico */ }
+  if (!r || !r.codigo_produto) {
+    try { r = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { codigo_produto: id }); } catch (e) {}
+  }
   if (!r || !r.codigo_produto) {
     try { r = await chamarOmie(env, "/geral/produtos/", "ConsultarProduto", { nCodProduto: id }); } catch (e) {}
   }
@@ -161,10 +172,17 @@ export async function fichaDaOp(env, op, comSaldo = true) {
   const qtdOP = get(ident, "nQtde") ?? 0;
   let sku = null, produtoDesc = "";
   if (nCodProduto) {
-    const cacheProd = await construirCacheProdutos(env); // { SKU: { codigo_produto, descricao } }
-    for (const [s, info] of Object.entries(cacheProd)) {
-      if (String(info.codigo_produto) === String(nCodProduto)) { sku = s; produtoDesc = info.descricao || ""; break; }
-    }
+    // mapaProdutoParaSku (arrayKey correto) cobre produtos fora de SKUS_ATIVOS,
+    // ex.: FX000 Base Kombucha — construirCacheProdutos não resolve esses.
+    const mapa = await mapaProdutoParaSku(env);
+    const info = mapa.get(String(nCodProduto));
+    if (info) { sku = info.sku || null; produtoDesc = info.descricao || ""; }
+  }
+  if (!sku && nCodProduto) {
+    // Último recurso: ConsultarProduto por id (ex.: produto além das páginas do mapa)
+    const rp = await resolveProduto(env, nCodProduto);
+    sku = rp.codigo || null;
+    if (!produtoDesc) produtoDesc = rp.descricao || "";
   }
 
   // 1) Fonte verdadeira: itensDetalhes da OP (msg 382)

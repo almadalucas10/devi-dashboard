@@ -291,6 +291,7 @@ const SPEC = {
 };
 
 const PRODUTOS = {
+  FX000: {nome:'Base Kombucha',familia:'kombucha',pH:null,brix:null,carbonatacao:null,abv:null},
   CH001: {nome:'Chá Verde Pêssego',familia:'cha',pH:{min:3.09,alvo:3.25,max:3.6}, brix:{min:3.9,alvo:5.34,max:6}, carbonatacao:{min:1.5,alvo:1.54,max:1.7}, abv:null},
   CH002: {nome:'Chá Hibisco Morango',familia:'cha',pH:{min:2.9,alvo:3.18,max:3.5}, brix:{min:4,alvo:5.93,max:7.3}, carbonatacao:{min:1.5,alvo:1.57,max:2}, abv:null},
   CH003: {nome:'Chá Camomila Maracujá',familia:'cha',pH:{min:2.8,alvo:2.91,max:3.19}, brix:{min:4,alvo:4.42,max:5}, carbonatacao:{min:1.5,alvo:1.55,max:1.7}, abv:null},
@@ -309,7 +310,7 @@ const PRODUTOS = {
   RTM002: {nome:'Refri Uva Mônica',familia:'refri',pH:{min:3.2,alvo:3.4,max:3.53}, brix:{min:4,alvo:4.37,max:5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
   RTM003: {nome:'Refri Laranja Mônica',familia:'refri',pH:{min:3.76,alvo:3.83,max:3.94}, brix:{min:4,alvo:4.1,max:4.5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
 };
-const SIGLA = { CH001:'CVP',CH002:'CML',CH003:'CCM',CH004:'CHM',FX001:'KFV',FX002:'KABX',
+const SIGLA = { FX000:'BASE',CH001:'CVP',CH002:'CML',CH003:'CCM',CH004:'CHM',FX001:'KFV',FX002:'KABX',
   FX003:'KMÇ',FX006:'KMIR',FX007:'KPL',RF001:'RLS',RF002:'RFV',RF003:'RGA',RF004:'RLA',
   RF005:'RUV',RTM001:'RTMLA',RTM002:'RTMLS',RTM003:'RTMUV' };
 // SKU da ficha — sempre derivado da OP aberta (sem seletor no cabeçalho)
@@ -385,7 +386,7 @@ function abrirOp(op){
   document.getElementById('opNum').textContent = '#' + op;
   document.getElementById('opMeta').innerHTML =
     `12/08/2026<br>${o.qtd.toLocaleString('pt-BR')} un previstas`;
-  skuAtual = (o.sku && PRODUTOS[o.sku]) ? o.sku : skuAtual;
+  skuAtual = o.sku || skuAtual; // SKU vem do worker (autoritativo) — sem herdar o da OP anterior
   aplicarSku();
   resetarFicha();
   mostrarFicha();
@@ -453,6 +454,11 @@ const BLOCO_FAMILIA = {
 // A lista troca junto com a OP aberta (skuAtual).
 // ---------------------------------------------------------------------------
 const RECEITAS = {
+  // Base Kombucha (FX000) — estrutura real (estruturas.js): Chá Verde + Açúcar
+  FX000: [
+    { cod:'MP05', nome:'Chá Verde Orgânico', un:'kg', porUnidade:0.006, saldo:null },
+    { cod:'PRD00338', nome:'Açúcar Cristal Org.', un:'kg', porUnidade:0.035, saldo:null },
+  ],
   CH001: [
     { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
     { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
