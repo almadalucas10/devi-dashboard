@@ -1,0 +1,3 @@
+# URLs curtas para os protótipos de qualidade (arquivos vivem em docs/qualidade/)
+# Rewrite 200 — mantém a URL /qualidade/... visível e evita o fallback para o index.html
+/qualidade/*  /docs/qualidade/:splat  200
