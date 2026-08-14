@@ -133,6 +133,12 @@
   .cb input{font-size:15px; padding:9px 8px; min-height:42px}
   .bx{background:none; border:none; color:#6c7d8c; font-size:19px; cursor:pointer}
 
+  /* ---------- fermentação (Base Kombucha / PC04) ---------- */
+  .fb-cab{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+  .fb{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .fb input{font-size:15px; padding:9px 8px; min-height:42px}
+
   /* ---------- estoque (envios) ---------- */
   .es-cab{display:grid; grid-template-columns:70px 1fr 1fr 1fr 34px; gap:7px;
     font-size:10px; color:var(--txt3); padding:0 2px 6px}
@@ -308,6 +314,85 @@
     </div>
   </div>
 
+  <!-- ============ BASE KOMBUCHA (FX000) — PC04 Qualidade Kombucha V2 ============ -->
+  <div class="sec hid" data-sec="starter">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Starter da Fermentação</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="g2">
+        <div class="campo"><label>Tanque</label>
+          <input type="text" data-c="tanqueSt" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Fonte</label>
+          <input type="text" data-c="fonteSt" data-req><div class="msg"></div></div>
+      </div>
+      <div class="g3">
+        <div class="campo"><label>pH</label>
+          <input type="text" inputmode="decimal" data-c="phSt" data-req><div class="msg"></div></div>
+        <div class="campo"><label>°Brix</label>
+          <input type="text" inputmode="decimal" data-c="brixSt" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Volume (L)</label>
+          <input type="text" inputmode="decimal" data-c="volSt" data-req><div class="msg"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec hid" data-sec="fermentacao">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Fermentação</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="fb-cab"><span>Data</span><span>pH</span><span>°Brix</span><span>Temp °C</span><span>ABV %</span><span></span></div>
+      <div id="ferLin"></div>
+      <button class="btn" onclick="addFer()">+ Adicionar leitura</button>
+    </div>
+  </div>
+
+  <div class="sec hid" data-sec="filtracao">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Filtração</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="g2">
+        <div class="campo"><label>Volume (L)</label>
+          <input type="text" inputmode="decimal" data-c="volFi" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Tempo (min)</label>
+          <input type="text" inputmode="decimal" data-c="tempoFi" data-req><div class="msg"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec hid" data-sec="produtoAcabado">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Produto Acabado</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="campo"><label>Produto</label>
+        <input type="text" data-c="prodPA" data-req><div class="msg"></div></div>
+      <div class="g3" style="margin-top:10px">
+        <div class="campo"><label>°Brix do Produto</label>
+          <input type="text" inputmode="decimal" data-c="brixPA" data-req><div class="msg"></div></div>
+        <div class="campo"><label>pH do Produto</label>
+          <input type="text" inputmode="decimal" data-c="phPA" data-req><div class="msg"></div></div>
+        <div class="campo"><label>ABV (%)</label>
+          <input type="text" inputmode="decimal" data-c="abvPA" data-req><div class="msg"></div></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Brix Suco</label>
+        <input type="text" inputmode="decimal" data-c="brixSucoPA" data-req><div class="msg"></div></div>
+    </div>
+  </div>
+
+  <div class="sec hid" data-sec="observacoes">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Observações do Processo</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <textarea data-c="obs" data-req style="width:100%; min-height:70px; background:var(--campo);
+        border:1.5px solid var(--linha); border-radius:8px; color:var(--txt); font-size:15px;
+        padding:11px 12px; font-family:inherit; outline:none; resize:vertical"></textarea>
+    </div>
+  </div>
+
 </div>
 
 <div class="rod">
@@ -406,16 +491,18 @@ function voltarLista(){ mostrarLista(); }
 
 function resetarFicha(){
   conferidos.clear();
-  nc = 0; nEs = 0; // reinicia os contadores de linha (carbonatação/estoque)
-  document.querySelectorAll('.sec input, .sec select').forEach(e => {
+  nc = 0; nEs = 0; nf = 0; // reinicia os contadores de linha (carbonatação/estoque/fermentação)
+  document.querySelectorAll('.sec input, .sec select, .sec textarea').forEach(e => {
     e.value = ''; e.classList.remove('ok', 'al', 'er', 'info');
   });
   document.querySelectorAll('.msg').forEach(m => { m.textContent = ''; m.className = 'msg'; });
   document.getElementById('cbLin').innerHTML = '';
   document.getElementById('esLin').innerHTML = '';
+  document.getElementById('ferLin').innerHTML = '';
   montarInsumos();
   addCarb();
   addEstoque();
+  addFer();
   document.getElementById('resumo').style.display = 'none';
   document.getElementById('saida').style.display = 'none';
   try { window.scrollTo(0, 0); } catch(e) {}
@@ -490,6 +577,7 @@ async function carregarInsumosReais(op, nCodOP){
 // nem recravação. O insumos (consulta) nunca entra na contagem de progresso.
 // ---------------------------------------------------------------------------
 const BLOCO_FAMILIA = {
+  base: ['starter','fermentacao','filtracao','produtoAcabado','observacoes'], // FX000 — PC04 Qualidade Kombucha V2
   kombucha: ['carbonatacao','preenvase','recravacao','estoque'],
   refri:    ['carbonatacao','preenvase','recravacao','estoque'],
   cha:      ['carbonatacao','preenvase','recravacao','estoque'],
@@ -908,6 +996,24 @@ function addEstoque(){
   atualizar();
 }
 
+// Fermentação da Base Kombucha (PC04) — linhas: Data | pH | °Brix | Temp | ABV
+let nf = 0;
+function addFer(){
+  const el = document.getElementById('ferLin');
+  const id = nf++;
+  const d = document.createElement('div');
+  d.className='fb';
+  d.innerHTML=`<input type="date" data-c="fer_${id}_d">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_ph" placeholder="pH">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_br" placeholder="°Brix">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_tp" placeholder="°C">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_ab" placeholder="%">
+    <button class="bx" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  el.appendChild(d);
+  d.querySelectorAll('input').forEach(i=>i.addEventListener('input', atualizar));
+  atualizar();
+}
+
 function alterna(c){ c.parentElement.classList.toggle('ab'); }
 
 // ---------------------------------------------------------------------------
@@ -934,7 +1040,7 @@ function aplicarSku(){
   const p = PRODUTOS[sku] || {};
   const prod = document.querySelector('.prod');
   if(prod) prod.textContent = `${SIGLA[sku] || ''} · ${p.nome || sku}`;
-  aplicarFamilia(p.familia || 'kombucha');
+  aplicarFamilia(sku === 'FX000' ? 'base' : (p.familia || 'kombucha'));
   atualizarAvisoSpec();
 }
 
@@ -975,6 +1081,10 @@ function atualizar(){
     } else if(nome==='estoque'){
       const l = sec.querySelectorAll('.es'); total = l.length;
       l.forEach(x=>{ if([...x.querySelectorAll('input, select')].every(i=>i.value.trim()!=='')) feito++; });
+      b.textContent = total===0 ? '—' : `${feito} de ${total}`;
+    } else if(nome==='fermentacao'){
+      const l = sec.querySelectorAll('.fb'); total = l.length;
+      l.forEach(x=>{ if([...x.querySelectorAll('input')].every(i=>i.value.trim()!=='')) feito++; });
       b.textContent = total===0 ? '—' : `${feito} de ${total}`;
     } else if(nome==='recravacao'){
       const ins = sec.querySelectorAll('input[data-rec]'); total = ins.length;
@@ -1029,6 +1139,21 @@ function salvar(){
         const v=[...l.querySelectorAll('input, select')].map(i=>i.value.trim());
         return { hora:v[0]||null, quantidade:n(v[1]), tipo:v[2]||null, responsavel:v[3]||null };
       }).filter(x=>x.quantidade!==null);
+    } else if(nome==='starter'){
+      d.blocos.starter = { tanque:g('tanqueSt'), fonte:g('fonteSt'),
+                           pH:n(g('phSt')), brix:n(g('brixSt')), volume:n(g('volSt')) };
+    } else if(nome==='fermentacao'){
+      d.blocos.fermentacao = [...document.querySelectorAll('.fb')].map(l=>{
+        const v=[...l.querySelectorAll('input')].map(i=>i.value.trim());
+        return { data:v[0]||null, pH:n(v[1]), brix:n(v[2]), temperatura:n(v[3]), abv:n(v[4]) };
+      }).filter(x=>x.data||x.pH);
+    } else if(nome==='filtracao'){
+      d.blocos.filtracao = { volume:n(g('volFi')), tempo:n(g('tempoFi')) };
+    } else if(nome==='produtoAcabado'){
+      d.blocos.produtoAcabado = { produto:g('prodPA'), brix:n(g('brixPA')), pH:n(g('phPA')),
+                                  abv:n(g('abvPA')), brixSuco:n(g('brixSucoPA')) };
+    } else if(nome==='observacoes'){
+      d.blocos.observacoes = g('obs') || '';
     }
   });
 
@@ -1053,9 +1178,13 @@ function salvar(){
     conferido: conferidos.has(i.cod),
     conferidoEm: conferidos.has(i.cod) ? new Date().toISOString() : null
   }));
-  d.indiceColeta = { pH:!!g('pH'), brix:!!g('brix'), carbonatacao:!!g('carb'),
-                     recravacao: rec.altura != null || rec.espessura != null || rec.transpasse != null,
-                     abv:false };
+  d.indiceColeta = skuAtual === 'FX000'
+    ? { pH: !!g('phSt') || !!g('phPA'), brix: !!g('brixSt') || !!g('brixPA'),
+        temperatura: !!g('fer_0_tp'), abv: !!g('abvPA') || !!g('fer_0_ab'),
+        carbonatacao: false, recravacao: false }
+    : { pH:!!g('pH'), brix:!!g('brix'), carbonatacao:!!g('carb'),
+        recravacao: rec.altura != null || rec.espessura != null || rec.transpasse != null,
+        abv:false };
   d.status = 'completa';
   d.registradoEm = new Date().toISOString();
 
@@ -1091,13 +1220,14 @@ function salvar(){
 montarInsumos();
 addCarb();
 addEstoque();
+addFer();
 // SKU da ficha vem da OP aberta — sem seletor no cabeçalho
 skuAtual = 'FX001';
 aplicarSku();
 document.querySelectorAll('input[data-rec]').forEach(inp=>{
   inp.addEventListener('input', ()=>{ validar(inp, SPEC.recravacao[inp.dataset.rec]); atualizar(); });
 });
-document.querySelectorAll('input[data-req], select[data-req]').forEach(i=>{
+document.querySelectorAll('input[data-req], select[data-req], textarea[data-req]').forEach(i=>{
   const k=i.dataset.spec;
   i.addEventListener('input', ()=>{ validar(i, k ? produtoAtual()[k] ?? null : null); atualizar(); });
   i.addEventListener('change', atualizar);
