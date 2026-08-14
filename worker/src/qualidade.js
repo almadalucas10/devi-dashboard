@@ -66,8 +66,7 @@ const UN = { EMB01:"un", EMB02:"un", EMB04:"un", EMB08:"un", MP0:"kg", INS024:"u
   MPR022:"kg", MP021:"kg", MP036:"kg", MP022:"kg", MP044:"kg", MPA001:"kg", MPR007:"kg",
   MPR015:"kg", MPR016:"kg", MPR011:"kg", MPR023:"kg", MPR004:"kg", MPR006:"kg",
   MPR009:"kg", MPC002:"kg", MPC004:"kg", MPC005:"kg", MPC006:"kg", MPC011:"kg",
-  MPC020:"kg", MPC030:"kg", MP020:"kg", MP051:"kg", MPA008:"kg", MPA031:"kg", MPA032:"kg",
-  MP030:"kg", MP032:"L", MP036:"kg" };
+  MPC020:"kg", MPC030:"kg", MP020:"kg", MP051:"kg", MPA008:"kg", MPA031:"kg", MPA032:"kg" };
 
 const get = (obj, ...keys) => { for (const k of keys) { if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k]; } return null; };
 const r3 = x => Math.round(x * 1000) / 1000;
