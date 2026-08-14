@@ -139,8 +139,8 @@ async function resolveProduto(env, id) {
       : await consultarProduto(env, chave);
   } catch (e) { /* não encontrado */ }
   const out = r && r.codigo_produto
-    ? { codigo: r.codigo || "", descricao: r.descricao || r.cDescricao || "" }
-    : { codigo: "", descricao: "" };
+    ? { codigo: r.codigo || "", descricao: r.descricao || r.cDescricao || "", un: r.unidade || r.un || "" }
+    : { codigo: "", descricao: "", un: "" };
   cacheProdutosResolvidos.set(chave, out);
   return out;
 }
@@ -213,7 +213,7 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
       if (rp.codigo || rp.descricao) {
         item.codigo = rp.codigo || item.codigo;
         item.nome = rp.descricao || item.nome;
-        item.un = UN[item.codigo] || item.un;
+        item.un = rp.un || UN[item.codigo] || item.un;
       }
     }
     // 2) último recurso: casamento por quantidade — só sem código e sem repetir código
