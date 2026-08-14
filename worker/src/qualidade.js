@@ -230,120 +230,192 @@ function zipStore(arquivos) {
   return Buffer.concat([...chunks, cdData, eocd]);
 }
 
-/** PDF da ficha — layout em folha: cabeçalho, blocos formatados por tipo, NC em vermelho */
+/** PDF da ficha — estilo da Ordem de Produção do Omie (tabelas, cabeçalho, rodapé) */
 function pdfDaFicha(ficha) {
+  const W = 595, M = 50, CW = W - 2 * M;
+  // WinAnsi (cp1252) — o PDF exige esses bytes; a fonte declara WinAnsiEncoding
+  const ESP = { "—": "\x97", "–": "\x96", "•": "\x95", "°": "\xB0" };
   const esc = s => {
-    // WinAnsi (cp1252) — o PDF não usa UTF-8; acentos viram o byte correto
-    const ESP = { "—": "\x97", "–": "\x96", "•": "\x95", "°": "\xB0" };
     let out = "";
     for (const ch of String(s ?? "")) {
       const cp = ch.codePointAt(0);
-      if (cp <= 0xFF) { out += ch; continue; }
-      out += ESP[ch] || "?";
+      out += cp <= 0xFF ? ch : (ESP[ch] || "?");
     }
     return out.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
   };
+  const largura = (s, size) => String(s).length * size * 0.52;
   const fmtN = v => (v === null || v === undefined || isNaN(v)) ? "—" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
-  const W = 595, M = 50;
-  const ops = [];
-  let y = 800;
-  const linha = (txt, o = {}) => {
-    if (y < 60) return;
-    const size = o.size || 10;
-    let x = M;
-    if (o.center) x = Math.max(M, (W - txt.length * size * 0.5) / 2);
-    const col = o.color ? o.color + " rg " : "";
-    ops.push(`${col}BT ${o.bold ? "/F2" : "/F1"} ${size} Tf ${x} ${y} Td (${esc(txt)}) Tj ET`);
-    y -= size * 1.5;
-  };
-  const regra = (grossa = false) => {
-    ops.push(`${grossa ? "2 w" : "0.6 w"} ${M} ${y} m ${W - M} ${y} l S`);
-    y -= 10;
-  };
-  const espaco = n => { y -= n; };
+  const FAM = { kombucha: "Kombuchas", refri: "Refrigerantes", cha: "Chás", barril: "Barril" };
   const LAB = {
     starter: "Starter da Fermentação", fermentacao: "Fermentação", filtracao: "Filtração",
     produtoAcabado: "Produto Acabado", observacoes: "Observações do Processo",
     preenvase: "Pré-envase", recravacao: "Recravação", carbonatacao: "Carbonatação",
     estoque: "Envio para Estoque", formulacao: "Formulação",
   };
-  const fmtBloco = (bloco, dados) => {
-    const L = [];
-    if (bloco === "recravacao") {
-      (Array.isArray(dados) ? dados : []).forEach((r, i) =>
-        L.push(`  #${i + 1}   Altura ${fmtN(r.altura)}   Espessura ${fmtN(r.espessura)}   Transpasse ${fmtN(r.transpasse)} mm`));
-    } else if (bloco === "carbonatacao") {
-      (Array.isArray(dados) ? dados : []).forEach(r =>
-        L.push(`  ${r.hora || "—"}   Temp ${fmtN(r.temperatura)}°C   P.cil ${fmtN(r.pressaoCilindro)}   P.tan ${fmtN(r.pressaoTanque)}`));
-    } else if (bloco === "fermentacao") {
-      (Array.isArray(dados) ? dados : []).forEach(r =>
-        L.push(`  ${r.data || "—"}   pH ${fmtN(r.pH)}   Brix ${fmtN(r.brix)}   Temp ${fmtN(r.temperatura)}°C   ABV ${fmtN(r.abv)}%`));
-    } else if (bloco === "estoque") {
-      (Array.isArray(dados) ? dados : []).forEach(r =>
-        L.push(`  ${r.hora || "—"}   ${fmtN(r.quantidade)} ${r.tipo || ""}   ${r.responsavel || ""}`));
-    } else if (bloco === "starter") {
-      L.push(`  Tanque: ${dados.tanque || "—"}   Fonte: ${dados.fonte || "—"}   pH ${fmtN(dados.pH)}   Brix ${fmtN(dados.brix)}   Volume ${fmtN(dados.volume)} L`);
-    } else if (bloco === "preenvase") {
-      L.push(`  pH ${fmtN(dados.pH)}   Brix ${fmtN(dados.brix)}   Carbonatação ${fmtN(dados.carbonatacao)}   Resp: ${dados.responsavel || "—"}`);
-    } else if (bloco === "filtracao") {
-      L.push(`  Volume ${fmtN(dados.volume)} L   Tempo ${fmtN(dados.tempo)} min`);
-    } else if (bloco === "produtoAcabado") {
-      L.push(`  Produto: ${dados.produto || "—"}   Brix ${fmtN(dados.brix)}   pH ${fmtN(dados.pH)}   ABV ${fmtN(dados.abv)}%   Brix Suco ${fmtN(dados.brixSuco)}`);
-    } else if (bloco === "observacoes") {
-      L.push(`  ${String(dados || "").slice(0, 160) || "—"}`);
-    } else {
-      L.push("  " + Object.entries(dados || {}).map(([k, v]) => `${k}: ${fmtN(v)}`).join("   "));
+
+  const ops = [];
+  let y = 810;
+
+  const texto = (s, o = {}) => {
+    if (y < 45) return;
+    const size = o.size || 10;
+    let x = o.x ?? M;
+    if (o.center) x = Math.max(M, (W - largura(s, size)) / 2);
+    const col = o.color ? o.color + " rg " : "";
+    ops.push(`${col}BT ${o.bold ? "/F2" : "/F1"} ${size} Tf ${x} ${y} Td (${esc(s)}) Tj ET`);
+    y -= size * 1.5;
+  };
+  const regra = (grossa = false) => {
+    ops.push(`${grossa ? "1.6 w" : "0.5 w"} ${M} ${y} m ${W - M} ${y} l S`);
+    y -= 10;
+  };
+  const espaco = n => { y -= n; };
+
+  // tabela com bordas (estilo OP): colunas, larguras, linhas
+  const tabela = (colunas, largs, linhas, opt = {}) => {
+    const rh = opt.rh || 14, fs = opt.fs || 9, fsH = opt.fsH || 9;
+    const x0 = M;
+    const xs = []; let acc = 0;
+    for (let i = 0; i < colunas.length; i++) { xs.push(x0 + acc); acc += largs[i]; }
+    const right = x0 + acc;
+    const yTop = y;
+    if (y - rh < 45) return false;
+    // cabeçalho com fundo
+    ops.push(`0.92 0.92 0.92 rg ${x0} ${y - rh} ${right - x0} ${rh} re f`);
+    colunas.forEach((c, i) => ops.push(`BT /F2 ${fsH} Tf ${xs[i] + 4} ${y - 9} Td (${esc(c)}) Tj ET`));
+    y -= rh;
+    ops.push(`0.9 w ${x0} ${y} m ${right} ${y} l S`);
+    for (const linha of linhas) {
+      if (y - rh < 45) { y = 30; return false; }
+      linha.forEach((c, i) => {
+        let t = String(c ?? "");
+        const max = largs[i] - 7;
+        while (largura(t, fs) > max && t.length > 1) t = t.slice(0, -1);
+        if (t !== String(c ?? "")) t += "…";
+        ops.push(`BT /F1 ${fs} Tf ${xs[i] + 4} ${y - 9} Td (${esc(t)}) Tj ET`);
+      });
+      y -= rh;
+      ops.push(`0.5 w ${x0} ${y} m ${right} ${y} l S`);
     }
-    return L.length ? L : ["  (vazio)"];
+    for (let i = 1; i < colunas.length; i++) ops.push(`${xs[i]} ${y} m ${xs[i]} ${yTop} l S`);
+    y -= 7;
+    return true;
+  };
+  const titulo = t => {
+    espaco(2);
+    texto(t.toUpperCase(), { bold: true, size: 10.5 });
+    y -= 1;
   };
 
-  // ---- cabeçalho da folha ----
-  linha("DEVI PRODUCAO DE BEBIDAS LTDA", { bold: true, size: 15, center: true });
-  linha("FICHA DE QUALIDADE", { size: 11, center: true });
-  espaco(6);
-  linha(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 12 });
-  linha(`Produto: ${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`);
-  linha(`Quantidade: ${fmtN(ficha.qtd)} ${ficha.un || ""}    Registrado em: ${ficha.registradoEm || "—"}`);
+  // ================= cabeçalho (como a OP do Omie) =================
+  texto("DEVI PRODUCAO DE BEBIDAS LTDA", { bold: true, size: 16, center: true });
+  texto("FICHA DE QUALIDADE", { size: 11, center: true });
+  espaco(7);
+  texto(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
+  const previsao = ficha.previsao || "—";
+  const situacao = ficha.situacao || "Em andamento";
+  texto(`Previsão de Conclusão: ${previsao}      Situação: ${situacao}`, { size: 10 });
+  texto(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`, { size: 11 });
+  texto(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}`, { size: 10 });
   regra(true);
   espaco(4);
 
-  // ---- blocos ----
-  const ncs = ficha.naoConformidades || [];
+  // ================= resumo (família × quantidade) =================
+  titulo("Resumo da Ordem de Produção");
+  tabela(
+    ["Família", "Quantidade a Produzir"],
+    [CW * 0.45, CW * 0.55],
+    [[FAM[ficha.familia] || ficha.familia || "—", `${fmtN(ficha.qtd)} ${ficha.un || ""}`]],
+    { rh: 15, fs: 10, fsH: 10 }
+  );
+
+  // ================= blocos =================
+  titulo("Itens e Medições");
   for (const [bloco, dados] of Object.entries(ficha.blocos || {})) {
-    if (y < 110) { linha("(documento longo — restante omitido nesta página)", { color: "0.5 0.5 0.5" }); break; }
-    linha((LAB[bloco] || bloco).toUpperCase(), { bold: true, size: 10.5 });
-    for (const l of fmtBloco(bloco, dados)) linha(l, { size: 9.5 });
+    if (y < 120) break;
+    titulo(LAB[bloco] || bloco);
+    if (bloco === "recravacao") {
+      const linhas = (Array.isArray(dados) ? dados : []).map((r, i) =>
+        [`#${i + 1}`, fmtN(r.altura), fmtN(r.espessura), fmtN(r.transpasse)]);
+      if (linhas.length) tabela(["Leitura", "Altura (mm)", "Espessura (mm)", "Transpasse (mm)"],
+        [0.18, 0.28, 0.28, 0.26].map(v => v * CW), linhas);
+      else texto("  (sem leituras)");
+    } else if (bloco === "carbonatacao") {
+      const linhas = (Array.isArray(dados) ? dados : []).map(r =>
+        [r.hora || "—", fmtN(r.temperatura), fmtN(r.pressaoCilindro), fmtN(r.pressaoTanque)]);
+      if (linhas.length) tabela(["Horário", "Temp (°C)", "P. cilindro", "P. tanque"],
+        [0.22, 0.26, 0.26, 0.26].map(v => v * CW), linhas);
+      else texto("  (sem leituras)");
+    } else if (bloco === "fermentacao") {
+      const linhas = (Array.isArray(dados) ? dados : []).map(r =>
+        [r.data || "—", fmtN(r.pH), fmtN(r.brix), fmtN(r.temperatura), fmtN(r.abv)]);
+      if (linhas.length) tabela(["Data", "pH", "°Brix", "Temp (°C)", "ABV (%)"],
+        [0.26, 0.18, 0.18, 0.19, 0.19].map(v => v * CW), linhas);
+      else texto("  (sem leituras)");
+    } else if (bloco === "estoque") {
+      const linhas = (Array.isArray(dados) ? dados : []).map(r =>
+        [r.hora || "—", fmtN(r.quantidade), r.tipo || "—", r.responsavel || "—"]);
+      if (linhas.length) tabela(["Horário", "Quantidade", "Tipo", "Responsável"],
+        [0.2, 0.28, 0.26, 0.26].map(v => v * CW), linhas);
+      else texto("  (sem envios)");
+    } else if (bloco === "preenvase" || bloco === "starter" || bloco === "filtracao" || bloco === "produtoAcabado") {
+      const mapa = bloco === "preenvase" ? [["pH", dados.pH], ["°Brix", dados.brix], ["Carbonatação", dados.carbonatacao], ["Responsável", dados.responsavel]]
+        : bloco === "starter" ? [["Tanque", dados.tanque], ["Fonte", dados.fonte], ["pH", dados.pH], ["°Brix", dados.brix], ["Volume (L)", dados.volume]]
+        : bloco === "filtracao" ? [["Volume (L)", dados.volume], ["Tempo (min)", dados.tempo]]
+        : [["Produto", dados.produto], ["°Brix", dados.brix], ["pH", dados.pH], ["ABV (%)", dados.abv], ["Brix Suco", dados.brixSuco]];
+      const linhas = mapa.map(([k, v]) => [k, typeof v === "string" ? v : fmtN(v)]);
+      tabela(["Campo", "Valor"], [0.4, 0.6].map(x => x * CW), linhas, { rh: 13, fs: 9.5 });
+    } else if (bloco === "observacoes") {
+      texto(`  ${String(dados || "").slice(0, 180) || "—"}`, { size: 9.5 });
+    } else {
+      const linhas = Object.entries(dados || {}).map(([k, v]) => [k, typeof v === "string" ? v : fmtN(v)]);
+      if (linhas.length) tabela(["Campo", "Valor"], [0.4, 0.6].map(x => x * CW), linhas, { rh: 13, fs: 9.5 });
+    }
     espaco(3);
   }
 
-  // ---- não-conformidades (vermelho) ----
+  // ================= não-conformidades (vermelho) =================
+  const ncs = ficha.naoConformidades || [];
   if (ncs.length) {
-    if (y < 120) { linha("(NC na página seguinte — omitido)", { color: "0.5 0.5 0.5" }); }
-    else {
-      espaco(4);
-      regra();
-      linha(`NAO CONFORMIDADES (${ncs.length})`, { bold: true, size: 10.5, color: "0.75 0.1 0.1" });
-      for (const nc of ncs) {
-        const rotulo = `${nc.bloco || ""}${nc.leitura ? " #" + nc.leitura : ""}/${nc.campo || ""}`;
-        linha(`  • ${rotulo}: ${fmtN(nc.valor)}  (faixa ${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)})`,
-          { size: 9.5, color: "0.75 0.1 0.1" });
-      }
+    espaco(2);
+    texto(`NAO CONFORMIDADES (${ncs.length})`, { bold: true, size: 10.5, color: "0.8 0.1 0.1" });
+    const linhas = ncs.map(nc => [
+      `${nc.bloco || ""}${nc.leitura ? " #" + nc.leitura : ""}`,
+      nc.campo || "", fmtN(nc.valor),
+      `${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)}`,
+    ]);
+    if (y > 90) {
+      ops.push(`1 w ${M} ${y} m ${W - M} ${y} l S`); // realça a seção
+      tabela(["Bloco", "Campo", "Valor", "Faixa"], [0.3, 0.25, 0.2, 0.25].map(v => v * CW), linhas,
+        { color: "0.8 0.1 0.1" });
     }
   }
 
-  // ---- rodapé ----
+  // ================= outras informações =================
+  espaco(4);
   regra(true);
-  linha("Documento gerado automaticamente pelo sistema de qualidade — Dêvi", { size: 8.5, color: "0.45 0.45 0.45" });
+  titulo("Outras Informações");
+  tabela(["Campo", "Valor"], [0.4, 0.6].map(x => x * CW),
+    [["Registrado em", ficha.registradoEm || "—"], ["Status da ficha", ficha.status || "completa"]],
+    { rh: 13, fs: 9.5 });
 
-  // ---- monta o PDF ----
+  // ================= rodapé =================
+  espaco(6);
+  regra();
+  y += 12;
+  ops.push(`0.5 0.5 0.5 rg BT /F1 8 Tf ${M} ${y} Td (Documento gerado automaticamente pelo sistema de qualidade - Dêvi) Tj ET`);
+  ops.push(`0.5 0.5 0.5 rg BT /F1 8 Tf ${W - M - 60} ${y} Td (Página 1 de 1) Tj ET`);
+
+  // ================= monta o PDF =================
   let out = "%PDF-1.4\n";
   const objs = [];
   objs.push("<< /Type /Catalog /Pages 2 0 R >>");
   objs.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
   const stream = ops.join("\n");
   objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`);
-  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  // WinAnsiEncoding — corrige os acentos (antes a fonte usava StandardEncoding)
+  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
   objs.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
   const offsets = [0];
   for (let i = 0; i < objs.length; i++) {
@@ -354,7 +426,7 @@ function pdfDaFicha(ficha) {
   out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
   for (let i = 1; i <= objs.length; i++) out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
   out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return Buffer.from(out, "latin1"); // bytes WinAnsi — o ZIP recebe o Buffer direto
+  return Buffer.from(out, "latin1");
 }
 
 /** Anexa (ou substitui) o PDF da ficha na OP — zip + base64 conforme o Omie exige */

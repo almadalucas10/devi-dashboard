@@ -1255,6 +1255,11 @@ async function salvar(){
 
   const d = { op: opAtual || '2026/00527', nCodOP: nCodOPAtual || 0, sku:sku, sigla:SIGLA[sku]||'',
               familia:fam, dataProducao:'2026-08-12', blocos:{} };
+  if(folhaInfo){
+    d.previsao = folhaInfo.previsao || '';
+    d.situacao = folhaInfo.situacao || '';
+    d.tipoProduto = folhaInfo.tipoProduto || '';
+  }
 
   // um bloco por vez — na versão real cada um grava ao sair (PATCH /bloco/:nome)
   secVisiveis().forEach(sec=>{
