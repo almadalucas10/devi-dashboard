@@ -120,6 +120,13 @@ async function catalogoProdutos(env) {
   return _cat;
 }
 
+/** Debug — ListarAnexo: descobre o cTabela da OP (anexar arquivo pela interface, ler aqui) */
+export async function listarAnexos(env, nId) {
+  return chamarOmie(env, "/geral/anexo/", "ListarAnexo", {
+    nPagina: 1, nRegPorPagina: 50, nId: Number(nId),
+  });
+}
+
 /** Mapa codigo_produto → { sku, descricao, un } via ListarProdutos (chave real: produto_servico_cadastro). */
 async function mapaProdutoParaSku(env) {
   const cat = await catalogoProdutos(env);
