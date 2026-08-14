@@ -5,7 +5,7 @@
 // ============================================================================
 import { readJson, writeJson, writeSyncMeta } from "./r2.js";
 import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
-import { buscarFilaComRemessas } from "./fila.js";
+import { buscarFilaDePedidos } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
 import { buscarEstoqueInsumos } from "./insumos.js";
 import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
@@ -38,7 +38,7 @@ async function runLightSync(env) {
     const cacheProd = await construirCacheProdutos(env);
 
     try {
-      partial.filaDePedidos = await buscarFilaComRemessas(env);
+      partial.filaDePedidos = await buscarFilaDePedidos(env);
       console.log(`[light] ✅ Fila: ${partial.filaDePedidos.length} pedidos`);
     } catch (e) {
       partial.filaDePedidos = { erro: e.message };
@@ -152,7 +152,7 @@ async function runHeavySync(env) {
 
     // Atualiza fila + estoque também (dados frescos)
     try {
-      data.filaDePedidos = await buscarFilaComRemessas(env);
+      data.filaDePedidos = await buscarFilaDePedidos(env);
       console.log(`[heavy] ✅ Fila: ${data.filaDePedidos.length} pedidos`);
     } catch (e) {
       data.filaDePedidos = { erro: e.message };
@@ -404,17 +404,19 @@ export default {
 
     
     if (url.pathname === "/api/debug/remessas") {
-      // Remessas do OMIE (produtos/remessa) — estrutura e status
+      // Sonda a API de Remessas do OMIE (vendas/remessa) — pra exibir na Fila e impactar Reposição
       try {
         const { chamarOmie } = await import("./omie.js");
-        const r0 = await chamarOmie(env, "/produtos/remessa/", "ListarRemessas", { nPagina: 1 });
-        const remessas = r0.remessas || [];
-        return json({
-          total: r0.nTotalRegistros,
-          naoFaturadas: remessas.filter(r => (r.cabec || {}).faturada !== "S").length,
-          canceladas: remessas.filter(r => (r.cabec || {}).cCancelado === "S").length,
-          amostra: remessas[0] || null,
-        });
+        const tenta = async (ep, mt) => {
+          try {
+            const r = await chamarOmie(env, ep, mt, { pagina: 1, registros_por_pagina: 50, apenas_importado_api: "N" });
+            const lista = Array.isArray(r) ? r : (r.remessas || r.listaRemessas || r.cadastros || r.lista || []);
+            return { ok: true, chaves: Object.keys(r).slice(0, 20), total: r.nTotRegistros || r.total_de_registros || r.total || lista.length, n: lista.length, amostra: lista[0] || null };
+          } catch(e) { return { ok: false, erro: e.message.slice(0, 120) }; }
+        };
+        const r1 = await tenta("/vendas/remessa/", "ListarRemessas");
+        const r2 = await tenta("/vendas/remessa/", "PesquisarRemessas");
+        return json({ ListarRemessas: r1, PesquisarRemessas: r2 });
       } catch(e) { return json({ erro: e.message.slice(0, 150) }, 500); }
     }
 
