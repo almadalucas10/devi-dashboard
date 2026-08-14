@@ -17,8 +17,8 @@
 
   .topo{position:sticky; top:0; z-index:20; background:#0c1219;
     border-bottom:1px solid var(--linha); padding:10px 14px}
-  .logo{height:34px; width:auto; object-fit:contain; margin-bottom:5px; display:block}
-  .topoLista .logo{height:44px; margin:0 0 6px}
+  .logo-row{display:flex; justify-content:center; margin-bottom:6px}
+  .logo{height:56px; width:auto; object-fit:contain; display:block}
   .t1{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
   .op{font-size:22px; font-weight:700; letter-spacing:-.5px}
   .op span{color:var(--az)}
@@ -243,9 +243,9 @@
     <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
     <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
   </div>
+  <div class="logo-row"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
   <div class="t1">
     <div>
-      <img class="logo" src="logo-devi.png" alt="Dêvi">
       <div class="op">OP <span id="opNum">#527</span></div>
       <div class="prod">KFV · Kombucha Frutas Vermelhas</div>
     </div>
@@ -257,9 +257,9 @@
 
 <!-- ============ LISTA DE OPs ABERTAS (painel do formulário) ============ -->
 <div id="viewLista">
+  <div class="logo-row"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
   <div class="topoLista">
     <div>
-      <img class="logo" src="logo-devi.png" alt="Dêvi">
       <h1>Fichas do dia — OPs abertas</h1>
       <div class="sub">12/08/2026 · toque na OP para abrir a ficha · em produção a lista vem de <b>ListarOrdemProducao</b> (lExibirItens)</div>
     </div>
