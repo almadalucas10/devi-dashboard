@@ -78,6 +78,33 @@
   .ins-tr{height:4px; background:var(--trilho); border-radius:2px; overflow:hidden; margin-top:5px}
   .ins-tr i{display:block; height:100%}
 
+  /* ---------- folha da OP (clone do modelo Omie) ---------- */
+  .folha{background:#f4f1e8; color:#1c1c1c; border:1px solid #d8d2c0; border-radius:6px;
+    padding:14px 16px; font-size:13px; box-shadow:0 1px 5px rgba(0,0,0,.35)}
+  .fl-emp{font-weight:700; letter-spacing:.4px; font-size:12px; text-transform:uppercase; text-align:center; color:#222}
+  .fl-op{font-size:16px; font-weight:700; margin:7px 0 5px; text-align:center}
+  .fl-linha{display:flex; justify-content:space-between; gap:8px; font-size:12px; margin:2px 0; flex-wrap:wrap}
+  .fl-linha b{font-weight:600}
+  .fl-prod{font-size:13px; font-weight:600; margin:7px 0 2px}
+  .fl-cab{border-bottom:2px solid #222; padding-bottom:8px; margin-bottom:6px}
+  .fl-titulo{font-weight:700; margin:8px 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.4px}
+  .folha table{width:100%; border-collapse:collapse; font-size:12px}
+  .folha thead th{text-align:left; border-bottom:2px solid #222; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.3px; padding:4px 6px; color:#333}
+  .folha tbody td{border-bottom:1px solid #cfc9b6; padding:5px 6px; vertical-align:top}
+  .folha tbody tr{cursor:pointer}
+  .folha tbody tr:hover{background:#ece8da}
+  .folha tbody tr.conf{background:#e1efe0}
+  .folha tbody tr.conf .fl-desc{text-decoration:line-through; color:#666}
+  .fl-cod{font-weight:700; font-size:12px}
+  .fl-desc{color:#444; font-size:11.5px; margin-top:1px}
+  .fl-saldo{font-size:10.5px; margin-top:2px}
+  .fl-q{white-space:nowrap; font-weight:600; text-align:right}
+  .folha .fl-chk{width:34px; text-align:center}
+  .folha .chk{width:22px; height:22px; border:1.5px solid #777; border-radius:4px;
+    background:#fff; font-size:13px}
+  .folha .chk.on{background:#22c55e; border-color:#22c55e; color:#fff}
+
   /* ---------- carbonatacao ---------- */
   .cb-cab{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 34px; gap:7px;
     font-size:10px; color:var(--txt3); padding:0 2px 6px}
@@ -180,16 +207,10 @@
   <div class="sec ab" data-sec="insumos" data-consulta>
     <div class="cab" onclick="alterna(this)">
       <span class="chev">▸</span>
-      <h2>Insumos da OP</h2>
+      <h2>Folha da OP</h2>
       <span class="est info" id="insChk">0 de 9 conferidos</span>
     </div>
     <div class="corpo">
-      <div class="avi az" id="insumosAvi">
-        Lista vinda do Omie — <b>itensDetalhes</b> da OP #527. Não é calculada pela ficha
-        técnica: se algum item foi ajustado nesta OP, é este o valor válido.<br>
-        <span style="color:var(--txt3)">Dados de demonstração — em produção vêm de
-        <b>ConsultarOrdemProducao</b> cruzado com o saldo do almoxarifado (<b>PosicaoEstoque</b>).</span>
-      </div>
       <div id="insumos"></div>
     </div>
   </div>
@@ -337,6 +358,7 @@ const FICHAS = {
 let opAtual = null;
 let opQtd = 4464; // quantidade da OP aberta — escala a lista de insumos
 let receitaReal = null;          // insumos reais da OP (endpoint) — substitui o mock
+let folhaInfo = null;            // campos do cabeçalho da folha (previsao/situacao/tipoProduto)
 const receitasCache = {};        // op → insumos reais já carregados
 
 function statusFicha(op){ return FICHAS[op]; }
@@ -426,9 +448,12 @@ async function carregarInsumosReais(op, nCodOP){
     const r = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(nCodOP || op));
     const j = await r.json();
     if(j.itens && j.itens.length){
+      folhaInfo = { previsao: j.previsao || '', situacao: j.situacao || '',
+                    tipoProduto: j.tipoProduto || '' };
       receitaReal = j.itens.map(i => ({
         cod: String(i.codigo || i.cod), nome: i.nome || i.codigo, un: i.un || '',
-        quantidade: i.quantidade ?? null, saldo: i.saldo ?? null
+        quantidade: i.quantidade ?? null, saldo: i.saldo ?? null,
+        reservado: i.reservado || ''
       }));
       receitasCache[op] = receitaReal;
       montarInsumos();
@@ -726,36 +751,57 @@ function insumosDaOp(){
     quantidade: i.porUnidade * (opQtd || 4464) }));
 }
 
+const FAMILIA_NOME = { kombucha: 'Kombuchas', refri: 'Refrigerantes', cha: 'Chás', barril: 'Barril' };
+const fmtFolha = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 6 });
+
 function montarInsumos(){
   const el = document.getElementById('insumos');
-  const avi = document.getElementById('insumosAvi');
   const lista = insumosDaOp();
-  if(avi){
-    const p = PRODUTOS[skuAtual] || {};
-    avi.innerHTML = `Lista vinda do Omie — <b>itensDetalhes</b> da OP <b>#${opAtual || '—'}</b>
-      (${p.nome || skuAtual}), explodida pela ficha técnica até as folhas. Não é calculada pela ficha
-      técnica: se algum item foi ajustado nesta OP, é este o valor válido.<br>
-      <span style="color:var(--txt3)">Dados de demonstração — em produção vêm de
-      <b>ConsultarOrdemProducao</b> (itensDetalhes) cruzado com o saldo do almoxarifado (<b>PosicaoEstoque</b>).</span>`;
-  }
-  el.innerHTML = lista.map(i => {
-    const qtde = i.quantidade ?? 0;
-    const semSaldo = i.saldo === null || i.saldo === undefined;
-    const falta = !semSaldo && i.saldo < qtde;
-    const pct = semSaldo ? 0 : Math.min(100, (qtde / Math.max(i.saldo, qtde)) * 100);
-    return `<div class="ins${falta?' falta':''}" onclick="toggleInsumo('${i.cod}')">
-      <div class="ins-l1">
-        <span class="chk" id="chk_${i.cod}">✓</span>
-        <span class="ins-nm">${i.nome}</span>
-        <span class="ins-q" style="color:${falta?'var(--er2)':'var(--txt2)'}">${fmtQ(qtde)} <span style="font-size:11px;color:var(--txt3)">${i.un}</span></span>
+  const info = folhaInfo || {};
+  const p = PRODUTOS[skuAtual] || {};
+  const fam = FAMILIA_NOME[p.familia] || p.familia || '';
+  const qtd = opQtd || 4464;
+  el.innerHTML = `
+    <div class="folha">
+      <div class="fl-cab">
+        <div class="fl-emp">DEVI Produção de Bebidas LTDA</div>
+        <div class="fl-op">Ordem de Produção Nº ${opAtual || '—'}</div>
+        <div class="fl-linha">
+          <span>Previsão de Conclusão: <b>${info.previsao || '—'}</b></span>
+          <span>Situação: <b>${info.situacao || 'Em andamento'}</b></span>
+        </div>
+        <div class="fl-prod">${skuAtual} - ${p.nome || skuAtual}</div>
+        <div class="fl-linha">
+          <span>Tipo de Produto: <b>${info.tipoProduto || '04 - Produto Acabado'}</b></span>
+          <span>Família: <b>${fam || '—'}</b></span>
+          <span>Quantidade a Produzir: <b>${fmt(qtd)} UND</b></span>
+        </div>
       </div>
-      <div class="ins-tr"><i style="width:${pct}%;background:${semSaldo?'var(--trilho)':falta?'var(--er)':'var(--ok)'}"></i></div>
-      <div class="ins-l2">
-        <span>${i.cod}</span>
-        <span style="color:${falta?'var(--er2)':'var(--txt3)'}">${semSaldo?'saldo —':falta?'falta '+fmtQ(qtde-i.saldo)+' '+i.un:'estoque '+fmt(i.saldo)+' '+i.un}</span>
-      </div>
+      <div class="fl-titulo">Itens da Ordem de Produção</div>
+      <table>
+        <thead><tr><th>Descrição do Item</th><th style="text-align:right">Quantidade</th><th>Unidade</th><th>Reservado</th><th class="fl-chk"></th></tr></thead>
+        <tbody>
+          ${lista.map(i => {
+            const qtde = i.quantidade ?? 0;
+            const semSaldo = i.saldo === null || i.saldo === undefined;
+            const falta = !semSaldo && i.saldo < qtde;
+            const conf = conferidos.has(i.cod) ? 'conf' : '';
+            const res = i.reservado === 'S' ? 'Sim' : i.reservado === 'N' ? 'Não' : '—';
+            return `<tr class="${conf}" onclick="toggleInsumo('${i.cod}')">
+              <td>
+                <div class="fl-cod">${i.cod}</div>
+                <div class="fl-desc">${i.nome || i.cod}</div>
+                <div class="fl-saldo" style="color:${falta ? '#b91c1c' : '#666'}">${semSaldo ? 'saldo —' : falta ? 'falta ' + fmtQ(qtde - i.saldo) + ' ' + i.un : 'estoque: ' + fmt(i.saldo) + ' ' + i.un}</div>
+              </td>
+              <td class="fl-q">${fmtFolha(qtde)}</td>
+              <td>${i.un || '—'}</td>
+              <td>${res}</td>
+              <td class="fl-chk"><span class="chk" id="chk_${i.cod}">✓</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
     </div>`;
-  }).join('');
   atualizarInsumosChk();
 }
 

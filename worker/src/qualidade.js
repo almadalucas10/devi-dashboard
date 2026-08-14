@@ -197,6 +197,7 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
     nome: get(d, "cDescricao", "cNomeProduto", "cDescricaoItem") ?? "",
     un: get(d, "cUnidade", "nUnidade") ?? "",
     quantidade: get(d, "nQtde") ?? null,
+    reservado: get(d, "cReservado") ?? "",
     _id: get(d, "nIdProdutoMalha", "nCodProduto"),
   })).filter((i) => i.codigo || i.nome);
 
@@ -272,5 +273,9 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
     op, nCodOP: get(ident, "nCodOP") ?? null, sku,
     produto: get(ident, "cDescricaoProduto", "cDescricao") ?? produtoDesc,
     nCodProduto, qtd: qtdOP, origem, itens,
+    // campos da folha (clone do modelo impresso pelo Omie)
+    previsao: get(ident, "dDtPrevisao") ?? "",
+    situacao: "Em andamento",            // lista só traz OPs abertas
+    tipoProduto: "04 - Produto Acabado",
   };
 }
