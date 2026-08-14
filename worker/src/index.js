@@ -431,6 +431,15 @@ export default {
     // ================= QUALIDADE — fichas do dia e ficha de uma OP =================
     // Cache R2 com TTL + stale-while-revalidate: o Omie ao vivo leva 10-40s e pende;
     // o cache garante resposta rápida e estável. O sync (cron 30min) aquece a lista.
+    if (url.pathname === "/api/qualidade/debug/anexo") {
+      try {
+        const { obterAnexo } = await import("./qualidade.js");
+        const nIdAnexo = url.searchParams.get("nIdAnexo");
+        const nId = url.searchParams.get("nId");
+        if (!nIdAnexo || !nId) return json({ erro: "passe ?nIdAnexo= e ?nId=" }, 400);
+        return json(await obterAnexo(env, nIdAnexo, nId));
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/debug/anexos") {
       try {
         const { listarAnexos } = await import("./qualidade.js");

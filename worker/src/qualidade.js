@@ -120,6 +120,13 @@ async function catalogoProdutos(env) {
   return _cat;
 }
 
+/** Debug — ObterAnexo: link de download do anexo (confere o que o Omie serve) */
+export async function obterAnexo(env, nIdAnexo, nId) {
+  return chamarOmie(env, "/geral/anexo/", "ObterAnexo", {
+    nIdAnexo: Number(nIdAnexo), cTabela: CTABELA_OP, nId: Number(nId),
+  });
+}
+
 /** Debug — ListarAnexo: descobre o cTabela da OP (anexar arquivo pela interface, ler aqui) */
 export async function listarAnexos(env, nId, cTabela = "") {
   return chamarOmie(env, "/geral/anexo/", "ListarAnexo", {
