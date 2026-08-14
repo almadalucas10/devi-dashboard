@@ -225,6 +225,9 @@
   .topoLista{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap}
   .topoLista h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
   .topoLista .sub{font-size:12px; color:var(--txt3); margin-top:2px}
+  .grupo{font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+    color:var(--txt3); margin:16px 2px 8px}
+  .grupo:first-child{margin-top:0}
 
   .opc{background:var(--painel); border:1px solid var(--linha); border-radius:12px;
     padding:12px 14px; margin-bottom:9px; cursor:pointer; display:flex;
@@ -510,7 +513,7 @@ function statusFicha(op){ return FICHAS[op]; }
 function renderLista(){
   const ST = { nova: ['nova', 'sem ficha'], parcial: ['parcial', 'parcial'],
                completa: ['completa', 'completa'], nc: ['nc', 'não conforme'] };
-  document.getElementById('opLista').innerHTML = OPS.map(o => {
+  const card = o => {
     const f = FICHAS[o.op];
     const [cls, label] = f ? (f.nc ? ST.nc : (f.completa ? ST.completa : ST.parcial)) : ST.nova;
     const p = (o.sku && PRODUTOS[o.sku]) || {};
@@ -519,7 +522,14 @@ function renderLista(){
         <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div></div>
       <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
         <span class="st ${cls}">${label}</span></div></div>`;
-  }).join('');
+  };
+  // separa as bases (FX000) dos demais SKUs
+  const base   = OPS.filter(o => o.sku === 'FX000');
+  const outros = OPS.filter(o => o.sku !== 'FX000');
+  const grupos = [];
+  if(outros.length) grupos.push(`<div class="grupo">Produtos acabados (${outros.length})</div>` + outros.map(card).join(''));
+  if(base.length)   grupos.push(`<div class="grupo">Base Kombucha (${base.length})</div>` + base.map(card).join(''));
+  document.getElementById('opLista').innerHTML = grupos.join('');
 }
 
 function mostrarLista(){ document.body.classList.add('lista'); renderLista(); }
