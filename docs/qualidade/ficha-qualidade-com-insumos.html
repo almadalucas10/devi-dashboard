@@ -98,8 +98,8 @@
   .folha tbody tr.conf .fl-desc{text-decoration:line-through; color:#666}
   .fl-cod{font-weight:700; font-size:12px}
   .fl-desc{color:#444; font-size:11.5px; margin-top:1px}
-  .fl-saldo{font-size:10.5px; margin-top:2px}
   .fl-q{white-space:nowrap; font-weight:600; text-align:right}
+  .fl-est{white-space:nowrap; text-align:right; font-weight:600}
   .folha .fl-chk{width:34px; text-align:center}
   .folha .chk{width:22px; height:22px; border:1.5px solid #777; border-radius:4px;
     background:#fff; font-size:13px}
@@ -779,23 +779,22 @@ function montarInsumos(){
       </div>
       <div class="fl-titulo">Itens da Ordem de Produção</div>
       <table>
-        <thead><tr><th>Descrição do Item</th><th style="text-align:right">Quantidade</th><th>Unidade</th><th>Reservado</th><th class="fl-chk"></th></tr></thead>
+        <thead><tr><th>Descrição do Item</th><th style="text-align:right">Quantidade</th><th>Unidade</th><th style="text-align:right">Estoque</th><th class="fl-chk"></th></tr></thead>
         <tbody>
           ${lista.map(i => {
             const qtde = i.quantidade ?? 0;
             const semSaldo = i.saldo === null || i.saldo === undefined;
             const falta = !semSaldo && i.saldo < qtde;
             const conf = conferidos.has(i.cod) ? 'conf' : '';
-            const res = i.reservado === 'S' ? 'Sim' : i.reservado === 'N' ? 'Não' : '—';
+            const est = semSaldo ? '—' : (falta ? 'falta ' + fmtQ(qtde - i.saldo) : fmt(i.saldo)) + ' ' + (i.un || '');
             return `<tr class="${conf}" onclick="toggleInsumo('${i.cod}')">
               <td>
                 <div class="fl-cod">${i.cod}</div>
                 <div class="fl-desc">${i.nome || i.cod}</div>
-                <div class="fl-saldo" style="color:${falta ? '#b91c1c' : '#666'}">${semSaldo ? 'saldo —' : falta ? 'falta ' + fmtQ(qtde - i.saldo) + ' ' + i.un : 'estoque: ' + fmt(i.saldo) + ' ' + i.un}</div>
               </td>
               <td class="fl-q">${fmtFolha(qtde)}</td>
               <td>${i.un || '—'}</td>
-              <td>${res}</td>
+              <td class="fl-est" style="color:${falta ? '#b91c1c' : '#333'}">${est}</td>
               <td class="fl-chk"><span class="chk" id="chk_${i.cod}">✓</span></td>
             </tr>`;
           }).join('')}
