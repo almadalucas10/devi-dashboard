@@ -121,9 +121,10 @@ async function catalogoProdutos(env) {
 }
 
 /** Debug — ListarAnexo: descobre o cTabela da OP (anexar arquivo pela interface, ler aqui) */
-export async function listarAnexos(env, nId) {
+export async function listarAnexos(env, nId, cTabela = "") {
   return chamarOmie(env, "/geral/anexo/", "ListarAnexo", {
     nPagina: 1, nRegPorPagina: 50, nId: Number(nId),
+    ...(cTabela ? { cTabela } : {}),
   });
 }
 

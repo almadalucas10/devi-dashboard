@@ -435,8 +435,9 @@ export default {
       try {
         const { listarAnexos } = await import("./qualidade.js");
         const nId = url.searchParams.get("nId");
+        const cTabela = url.searchParams.get("cTabela") || "";
         if (!nId) return json({ erro: "passe ?nId=NCODOP da OP" }, 400);
-        return json(await listarAnexos(env, nId));
+        return json(await listarAnexos(env, nId, cTabela));
       } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
     }
     if (url.pathname === "/api/qualidade/fichas") {
