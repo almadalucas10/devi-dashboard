@@ -438,7 +438,21 @@ export default {
         const cTabela = url.searchParams.get("cTabela") || "";
         if (!nId) return json({ erro: "passe ?nId=NCODOP da OP" }, 400);
         return json(await listarAnexos(env, nId, cTabela));
-      } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "POST") {
+      try {
+        const { anexarFichaNaOp } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const body = await request.json();
+        const nCodOP = Number(body.nCodOP || op);
+        const ficha = body.ficha || {};
+        const debug = url.searchParams.get("debug") === "1";
+        if (!nCodOP || !Object.keys(ficha.blocos || {}).length) {
+          return json({ erro: "envie { nCodOP, ficha } com blocos preenchidos" }, 400);
+        }
+        return json(await anexarFichaNaOp(env, nCodOP, { ...ficha, op: ficha.op || op }, debug));
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
     if (url.pathname === "/api/qualidade/fichas") {
       try {

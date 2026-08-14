@@ -128,6 +128,207 @@ export async function listarAnexos(env, nId, cTabela = "") {
   });
 }
 
+// ============================================================================
+// Anexo automático da ficha na OP — cTabela descoberto em 14/08/2026:
+// anexar um arquivo pela interface do Omie e ler com ListarAnexo retorna
+// cTabela = "ordem-producao" e nId = nCodOP da OP.
+// ============================================================================
+const CTABELA_OP = "ordem-producao";
+const PREFIXO_ANEXO = "ficha-qualidade-";
+
+// CRC32 (ZIP exige) — tabela padrão
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/** MD5 (Rivest) — exigido pelo IncluirAnexo (cMd5 do conteúdo compactado) */
+function md5hex(u8) {
+  const K = [0xd76aa478,0xe8c7b756,0x242070db,0xc1bdceee,0xf57c0faf,0x4787c62a,0xa8304613,0xfd469501,0x698098d8,0x8b44f7af,0xffff5bb1,0x895cd7be,0x6b901122,0xfd987193,0xa679438e,0x49b40821,0xf61e2562,0xc040b340,0x265e5a51,0xe9b6c7aa,0xd62f105d,0x02441453,0xd8a1e681,0xe7d3fbc8,0x21e1cde6,0xc33707d6,0xf4d50d87,0x455a14ed,0xa9e3e905,0xfcefa3f8,0x676f02d9,0x8d2a4c8a,0xfffa3942,0x8771f681,0x6d9d6122,0xfde5380c,0xa4beea44,0x4bdecfa9,0xf6bb4b60,0xbebfbc70,0x289b7ec6,0xeaa127fa,0xd4ef3085,0x04881d05,0xd9d4d039,0xe6db99e5,0x1fa27cf8,0xc4ac5665,0xf4292244,0x432aff97,0xab9423a7,0xfc93a039,0x655b59c3,0x8f0ccc92,0xffeff47d,0x85845dd1,0x6fa87e4f,0xfe2ce6e0,0xa3014314,0x4e0811a1,0xf7537e82,0xbd3af235,0x2ad7d2bb,0xeb86d391];
+  const S = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  const len = u8.length;
+  const bitLen = len * 8;
+  const padded = new Uint8Array((((len + 8) >> 6) + 1) << 6);
+  padded.set(u8);
+  padded[len] = 0x80;
+  const dv = new DataView(padded.buffer);
+  dv.setUint32(padded.length - 8, bitLen >>> 0, true);
+  dv.setUint32(padded.length - 4, Math.floor(bitLen / 0x100000000), true);
+  let A0 = 1732584193 >>> 0, B0 = 4023233417 >>> 0, C0 = 2562383102 >>> 0, D0 = 271733878 >>> 0;
+  const M = new Uint32Array(16);
+  const rotl = (x, n) => (x << n) | (x >>> (32 - n));
+  for (let i = 0; i < padded.length; i += 64) {
+    for (let j = 0; j < 16; j++) M[j] = dv.getUint32(i + j * 4, true);
+    let A = A0, B = B0, C = C0, D = D0;
+    for (let j = 0; j < 64; j++) {
+      let Fn, g;
+      if (j < 16) { Fn = (B & C) | (~B & D); g = j; }
+      else if (j < 32) { Fn = (D & B) | (~D & C); g = (5 * j + 1) % 16; }
+      else if (j < 48) { Fn = B ^ C ^ D; g = (3 * j + 5) % 16; }
+      else { Fn = C ^ (B | ~D); g = (7 * j) % 16; }
+      const tmp = D; D = C; C = B;
+      B = (B + rotl((A + Fn + K[j] + M[g]) >>> 0, S[j])) >>> 0;
+      A = tmp;
+    }
+    A0 = (A0 + A) >>> 0; B0 = (B0 + B) >>> 0; C0 = (C0 + C) >>> 0; D0 = (D0 + D) >>> 0;
+  }
+  const out = new Uint8Array(16);
+  const od = new DataView(out.buffer);
+  od.setUint32(0, A0, true); od.setUint32(4, B0, true); od.setUint32(8, C0, true); od.setUint32(12, D0, true);
+  return [...out].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** ZIP sem compressão (método store) — o Omie exige o arquivo compactado em ZIP */
+function zipStore(arquivos) {
+  const chunks = []; let offset = 0;
+  const central = [];
+  for (const { nome, dados } of arquivos) {
+    const data = Buffer.isBuffer(dados) ? dados : Buffer.from(dados, "utf8");
+    const crc = crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);            // assinatura
+    local.writeUInt16LE(20, 4);                    // versão
+    local.writeUInt16LE(0x0800, 6);                // flags UTF-8
+    local.writeUInt16LE(0, 8);                     // método store
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nome.length, 26);
+    const nameBuf = Buffer.from(nome, "utf8");
+    chunks.push(local, nameBuf, data);
+    const cd = Buffer.alloc(46);
+    cd.writeUInt32LE(0x02014b50, 0);               // assinatura central
+    cd.writeUInt16LE(20, 4);
+    cd.writeUInt16LE(0x0800, 6);
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt32LE(crc, 16);
+    cd.writeUInt32LE(data.length, 20);
+    cd.writeUInt32LE(data.length, 24);
+    cd.writeUInt16LE(nome.length, 28);
+    cd.writeUInt32LE(offset, 42);
+    central.push(Buffer.concat([cd, nameBuf]));
+    offset += 30 + nome.length + data.length;
+  }
+  const cdStart = offset;
+  const cdData = Buffer.concat(central);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(central.length, 8);
+  eocd.writeUInt16LE(central.length, 10);
+  eocd.writeUInt32LE(cdData.length, 12);
+  eocd.writeUInt32LE(cdStart, 16);
+  return Buffer.concat([...chunks, cdData, eocd]);
+}
+
+/** PDF texto mínimo (Helvetica) com o conteúdo da ficha */
+function pdfDaFicha(ficha) {
+  const linhas = [];
+  const add = t => linhas.push(t);
+  add("DEVI PRODUCAO DE BEBIDAS LTDA");
+  add(`Ficha de Qualidade - OP ${ficha.op || ""}`);
+  add(`Produto: ${ficha.sku || ""} - ${ficha.produto || ""}`);
+  add(`Quantidade: ${ficha.qtd ?? ""} ${ficha.un || ""}  |  Registrado: ${ficha.registradoEm || ""}`);
+  add("");
+  for (const [bloco, dados] of Object.entries(ficha.blocos || {})) {
+    add(`${bloco.toUpperCase()}:`);
+    add(JSON.stringify(dados));
+    add("");
+  }
+  const ncs = ficha.naoConformidades || [];
+  add(`NAO CONFORMIDADES (${ncs.length}):`);
+  for (const nc of ncs) {
+    add(`- ${nc.bloco}/${nc.campo}${nc.leitura ? " (leitura " + nc.leitura + ")" : ""}: ${nc.valor} (spec ${nc.spec.min} a ${nc.spec.max})`);
+  }
+  const esc = s => String(s ?? "").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7E]/g, "?");
+  let out = "%PDF-1.4\n";
+  const objs = [];
+  objs.push("<< /Type /Catalog /Pages 2 0 R >>");
+  objs.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  const conteudo = [];
+  let y = 790;
+  for (const l of linhas) {
+    conteudo.push(`BT /F1 10 Tf 50 ${y} Td (${esc(l)}) Tj ET`);
+    y -= 14;
+    if (y < 40) { conteudo.push(`BT /F1 10 Tf 50 40 Td (continua...) Tj ET`); break; }
+  }
+  const stream = conteudo.join("\n");
+  objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`);
+  objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  objs.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+  const offsets = [0];
+  for (let i = 0; i < objs.length; i++) {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${objs[i]}\nendobj\n`;
+  }
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= objs.length; i++) out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return out;
+}
+
+/** Anexa (ou substitui) o PDF da ficha na OP — zip + base64 conforme o Omie exige */
+export async function anexarFichaNaOp(env, nCodOP, ficha, debug = false) {
+  const nomePdf = `${PREFIXO_ANEXO}${String(ficha.op || nCodOP).replace(/\D/g, "")}.pdf`;
+  const pdf = pdfDaFicha(ficha);
+  const zip = zipStore([{ nome: nomePdf, dados: pdf }]);
+  const cArquivo = zip.toString("base64");
+  // cMd5 = MD5 da string base64 (verificado com o Omie em 14/08/2026 — não dos bytes)
+  const cMd5 = md5hex(new TextEncoder().encode(cArquivo));
+
+  // debug: quais interpretações de MD5 o Omie espera?
+  if (debug) {
+    const cand = {
+      md5Zip: md5hex(zip),
+      md5B64: md5hex(new TextEncoder().encode(cArquivo)),
+      md5Pdf: md5hex(new TextEncoder().encode(pdf)),
+      lenZip: zip.length, lenB64: cArquivo.length, lenPdf: pdf.length,
+    };
+    try {
+      const r = await chamarOmie(env, "/geral/anexo/", "IncluirAnexo", {
+        cCodIntAnexo: "", cTabela: CTABELA_OP, nId: Number(nCodOP),
+        cNomeArquivo: nomePdf, cTipoArquivo: "pdf", cArquivo, cMd5: cand.md5B64,
+      });
+      return { ok: true, ...(r || {}), candidatos: cand };
+    } catch (e) { return { erro: String(e.message), candidatos: cand }; }
+  }
+
+  // substitui apenas anexos da própria ficha (nunca apaga arquivos anexados à mão)
+  try {
+    const existentes = await listarAnexos(env, nCodOP, CTABELA_OP);
+    for (const an of existentes.listaAnexos || []) {
+      if (String(an.cNomeArquivo || "").startsWith(PREFIXO_ANEXO)) {
+        try {
+          await chamarOmie(env, "/geral/anexo/", "ExcluirAnexo", {
+            nIdAnexo: an.nIdAnexo, nId: Number(nCodOP), cTabela: CTABELA_OP,
+          });
+        } catch (e) { console.error(`[qualidade] excluir anexo antigo: ${e.message}`); }
+      }
+    }
+  } catch (e) { /* sem anexos ainda */ }
+
+  const r = await chamarOmie(env, "/geral/anexo/", "IncluirAnexo", {
+    cCodIntAnexo: "",
+    cTabela: CTABELA_OP,
+    nId: Number(nCodOP),
+    cNomeArquivo: nomePdf,
+    cTipoArquivo: "pdf",
+    cArquivo,
+    cMd5,
+  });
+  return { ok: true, nomeArquivo: nomePdf, ...(r || {}) };
+}
+
 /** Mapa codigo_produto → { sku, descricao, un } via ListarProdutos (chave real: produto_servico_cadastro). */
 async function mapaProdutoParaSku(env) {
   const cat = await catalogoProdutos(env);

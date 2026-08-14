@@ -445,6 +445,7 @@
 
 <div class="rod">
   <div class="resumo" id="resumo"></div>
+  <div id="anexoStatus" style="display:none; margin-bottom:10px; font-size:13px; color:var(--txt2)"></div>
   <button class="btn pri" onclick="salvar()">Concluir ficha</button>
   <pre id="saida" style="display:none"></pre>
 </div>
@@ -511,6 +512,7 @@ const FICHAS = {
   '523': { blocos: 1, total: 4, nc: false, completa: false }
 };
 let opAtual = null;
+let nCodOPAtual = null; // nCodOP da OP aberta — usado no anexo automático na OP
 let opQtd = 4464; // quantidade da OP aberta — escala a lista de insumos
 let opUn = 'UND';  // unidade da OP aberta (ex.: L para Base Kombucha)
 let receitaReal = null;          // insumos reais da OP (endpoint) — substitui o mock
@@ -563,6 +565,8 @@ function resetarFicha(){
   addRec();
   document.getElementById('resumo').style.display = 'none';
   document.getElementById('saida').style.display = 'none';
+  const anexoStatus = document.getElementById('anexoStatus');
+  if(anexoStatus) anexoStatus.style.display = 'none';
   try { window.scrollTo(0, 0); } catch(e) {}
 }
 
@@ -570,6 +574,7 @@ function abrirOp(op){
   const o = OPS.find(x => x.op === op);
   if(!o) return;
   opAtual = op;
+  nCodOPAtual = o.nCodOP || null;
   opQtd = o.qtd || 4464;
   opUn = o.un || (o.sku === 'FX000' ? 'L' : 'UND');
   receitaReal = receitasCache[op] || null;
@@ -1220,7 +1225,7 @@ function atualizar(){
 }
 
 // ---------------------------------------------------------------------------
-function salvar(){
+async function salvar(){
   const sku = skuAtual;
   const fam = (PRODUTOS[sku] || {}).familia || 'kombucha';
   const g = c => { const e=document.querySelector(`[data-c="${c}"]`);
@@ -1248,7 +1253,7 @@ function salvar(){
     return;
   }
 
-  const d = { op:'2026/00527', nCodOP:0, sku:sku, sigla:SIGLA[sku]||'',
+  const d = { op: opAtual || '2026/00527', nCodOP: nCodOPAtual || 0, sku:sku, sigla:SIGLA[sku]||'',
               familia:fam, dataProducao:'2026-08-12', blocos:{} };
 
   // um bloco por vez — na versão real cada um grava ao sair (PATCH /bloco/:nome)
@@ -1349,6 +1354,26 @@ function salvar(){
     + `// OP #${opAtual || '—'} salva — volte em "← OPs abertas" para ver o status na lista\n\n`
     + JSON.stringify(d, null, 2);
   s.scrollIntoView({behavior:'smooth'});
+
+  // ---- anexo automático na OP (Omie): PDF da ficha → zip → IncluirAnexo ----
+  const anexo = document.getElementById('anexoStatus');
+  if(anexo && nCodOPAtual){
+    anexo.style.display = 'block';
+    anexo.textContent = '⏳ Gerando e anexando o PDF na OP…';
+    try{
+      const resp = await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nCodOP: nCodOPAtual, ficha: d })
+      });
+      const j = await resp.json();
+      anexo.textContent = j.ok
+        ? `✅ Anexo na OP: ${j.cNomeArquivo || j.nomeArquivo || 'PDF'}`
+        : `⚠ Anexo falhou: ${String(j.erro || '').slice(0, 160)}`;
+    }catch(e){
+      anexo.textContent = '⚠ Anexo falhou (rede): ' + e.message;
+    }
+  }
 }
 
 montarInsumos();

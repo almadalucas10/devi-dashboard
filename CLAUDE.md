@@ -94,3 +94,15 @@ Ver `context/features.md` — documenta todas as decisões de arquitetura, mapea
 - Saldo vem da mesma fonte nos dois (mesmo local de estoque + `PosicaoEstoque`).
 - Caches de qualidade (`qualidade-ficha-*`, `qualidade-fichas`) são invalidadas automaticamente no `deploy.sh` após deploy do worker (passo 3.1).
 - Debug: `GET /api/qualidade/ficha/:nCodOP?raw=1` devolve o retorno bruto do Omie.
+
+## Anexo automático da ficha na OP (Omie)
+
+Ao concluir a ficha, o formulário chama `POST /api/qualidade/ficha/:nCodOP` e o worker anexa o PDF da ficha na OP. Fatos verificados com o Omie (14/08/2026):
+
+- **`cTabela` da OP = `"ordem-producao"`** (descoberto anexando um arquivo na interface e lendo com `ListarAnexo`). `nId` = `nCodOP` da OP.
+- **`cArquivo` = conteúdo compactado em ZIP (método store) e convertido em base64** — não é só base64.
+- **`cMd5` = MD5 da STRING base64** (do `cArquivo`), não dos bytes do zip — verificado por tentativa (`Esperado o MD5` no erro do Omie).
+- `ListarAnexo` exige `cTabela` (senão erro "preenchimento obrigatório"); retorna `listaAnexos` com `nIdAnexo`.
+- Substituição: `ExcluirAnexo` (por `nIdAnexo`) + `IncluirAnexo`. O worker só substitui anexos com prefixo `ficha-qualidade-` — nunca apaga arquivos anexados à mão (ex.: `TESTE.txt`).
+- `ObterAnexo` devolve `cLinkDownload` (link do PDF para o painel).
+- Debug da descoberta: `GET /api/qualidade/debug/anexos?nId=NCODOP&cTabela=ordem-producao`.
