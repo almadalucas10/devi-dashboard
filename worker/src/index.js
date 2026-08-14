@@ -221,6 +221,14 @@ async function runHeavySync(env) {
       }
     } catch (e) { console.error(`[heavy] ⚠️ KPIs calendário: ${e.message}`); }
 
+    // Qualidade — pré-aquece a lista de OPs abertas (cache do formulário do tablet)
+    try {
+      const { listarFichasDoDia } = await import("./qualidade.js");
+      const dados = await listarFichasDoDia(env, new Date().toISOString().slice(0, 10));
+      await writeJson(env, R2_KEYS.qualidadeFichas, { _ts: Date.now(), dados });
+      console.log(`[heavy] ✅ Qualidade fichas: ${dados.fichas.length} OPs`);
+    } catch (e) { console.error(`[heavy] ⚠️ Qualidade fichas: ${e.message}`); }
+
     await writeJson(env, R2_KEYS.omie, data);
     await writeSyncMeta(env, { omie: Date.now() });
     console.log(`[heavy] ✅ R2 salvo`);
@@ -421,11 +429,33 @@ export default {
     }
 
     // ================= QUALIDADE — fichas do dia e ficha de uma OP =================
+    // Cache R2 com TTL + stale-while-revalidate: o Omie ao vivo leva 10-40s e pende;
+    // o cache garante resposta rápida e estável. O sync (cron 30min) aquece a lista.
     if (url.pathname === "/api/qualidade/fichas") {
       try {
         const { listarFichasDoDia } = await import("./qualidade.js");
         const data = url.searchParams.get("data") || new Date().toISOString().slice(0, 10);
-        return json(await listarFichasDoDia(env, data));
+        const KEY = R2_KEYS.qualidadeFichas;
+        const FRESCO_MS = 15 * 60 * 1000;
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
+          return json(cached.dados);
+        }
+        if (cached && cached._ts) {
+          // stale: responde com o cache e refresca em background (usuário nunca espera o Omie)
+          ctx.waitUntil((async () => {
+            try {
+              const dados = await listarFichasDoDia(env, data);
+              await writeJson(env, KEY, { _ts: Date.now(), dados });
+              console.log(`[qualidade] refresh fichas: ${dados.fichas.length} OPs`);
+            } catch (e) { console.error(`[qualidade] refresh fichas: ${e.message}`); }
+          })());
+          return json(cached.dados);
+        }
+        // sem cache (primeira vez) — calcula ao vivo e guarda
+        const dados = await listarFichasDoDia(env, data);
+        await writeJson(env, KEY, { _ts: Date.now(), dados });
+        return json(dados);
       } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
     }
     if (url.pathname.startsWith("/api/qualidade/ficha/")) {
@@ -433,7 +463,24 @@ export default {
         const { fichaDaOp } = await import("./qualidade.js");
         const op = decodeURIComponent(url.pathname.split("/").pop());
         const comSaldo = url.searchParams.get("saldo") !== "0";
-        return json(await fichaDaOp(env, op, comSaldo));
+        const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
+        const FRESCO_MS = 60 * 60 * 1000;
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
+          return json(cached.dados);
+        }
+        if (cached && cached._ts) {
+          ctx.waitUntil((async () => {
+            try {
+              const dados = await fichaDaOp(env, op, comSaldo);
+              await writeJson(env, KEY, { _ts: Date.now(), dados });
+            } catch (e) { console.error(`[qualidade] refresh ficha ${op}: ${e.message}`); }
+          })());
+          return json(cached.dados);
+        }
+        const dados = await fichaDaOp(env, op, comSaldo);
+        await writeJson(env, KEY, { _ts: Date.now(), dados });
+        return json(dados);
       } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
     }
 if (url.pathname === "/api/health") {
