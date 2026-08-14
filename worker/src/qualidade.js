@@ -16,15 +16,6 @@ export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumo
 const EXCLUIR = new Set(['EMB08', 'MP0', 'INS024']);
 const excluido = (cod) => EXCLUIR.has(cod);
 
-// Códigos monitorados com saldo no almoxarifado (insumos.js) — só esses buscam
-// PosicaoEstoque; os demais ficam com saldo null.
-const MONITORADOS = new Set([
-  "MP018","MPR010","MPR016","MPR021","MP05","PRD00338","MPA001","MPR007","MPR015",
-  "MPR029","MP045","MP034","MP04","MP036","MP03","MP022","MP003","MPR024","MPR011",
-  "MP044","MP021","MPC002","MP032","MPC004","MPC005","MPR006","MP030","MPR012",
-  "MPR013","MPR022","MPA032","MP09","MP006","MP02","EMB01","EMB02"
-]);
-
 const NOMES = {
   // embalagem / produção
   EMB01:"Lata sleek 269 ml", EMB02:"Tampa 202 SOT", EMB04:"Lata (pack água)", EMB08:"Filme",
@@ -260,13 +251,14 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
     }
   }
 
-  // 3) Saldo do almoxarifado — só monitorados, lotes de 4 com pausa
+  // 3) Saldo do almoxarifado — TODOS os itens da OP (rótulo, tampa, aroma, concentrado…),
+  //    lotes de 4 com pausa. Itens sem produto/sem posição no local ficam com saldo null.
   if (comSaldo && itens.length) {
     const cache = new Map();
     for (let i = 0; i < itens.length; i += 4) {
       const lote = itens.slice(i, i + 4);
       await Promise.all(lote.map(async (item) => {
-        item.saldo = MONITORADOS.has(item.codigo) ? await saldoDo(env, item.codigo, cache) : null;
+        item.saldo = await saldoDo(env, item.codigo, cache);
       }));
       if (i + 4 < itens.length) await new Promise((res) => setTimeout(res, 250));
     }
