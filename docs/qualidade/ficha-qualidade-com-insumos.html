@@ -975,10 +975,18 @@ function validar(inp, spec){
   inp.classList.remove('ok','al','er','info');
   if(msg){ msg.textContent=''; msg.className='msg'; }
   if(inp.value.trim()==='') return null;
+  if(!spec){
+    // Sem especificação: campo numérico valida formato; campo de texto registra sem validar
+    const im = inp.getAttribute('inputmode');
+    if(v===null && (im === 'decimal' || im === 'numeric')){
+      inp.classList.add('er');
+      if(msg){msg.textContent='valor inválido'; msg.className='msg er';} return 'er';
+    }
+    inp.classList.add('info');
+    if(msg){msg.textContent='sem especificação — registrado sem validar'; msg.className='msg info';} return 'info';
+  }
   if(v===null){ inp.classList.add('er');
     if(msg){msg.textContent='valor inválido'; msg.className='msg er';} return 'er'; }
-  if(!spec){ inp.classList.add('info');
-    if(msg){msg.textContent='sem especificação — registrado sem validar'; msg.className='msg info';} return 'info'; }
   if(v < spec.min || v > spec.max){
     inp.classList.add('er');
     if(msg){ msg.textContent=`fora — ${spec.min.toFixed(2)} a ${spec.max.toFixed(2)}`; msg.className='msg er'; }
@@ -1171,14 +1179,20 @@ function salvar(){
     return e && e.value.trim()!=='' ? e.value.trim() : null; };
 
   // Bloqueia fechamento com campo obrigatório em branco (observações fica de fora)
+  // e com itens da folha da OP ainda não conferidos.
   const pendentes = secVisiveis().filter(s =>
     s.dataset.sec !== 'observacoes' && !secPreenchida(s));
-  if(pendentes.length){
+  const itensFolha = insumosDaOp();
+  const folhaIncompleta = itensFolha.length > 0 && conferidos.size < itensFolha.length;
+  if(pendentes.length || folhaIncompleta){
     const res = document.getElementById('resumo');
     res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>` +
       pendentes.map(s => `<li><span>${s.querySelector('h2').textContent}</span>` +
         `<b style="color:var(--er2)">${s.querySelector('[data-est]').textContent}</b></li>`).join('') +
-      `</ul><div class="nc"><b>Preencha os campos pendentes para concluir a ficha.</b></div>`;
+      (folhaIncompleta
+        ? `<li><span>Folha da OP</span><b style="color:var(--er2)">${conferidos.size} de ${itensFolha.length} conferidos</b></li>`
+        : '') +
+      `</ul><div class="nc"><b>Preencha os campos pendentes e confira todos os itens da folha para concluir a ficha.</b></div>`;
     res.style.display = 'block';
     const saida = document.getElementById('saida');
     saida.style.display = 'none';
