@@ -1057,6 +1057,24 @@ function secVisiveis(){
     s => !s.hasAttribute('data-consulta') && !s.classList.contains('hid'));
 }
 
+// true quando todos os campos obrigatórios do bloco estão preenchidos
+// (observações não entra — campo livre). Mesma lógica do progresso.
+function secPreenchida(sec){
+  const nome = sec.dataset.sec;
+  const linhaOk = l => [...l.querySelectorAll('input, select')].every(i => i.value.trim() !== '');
+  if(nome === 'carbonatacao' || nome === 'fermentacao' || nome === 'estoque'){
+    const sel = nome === 'carbonatacao' ? '.cb' : nome === 'fermentacao' ? '.fb' : '.es';
+    const linhas = sec.querySelectorAll(sel);
+    return linhas.length > 0 && [...linhas].every(linhaOk);
+  }
+  if(nome === 'recravacao'){
+    const ins = sec.querySelectorAll('input[data-rec]');
+    return ins.length > 0 && [...ins].every(x => x.value.trim() !== '');
+  }
+  const req = sec.querySelectorAll('[data-req]');
+  return req.length > 0 && [...req].every(x => x.value.trim() !== '');
+}
+
 function aplicarFamilia(fam){
   fam = fam || 'kombucha';
   const blocos = BLOCO_FAMILIA[fam] || BLOCO_FAMILIA.kombucha;
@@ -1151,6 +1169,22 @@ function salvar(){
   const fam = (PRODUTOS[sku] || {}).familia || 'kombucha';
   const g = c => { const e=document.querySelector(`[data-c="${c}"]`);
     return e && e.value.trim()!=='' ? e.value.trim() : null; };
+
+  // Bloqueia fechamento com campo obrigatório em branco (observações fica de fora)
+  const pendentes = secVisiveis().filter(s =>
+    s.dataset.sec !== 'observacoes' && !secPreenchida(s));
+  if(pendentes.length){
+    const res = document.getElementById('resumo');
+    res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>` +
+      pendentes.map(s => `<li><span>${s.querySelector('h2').textContent}</span>` +
+        `<b style="color:var(--er2)">${s.querySelector('[data-est]').textContent}</b></li>`).join('') +
+      `</ul><div class="nc"><b>Preencha os campos pendentes para concluir a ficha.</b></div>`;
+    res.style.display = 'block';
+    const saida = document.getElementById('saida');
+    saida.style.display = 'none';
+    res.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
 
   const d = { op:'2026/00527', nCodOP:0, sku:sku, sigla:SIGLA[sku]||'',
               familia:fam, dataProducao:'2026-08-12', blocos:{} };
