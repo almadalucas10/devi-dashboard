@@ -393,10 +393,11 @@ function abrirOp(op){
 }
 
 // ---- integração com o endpoint do worker (mock quando file:// ou offline) ----
+const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
 async function carregarOPS(){
   if(location.protocol !== 'file:'){
     try{
-      const r = await fetch('/api/qualidade/fichas');
+      const r = await fetch(WORKER_URL + '/api/qualidade/fichas');
       const j = await r.json();
       if(j.fichas && j.fichas.length){
         OPS.length = 0;
@@ -406,7 +407,10 @@ async function carregarOPS(){
         }));
         OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
       }
-    }catch(e){}
+    }catch(e){
+      const el = document.getElementById('opLista');
+      if(el) el.innerHTML = '<div class="sub" style="padding:14px;color:var(--er2)">Não foi possível carregar as OPs do Omie — verifique o worker (' + e.message + ')</div>';
+    }
   }
   mostrarLista();
 }
@@ -414,7 +418,7 @@ async function carregarOPS(){
 async function carregarInsumosReais(op, nCodOP){
   if(location.protocol === 'file:') return;
   try{
-    const r = await fetch('/api/qualidade/ficha/' + encodeURIComponent(nCodOP || op));
+    const r = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(nCodOP || op));
     const j = await r.json();
     if(j.itens && j.itens.length){
       receitaReal = j.itens.map(i => ({
