@@ -579,6 +579,17 @@
   </div>
 </div>
 
+<!-- ============ VIEWER DE POPS — janela pop sobre o portal (iframe) ============ -->
+<div class="modal" id="modalPOPViewer" onclick="if(event.target===this)fecharPOPViewer()">
+  <div class="modalBox" style="max-width:920px;padding:0;overflow:hidden">
+    <div class="modalCab" style="padding:10px 14px;margin:0;border-bottom:1px solid var(--linha)">
+      <h2>📋 POPs de Processo</h2>
+      <button class="bx" style="font-size:24px" onclick="fecharPOPViewer()">×</button>
+    </div>
+    <iframe id="popFrame" title="POPs" style="display:block;width:100%;height:78vh;border:none;background:#0a0f16"></iframe>
+  </div>
+</div>
+
 <!-- ============ CONTROLE DE ENVASE (PC3) — modal unificado ============ -->
 <div class="modal" id="modalControle" onclick="if(event.target===this)fecharControles()">
   <div class="modalBox" style="max-width:680px">
@@ -848,7 +859,21 @@ function urlPOPs(pop, extra){
   if (fam) q.push('familia=' + encodeURIComponent(fam));
   return '/docs/qualidade/pops/' + (q.length ? '?' + q.join('&') : '');
 }
-function abrirPOPsViewer(){ window.open(urlPOPs(), '_blank'); }
+function abrirPOPFrame(url){
+  const m = document.getElementById('modalPOPViewer');
+  const f = document.getElementById('popFrame');
+  if(!m || !f) return;
+  f.src = url;
+  m.style.display = 'flex';
+}
+function fecharPOPViewer(){
+  const m = document.getElementById('modalPOPViewer');
+  if(!m) return;
+  m.style.display = 'none';
+  const f = document.getElementById('popFrame');
+  if(f) f.src = 'about:blank';
+}
+function abrirPOPsViewer(){ abrirPOPFrame(urlPOPs()); }
 function injetarLinksPOP(){
   document.querySelectorAll('.sec[data-sec]').forEach(sec => {
     if (sec.classList.contains('hid')) return;
@@ -857,14 +882,13 @@ function injetarLinksPOP(){
     if (!pops || sec.querySelector('.linkPOP')) return;
     const cab = sec.querySelector('.cab');
     if (!cab) return;
-    const link = document.createElement('a');
+    const link = document.createElement('button');
+    link.type = 'button';
     link.className = 'linkPOP';
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.href = urlPOPs(pops[0]);
     link.textContent = '📖 ver POP ' + pops[0].replace('POP','');
     if (pops.length > 1) link.textContent += '/' + pops[1].replace('POP','');
-    link.style.cssText = 'font-size:11px;color:var(--az2);text-decoration:none;' +
+    link.onclick = () => abrirPOPFrame(urlPOPs(pops[0]));
+    link.style.cssText = 'font-size:11px;color:var(--az2);cursor:pointer;font-family:inherit;' +
       'background:#0f1a24;border:1px solid #1c3a4f;border-radius:20px;padding:2px 9px;white-space:nowrap';
     cab.appendChild(link);
   });

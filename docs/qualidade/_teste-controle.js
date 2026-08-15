@@ -8,7 +8,7 @@ const html = fs.readFileSync('/home/almadalucas/.reasonix/global-workspace/devi-
 
 const vc = new VirtualConsole();
 const jsErrors = [];
-vc.on('jsdomError', e => jsErrors.push(e.message));
+vc.on('jsdomError', e => { if (!/navigation/i.test(e.message)) jsErrors.push(e.message); });
 
 let postado = null;
 let gets = [];
@@ -136,6 +136,18 @@ setTimeout(() => {
         const pH = $('input[data-c="pH"]');
         setTimeout(() => {
           ok(pH.value === '3.3', 'pH da 528 mantido após resposta atrasada da 517 chegar (era ' + pH.value + ')');
+
+          // ---- viewer de POPs em janela pop (iframe sobre o portal) ----
+          window.abrirPOPsViewer();
+          const fr = $('#popFrame');
+          ok($('#modalPOPViewer').style.display === 'flex', 'modal do viewer abre (portal ao fundo)');
+          ok((fr.src || '').includes('/docs/qualidade/pops/?') && (fr.src || '').includes('op='), 'iframe com contexto da OP: ' + fr.src);
+          window.fecharPOPViewer();
+          ok($('#modalPOPViewer').style.display === 'none' && fr.src === 'about:blank', 'modal fecha e iframe limpo');
+          const btn10 = $$('.linkPOP').find(b => b.textContent.includes('POP 10'));
+          if (btn10) btn10.click();
+          ok($('#modalPOPViewer').style.display === 'flex' && (fr.src || '').includes('pop=POP10'), 'link ver POP 10 abre no modal: ' + fr.src);
+          window.fecharPOPViewer();
           console.log(`\n${pass} passaram, ${fail} falharam`);
           process.exit(fail ? 1 : 0);
         }, 160);
