@@ -34,11 +34,11 @@ export function montarLinhaRegistro(r) {
 
 /** Primeira linha vazia (índice 1-based) na coluna A a partir da linha 3. */
 export async function primeiraLinhaVazia(env, token, spreadsheetId, tab) {
-  const colA = await getValues(env, token, `${tab}!A3:A2000`, spreadsheetId);
-  for (let i = 0; i < colA.length; i++) {
-    if (!String(colA[i] && colA[i][0] || "").trim()) return i + 3;
+  const colB = await getValues(env, token, `${tab}!B3:B2000`, spreadsheetId);
+  for (let i = 0; i < colB.length; i++) {
+    if (!String(colB[i] && colB[i][0] || "").trim()) return i + 3;
   }
-  return 3 + colA.length;
+  return 3 + colB.length;
 }
 
 /** Últimos registros (do fim da tabela para cima) + cabeçalho. Opcional: filtra por OP. */
@@ -46,7 +46,7 @@ export async function listarRegistros(env, n = 10, opFiltro = null) {
   const id = sheetId(env);
   if (!id) return { erro: "CONTROLE_PC3_ID não configurado" };
   const token = await getAccessToken(env);
-  const valores = await getValues(env, token, `${PC3_TAB}!A2:H2000`, id);
+  const valores = await getValues(env, token, `${PC3_TAB}!B2:I2000`, id);
   if (!valores.length) return { cabecalho: PC3_HEADERS, registros: [] };
   const cabecalho = valores[0];
   let linhas = valores.slice(1).filter((l) =>
@@ -68,10 +68,10 @@ export async function listarRegistros(env, n = 10, opFiltro = null) {
 export async function registrarControle(env, rec) {
   const id = sheetId(env);
   if (!id) return { ok: false, erro: "CONTROLE_PC3_ID não configurado" };
-  const linha = montarLinhaRegistro(rec);
+  const linha = ["", ...montarLinhaRegistro(rec)]; // A = espaçador; tabela real é B:I
   const token = await getAccessToken(env);
   const row = await primeiraLinhaVazia(env, token, id, PC3_TAB);
-  const range = `${PC3_TAB}!A${row}:H${row}`;
+  const range = `${PC3_TAB}!A${row}:I${row}`; // A (espaçador) + B:I (dados)
   const r = await setRange(env, token, id, range, linha);
   return { ok: true, linha: row, registrado: linha };
 }
