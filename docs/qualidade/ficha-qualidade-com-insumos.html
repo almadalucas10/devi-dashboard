@@ -574,7 +574,8 @@ function renderLista(){
     const dFer = (ehBase && o.data) ? diasFermentacao(o.data) : null;
     const corFer = dFer == null ? '' : (dFer >= 11 ? ' er' : (dFer >= 7 ? ' al' : ' ok'));
     const info = ehBase
-      ? (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
+      ? (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '') +
+        (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
       : (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '');
     return `<div class="opc" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
