@@ -122,6 +122,16 @@ export async function listarFichasDoDia(env, dataIso) {
       }
     }
   } catch (e) { console.error(`[qualidade] d1 fichas: ${e.message}`); }
+  // Insumos conferidos (do documento R2) — p/ o rodapé do portal
+  for (const f of lista) {
+    if (!f.status || f.status === 'sem ficha') continue;
+    try {
+      const doc = await lerFichaSalva(env, f.op);
+      const ci = (doc && doc.conferenciaInsumos) || [];
+      f.insumos_conferidos = ci.filter((c) => c.conferido).length;
+      f.insumos_total = ci.length;
+    } catch (e) { /* sem documento ainda */ }
+  }
   return { data: dataIso, fichas: lista };
 }
 
@@ -171,8 +181,12 @@ export async function salvarFicha(env, ficha) {
   const ncs = ficha.naoConformidades || [];
   const indice = ficha.indiceColeta ? JSON.stringify(ficha.indiceColeta) : null;
   const blocosStatus = ficha.blocos ? JSON.stringify(
-    Object.fromEntries(Object.entries(ficha.blocos).map(([b, v]) =>
-      [b, Array.isArray(v) ? v.length : (typeof v === "object" && v !== null ? "ok" : String(v ?? ""))]))) : null;
+    Object.fromEntries(Object.entries(ficha.blocos).map(([b, v]) => {
+      if (Array.isArray(v)) return [b, v.length];
+      if (v && typeof v === "object")
+        return [b, Object.values(v).some((x) => x !== null && x !== undefined && x !== "") ? "ok" : ""];
+      return [b, String(v ?? "")];
+    }))) : null;
   const agora = new Date().toISOString();
   await env.QUALIDADE_DB.prepare(
     `INSERT INTO fichas (op, n_cod_op, sku, sigla, familia, produto, qtd, un, previsao,

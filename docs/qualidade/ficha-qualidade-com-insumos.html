@@ -623,7 +623,9 @@ function renderLista(){
       const preenchido = v => v != null && v !== '' && v !== 0 && v !== '0' && v !== false;
       const feitos = nomes.filter(n => preenchido(bs[n.toLowerCase()]));
       const chips = feitos.map(n => `<span class="bq on">${BLOCO_NOME[n] || n}</span>`).join('');
-      if (chips) blocosTxt = `<div class="blocos">${chips}<span class="bqcount">${feitos.length}/${nomes.length}</span></div>`;
+      const insu = (o.insumos_conferidos || 0) > 0
+        ? `<span class="bq on">🧾 Insumos ${o.insumos_conferidos}/${o.insumos_total}</span>` : '';
+      if(chips || insu) blocosTxt = `<div class="blocos">${insu}${chips}<span class="bqcount">${feitos.length}/${nomes.length}</span></div>`;
     } else if (demo) {
       blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
     }
@@ -752,7 +754,8 @@ function preencherOPS(fichas){
     op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
     nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
     data: f.data || '', status: f.status || '', nc: f.nc || 0,
-    blocos_status: f.blocos_status || null
+    blocos_status: f.blocos_status || null,
+    insumos_conferidos: f.insumos_conferidos || 0, insumos_total: f.insumos_total || 0
   }));
   OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
 }
@@ -839,9 +842,9 @@ function aplicarFichaSalva(f){
   (b.recravacao||[]).forEach(r => { const id = addRec();
     setV(`rec_${id}_altura`,r.altura); setV(`rec_${id}_espessura`,r.espessura);
     setV(`rec_${id}_transpasse`,r.transpasse); });
-  // conferência de insumos salva
+  // conferência de insumos salva — re-renderiza as linhas (checkmarks) após aplicar
   (f.conferenciaInsumos||[]).forEach(c => { if(c.conferido) conferidos.add(c.codigo); });
-  if(f.conferenciaInsumos) atualizarInsumosChk();
+  if(f.conferenciaInsumos && f.conferenciaInsumos.some(c => c.conferido)) montarInsumos();
   atualizar();
 }
 
@@ -1207,7 +1210,7 @@ function montarInsumos(){
               <td class="fl-q">${fmtFolha(qtde)}</td>
               <td>${i.un || '—'}</td>
               <td class="fl-est" style="color:${falta ? '#b91c1c' : '#333'}">${est}</td>
-              <td class="fl-chk"><span class="chk" id="chk_${i.cod}">✓</span></td>
+              <td class="fl-chk"><span class="chk${conferidos.has(i.cod) ? ' on' : ''}" id="chk_${i.cod}">✓</span></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -1571,13 +1574,16 @@ let _assinaturaRascunho = '';
 // Persistência local (localStorage) — salva a cada mudança, sobrevive a navegação/offline
 function temBloco(f){
   const b = (f && f.blocos) || {};
-  return Object.keys(b).some(n => {
+  const temB = Object.keys(b).some(n => {
     const v = b[n];
     if(Array.isArray(v)) return v.length > 0;
     if(v && typeof v === 'object')
       return Object.values(v).some(x => x !== null && x !== undefined && x !== '');
     return String(v || '') !== '';
   });
+  if(temB) return true;
+  // só conferência de insumos também conta (persiste mesmo sem blocos preenchidos)
+  return ((f && f.conferenciaInsumos) || []).some(c => c.conferido);
 }
 function salvarLocal(){
   if(!opAtual || location.protocol === 'file:') return;
@@ -1605,7 +1611,7 @@ function salvarRascunho(imediato){
         const v = d.blocos[n];
         return Array.isArray(v) ? v.length > 0 : (typeof v === 'object' && v !== null) || String(v || '') !== '';
       });
-      if(!temBloco) return;
+      if(!temBloco && !(d.conferenciaInsumos || []).some(c => c.conferido)) return;
       await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ficha: d })
