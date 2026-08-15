@@ -171,13 +171,7 @@
     .wrap{padding:10px; gap:10px}
     .folha{padding:10px 8px; font-size:12px}
     .sec.paper .corpo{padding:10px; margin:0 4px 6px}
-    /* linhas dinâmicas compactas — time/date não estouram a grade */
-    .cb, .es, .fb, .rc{gap:5px}
-    .cb input, .es input, .es select, .fb input, .rc input{font-size:13.5px; padding:8px 5px; min-height:40px}
-    .cb, .cb-cab{grid-template-columns:1fr 1fr 1fr 1fr 26px}
-    .fb, .fb-cab{grid-template-columns:1fr 1fr 1fr 1fr 1fr 26px}
-    .rc, .rc-cab{grid-template-columns:1fr 1fr 1fr 26px}
-    .es, .es-cab{grid-template-columns:50px 1fr 1fr 1fr 26px}
+    .folha{padding:10px 8px; font-size:12px}
     .fl-op{font-size:14px; margin:6px 0 4px}
     .fl-linha{font-size:11px}
     .folha table{table-layout:fixed; font-size:11px}
@@ -191,6 +185,16 @@
     .fl-q{font-size:11px}
     .fl-est{font-size:10.5px}
     .folha .fl-chk{width:26px}
+  }
+
+  /* linhas dinâmicas no smartphone/tablet pequeno — 2 colunas (date/time não se sobrepõem) */
+  @media (max-width: 640px){
+    .cb, .es, .fb, .rc{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+    .cb input, .es input, .es select, .fb input, .rc input{font-size:14px; padding:9px 8px; min-height:42px}
+    .cb .bx, .es .bx, .fb .bx, .rc .bx{grid-column:1 / -1; justify-self:end; width:36px; min-height:38px}
+    .cb-cab, .es-cab, .fb-cab, .rc-cab{display:none}
+    /* hora (carbonatação/estoque) e data (fermentação) ocupam a linha inteira */
+    .cb input:first-child, .es input:first-child, .fb input:first-child{grid-column:1 / -1}
   }
 
   /* ---------- carbonatacao ---------- */
