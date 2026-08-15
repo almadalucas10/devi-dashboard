@@ -338,6 +338,7 @@
     <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
     <button class="btn btnNav" onclick="abrirArquivo()">📄 Fichas</button>
     <button class="btn btnNav" onclick="abrirPOPs()">📋 POPs</button>
+    <button class="btn btnNav" onclick="abrirControles()">📑 Envase</button>
     <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
   </div>
   <div class="t1">
@@ -455,44 +456,6 @@
     </div>
   </div>
 
-  <!-- ============ CONTROLE DE ENVASE (PC3) — registro na aba MODELO REGISTRO ============ -->
-  <div class="sec paper hid" data-sec="controleEnvase" data-registro>
-    <div class="cab" onclick="alterna(this)">
-      <span class="chev">▸</span><h2>Controle de Envase · PC3</h2><span class="est info">registro</span>
-    </div>
-    <div class="corpo">
-      <div class="avi az">
-        Registro direto no <b>PC3 — MODELO REGISTRO</b>. OP e SKU vêm da ficha:
-        <b id="pc3Ctx">—</b> · cada "Gerar registro" vira uma linha na planilha.
-      </div>
-      <div class="g2">
-        <div class="campo"><label>Data</label>
-          <input type="date" id="pc3Data"><div class="msg"></div></div>
-        <div class="campo"><label>Horário Inicial</label>
-          <input type="time" id="pc3Hi"><div class="msg"></div></div>
-        <div class="campo"><label>OP</label>
-          <input type="text" inputmode="numeric" id="pc3Op" readonly><div class="msg"></div></div>
-        <div class="campo"><label>Quantidade</label>
-          <input type="text" inputmode="numeric" id="pc3Qtd" placeholder="un"><div class="msg"></div></div>
-        <div class="campo"><label>Horário Final</label>
-          <input type="time" id="pc3Hf"><div class="msg"></div></div>
-        <div class="campo"><label>Responsável</label>
-          <input type="text" id="pc3Resp"><div class="msg"></div></div>
-        <div class="campo"><label>CIP*</label>
-          <select id="pc3Cip">
-            <option value="">—</option><option value="1">1</option><option value="2">2</option>
-          </select><div class="msg"></div></div>
-        <div class="campo"><label>Observações</label>
-          <input type="text" id="pc3Obs"><div class="msg"></div></div>
-      </div>
-      <div class="ctl-nota">*CIP: 1 (água + soda + peracético); 2 (peracético)</div>
-      <button class="btn" id="btnGerar" onclick="gerarRegistro()">＋ Gerar registro no PC3</button>
-      <div class="ctl-aviso" id="ctlAviso" style="display:none"></div>
-      <h3 class="ctl-rec-tit" style="display:none" id="ctlRecTit">Registros desta OP</h3>
-      <div id="ctlRecentes"></div>
-    </div>
-  </div>
-
   <!-- ============ BASE KOMBUCHA (FX000) — PC04 Qualidade Kombucha V2 ============ -->
   <div class="sec paper hid" data-sec="starter">
     <div class="cab" onclick="alterna(this)">
@@ -600,6 +563,51 @@
       <button class="bx" style="font-size:24px" onclick="fecharPOPs()">×</button>
     </div>
     <div id="popLista" class="modalLista"></div>
+  </div>
+</div>
+
+<!-- ============ CONTROLE DE ENVASE (PC3) — modal unificado ============ -->
+<div class="modal" id="modalControle" onclick="if(event.target===this)fecharControles()">
+  <div class="modalBox" style="max-width:680px">
+    <div class="modalCab">
+      <h2>📑 Controle de Envase · PC3</h2>
+      <button class="bx" style="font-size:24px" onclick="fecharControles()">×</button>
+    </div>
+    <div class="ctl">
+      <div class="ctl-cab">
+        <div>
+          <div class="ctl-cod">PC3 — MODELO REGISTRO</div>
+          <div class="ctl-tit">Registro de Envase</div>
+        </div>
+        <div class="ctl-meta" id="pc3Ctx">registro unificado<br>das OPs</div>
+      </div>
+      <div class="ctl-grid">
+        <div class="campo"><label>Data</label>
+          <input type="date" id="pc3Data"><div class="msg"></div></div>
+        <div class="campo"><label>Horário Inicial</label>
+          <input type="time" id="pc3Hi"><div class="msg"></div></div>
+        <div class="campo"><label>OP</label>
+          <input type="text" inputmode="numeric" id="pc3Op" readonly><div class="msg"></div></div>
+        <div class="campo"><label>Quantidade</label>
+          <input type="text" inputmode="numeric" id="pc3Qtd" placeholder="un"><div class="msg"></div></div>
+        <div class="campo"><label>Horário Final</label>
+          <input type="time" id="pc3Hf"><div class="msg"></div></div>
+        <div class="campo"><label>Responsável</label>
+          <input type="text" id="pc3Resp"><div class="msg"></div></div>
+        <div class="campo"><label>CIP</label>
+          <select id="pc3Cip">
+            <option value="">—</option>
+            <option value="1">1 — água + soda + peracético</option>
+            <option value="2">2 — peracético</option>
+          </select><div class="msg"></div></div>
+        <div class="campo"><label>Observações</label>
+          <input type="text" id="pc3Obs"><div class="msg"></div></div>
+      </div>
+      <button class="btn pri" id="btnGerar" onclick="gerarRegistro()">＋ Gerar registro</button>
+      <div class="ctl-aviso" id="ctlAviso" style="display:none"></div>
+      <h3 class="ctl-rec-tit">Últimos registros</h3>
+      <div id="ctlRecentes" class="modalLista"></div>
+    </div>
   </div>
 </div>
 
@@ -811,7 +819,7 @@ async function abrirPOPs(){
 function fecharPOPs(){ const m = document.getElementById('modalPOPs'); if(m) m.style.display = 'none'; }
 
 // ---------------------------------------------------------------------------
-// Controle de Envase (PC3) — registro na aba MODELO REGISTRO, vinculado à OP
+// Controle de Envase (PC3) — modal unificado, aberto do cabeçalho da ficha
 // ---------------------------------------------------------------------------
 function avisoCtl(txt, ok){
   const a = document.getElementById('ctlAviso');
@@ -821,47 +829,49 @@ function avisoCtl(txt, ok){
 }
 function renderRegistros(j){
   const el = document.getElementById('ctlRecentes');
-  const tit = document.getElementById('ctlRecTit');
   const regs = (j && j.registros) || [];
-  if(!regs.length){ el.innerHTML = ''; if(tit) tit.style.display = 'none'; return; }
-  if(tit) tit.style.display = 'block';
+  if(!regs.length){ el.innerHTML = '<div class="sub" style="padding:10px;color:var(--txt3)">Nenhum registro ainda (ou planilha não compartilhada).</div>'; return; }
   el.innerHTML = regs.slice().reverse().map(r => `
     <div class="ctlRec">
       <b>${r['Data'] || '—'}</b>
       <span>${r['Horário Inicial'] || '—'}</span>
       <span>${r['Horário Final'] || '—'}</span>
-      <span>${r['Quantidade'] || ''} un${r['CIP*'] ? ' · CIP ' + r['CIP*'] : ''}</span>
+      <span>OP ${r['OP'] || '—'} · ${r['Quantidade'] || ''} un${r['CIP*'] ? ' · CIP ' + r['CIP*'] : ''}</span>
       <span class="r">${r['Responsável'] || ''}</span>
     </div>`).join('');
 }
-async function carregarRegistros(op){
+async function carregarRegistros(){
   const el = document.getElementById('ctlRecentes');
   if(!el) return;
-  el.innerHTML = '<div class="sub" style="padding:8px;color:var(--txt3)">Carregando registros…</div>';
+  el.innerHTML = '<div class="sub" style="padding:10px;color:var(--txt3)">Carregando registros…</div>';
   try{
-    const num = String(parseInt(String(op).split('/').pop().replace(/\D/g, ''), 10) || '');
-    const q = op ? ('?op=' + encodeURIComponent(num)) : '';
-    const r = await fetch(WORKER_URL + '/api/qualidade/controle/pc3' + q, { cache: 'no-store' });
+    const r = await fetch(WORKER_URL + '/api/qualidade/controle/pc3?n=8', { cache: 'no-store' });
     const j = await r.json();
     if(!r.ok || j.erro) throw new Error(j.erro || ('HTTP ' + r.status));
     renderRegistros(j);
   }catch(e){
-    el.innerHTML = `<div class="sub" style="padding:8px;color:var(--er2)">Erro ao carregar: ${e.message}</div>`;
+    el.innerHTML = `<div class="sub" style="padding:10px;color:var(--er2)">Erro ao carregar: ${e.message}</div>`;
   }
 }
-function preencherControleEnvase(){
+function numeroOp(s){
+  return String(parseInt(String(s || '').split('/').pop().replace(/\D/g, ''), 10) || '');
+}
+function abrirControles(){
+  const m = document.getElementById('modalControle');
+  if(!m) return;
+  m.style.display = 'flex';
+  avisoCtl('');
+  const num = numeroOp(opAtual);
   const ctx = document.getElementById('pc3Ctx');
-  const op = opAtual || '';
-  const num = String(parseInt(String(op).split('/').pop().replace(/\D/g, ''), 10) || '');
-  const sku = skuAtual || '';
-  if(ctx) ctx.textContent = `OP #${num} · ${sku}`;
+  if(ctx && opAtual) ctx.innerHTML = `OP #${num} · ${skuAtual || ''}<br>registro unificado das OPs`;
   const hoje = new Date();
   const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
   const d = document.getElementById('pc3Data'); if(d) d.value = iso;
   const o = document.getElementById('pc3Op'); if(o) o.value = num;
   const q = document.getElementById('pc3Qtd'); if(q) q.value = opQtd || '';
-  carregarRegistros(num);
+  carregarRegistros();
 }
+function fecharControles(){ const m = document.getElementById('modalControle'); if(m) m.style.display = 'none'; }
 function gerarRegistro(){
   const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
   const rec = {
@@ -883,17 +893,17 @@ function gerarRegistro(){
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ registro: rec }),
   }).then(r => r.json()).then(j => {
-    btn.disabled = false; btn.textContent = '＋ Gerar registro no PC3';
+    btn.disabled = false; btn.textContent = '＋ Gerar registro';
     if(j.ok){ avisoCtl(`Registro gravado na linha ${j.linha} do PC3.`, true);
-      ['pc3Data','pc3Hi','pc3Qtd','pc3Hf','pc3Resp','pc3Cip','pc3Obs'].forEach(i => {
+      ['pc3Hi','pc3Qtd','pc3Hf','pc3Resp','pc3Cip','pc3Obs'].forEach(i => {
         const e = document.getElementById(i); if(e) e.value = '';
       });
       const d = document.getElementById('pc3Data');
       const hoje = new Date();
       if(d) d.value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-      carregarRegistros(v('pc3Op') || String(opAtual || '').replace(/\D/g, ''));
+      carregarRegistros();
     } else { avisoCtl('Erro: ' + (j.erro || 'falha ao gravar')); }
-  }).catch(e => { btn.disabled = false; btn.textContent = '＋ Gerar registro no PC3'; avisoCtl('Erro: ' + e.message); });
+  }).catch(e => { btn.disabled = false; btn.textContent = '＋ Gerar registro'; avisoCtl('Erro: ' + e.message); });
 }
 
 let _resetando = false; // evita o auto-salvar durante o reset (não sobrescreve rascunho)
@@ -952,7 +962,6 @@ function abrirOp(op){
   mostrarFicha();
   carregarLocal(op); // restaura o rascunho local imediatamente (não espera o fetch)
   carregarInsumosReais(op, o.nCodOP);
-  preencherControleEnvase(); // OP/SKU/data/qtd pré-preenchidos + registros desta OP
 }
 
 // ---- integração com o endpoint do worker (mock quando file:// ou offline) ----
@@ -1585,7 +1594,7 @@ function alterna(c){ c.parentElement.classList.toggle('ab'); }
 // ---------------------------------------------------------------------------
 function secVisiveis(){
   return [...document.querySelectorAll('.sec')].filter(
-    s => !s.hasAttribute('data-consulta') && !s.hasAttribute('data-registro') && !s.classList.contains('hid'));
+    s => !s.hasAttribute('data-consulta') && !s.classList.contains('hid'));
 }
 
 // true quando todos os campos obrigatórios do bloco estão preenchidos
@@ -1611,10 +1620,6 @@ function aplicarFamilia(fam){
   const blocos = BLOCO_FAMILIA[fam] || BLOCO_FAMILIA.kombucha;
   document.querySelectorAll('.sec[data-sec]').forEach(sec=>{
     if(sec.hasAttribute('data-consulta')) return; // insumos: sempre visível, não é bloco de família
-    if(sec.hasAttribute('data-registro')){ // controle de envase: visível nos produtos envasados
-      sec.classList.toggle('hid', !['kombucha','refri','cha'].includes(fam));
-      return;
-    }
     const nome = sec.dataset.sec;
     sec.classList.toggle('hid', !blocos.includes(nome));
     if(!blocos.includes(nome)) sec.classList.remove('ab');
