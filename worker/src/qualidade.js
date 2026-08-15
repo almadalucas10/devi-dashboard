@@ -102,6 +102,12 @@ export async function listarFichasDoDia(env, dataIso) {
     });
   }
   const lista = fichas.filter((f) => f.op || f.nCodOP);
+  await anexarEstadoFichas(env, lista);
+  return { data: dataIso, fichas: lista };
+}
+
+/** Estado salvo das fichas (D1 + R2) — rápido; chamado a cada request p/ rodapés em tempo real */
+export async function anexarEstadoFichas(env, lista) {
   // Estado das fichas salvas (D1) — status, NC e blocos preenchidos, p/ o portal
   try {
     const ops = lista.map((f) => f.op).filter(Boolean);
@@ -118,6 +124,13 @@ export async function listarFichasDoDia(env, dataIso) {
           f.nc = Number(s.nc_count || 0);
           try { f.blocos_status = s.blocos_status ? JSON.parse(s.blocos_status) : null; }
           catch (e) { f.blocos_status = null; }
+        } else {
+          // sem ficha salva: o estado fresco manda (não herdar status velho do cache)
+          f.status = "sem ficha";
+          f.nc = 0;
+          f.blocos_status = null;
+          f.insumos_conferidos = 0;
+          f.insumos_total = 0;
         }
       }
     }
@@ -132,7 +145,7 @@ export async function listarFichasDoDia(env, dataIso) {
       f.insumos_total = ci.length;
     } catch (e) { /* sem documento ainda */ }
   }
-  return { data: dataIso, fichas: lista };
+  return lista;
 }
 
 /** Catálogo completo de produtos Omie (ListarProdutos, arrayKey correto) — cache 10 min. */
