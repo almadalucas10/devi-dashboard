@@ -254,6 +254,7 @@
   body.lista #viewLista{display:block}
   body.lista .topo, body.lista .wrap, body.lista .rod{display:none}
   .topoLista{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap}
+  .topoAcoes{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
   .topoLista h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
   .topoLista .sub{font-size:12px; color:var(--txt3); margin-top:2px}
   .grupo{font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
@@ -311,12 +312,15 @@
 <!-- ============ LISTA DE OPs ABERTAS (painel do formulário) ============ -->
 <div id="viewLista">
   <div class="logo-row"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
-  <div class="topoLista">
+    <div class="topoLista">
     <div>
       <h1>Fichas do dia — OPs abertas</h1>
       <div class="sub">12/08/2026 · toque na OP para abrir a ficha · em produção a lista vem de <b>ListarOrdemProducao</b> (lExibirItens)</div>
     </div>
-    <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
+    <div class="topoAcoes">
+      <button class="btn btnNav" onclick="baixarArquivoOPs()">📄 Arquivo das OPs</button>
+      <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
+    </div>
   </div>
   <div id="opLista"></div>
 </div>
@@ -591,6 +595,45 @@ function renderLista(){
 function mostrarLista(){ document.body.classList.add('lista'); renderLista(); }
 function mostrarFicha(){ document.body.classList.remove('lista'); }
 function voltarLista(){ mostrarLista(); }
+
+// ---- Arquivo das OPs (download .txt) — separado em acabados (17 SKUs) e bases ----
+function textoArquivoOPs(){
+  const l = [];
+  const agora = new Date();
+  l.push('DÊVI — FICHAS DO DIA (OPs abertas)');
+  l.push('Gerado em: ' + agora.toLocaleDateString('pt-BR') + ' ' +
+    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  l.push('');
+  const base = OPS.filter(o => o.sku === 'FX000');
+  const outros = OPS.filter(o => o.sku !== 'FX000');
+  l.push(`=== PRODUTOS ACABADOS (${outros.length} SKUs) ===`);
+  outros.forEach(o => {
+    const p = (o.sku && PRODUTOS[o.sku]) || {};
+    const qtdTxt = (o.un === 'L')
+      ? `${o.qtd.toLocaleString('pt-BR')} L`
+      : `${o.qtd.toLocaleString('pt-BR')} latas${sufixoL(o.qtd, o.un)}`;
+    l.push(`  OP ${o.op} · ${o.sigla} · ${p.nome || o.sku} · Fab: ${o.data || '—'} · ${qtdTxt}`);
+  });
+  l.push('');
+  l.push(`=== BASE KOMBUCHA (${base.length}) ===`);
+  base.forEach(o => {
+    const d = diasFermentacao(o.data);
+    l.push(`  OP ${o.op} · ${o.sigla} · Base Kombucha · Início: ${o.data || '—'} · ` +
+      `${d != null ? d + ' dias de fermentação' : 'sem data'} · ${o.qtd.toLocaleString('pt-BR')} L`);
+  });
+  return l.join('\n');
+}
+
+function baixarArquivoOPs(){
+  const blob = new Blob([textoArquivoOPs()], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `OPs-${new Date().toISOString().slice(0, 10)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
 
 function resetarFicha(){
   conferidos.clear();
