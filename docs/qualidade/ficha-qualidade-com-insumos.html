@@ -657,7 +657,7 @@ function renderLista(){
 
 function mostrarLista(){ document.body.classList.add('lista'); renderLista(); }
 function mostrarFicha(){ document.body.classList.remove('lista'); }
-function voltarLista(){ salvarLocal(); salvarRascunho(true); mostrarLista(); }
+function voltarLista(){ salvarLocal(); salvarRascunho(true); mostrarLista(); setTimeout(atualizarOPS, 2000); }
 
 // ---- Arquivo das fichas: lista das salvas (D1) + abrir o PDF anexado na OP ----
 const fmtDataBR = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -799,7 +799,7 @@ async function atualizarOPS(){
     if(j.fichas && j.fichas.length){ preencherOPS(j.fichas); renderLista(); }
   }catch(e){ /* silencioso */ }
 }
-setInterval(atualizarOPS, 30000);
+setInterval(atualizarOPS, 10000);
 
 async function carregarInsumosReais(op, nCodOP){
   if(location.protocol === 'file:') return;

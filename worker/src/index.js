@@ -666,28 +666,32 @@ export default {
     }
     if (url.pathname === "/api/qualidade/fichas") {
       try {
-        const { listarFichasDoDia } = await import("./qualidade.js");
+        const { listarFichasDoDia, anexarEstadoFichas } = await import("./qualidade.js");
         const data = url.searchParams.get("data") || new Date().toISOString().slice(0, 10);
         const KEY = R2_KEYS.qualidadeFichas;
-        const FRESCO_MS = 90 * 1000; // portal em tempo real: estado das fichas quase instantâneo
+        // cache só da base Omie (OPs abertas mudam pouco); estado D1 é sempre fresco abaixo
+        const FRESCO_MS = 5 * 60 * 1000;
         const cached = await readJson(env, KEY);
+        let dados = null;
         if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
-          return json(cached.dados);
-        }
-        if (cached && cached._ts) {
+          dados = cached.dados;
+        } else if (cached && cached._ts) {
           // stale: responde com o cache e refresca em background (usuário nunca espera o Omie)
           ctx.waitUntil((async () => {
             try {
-              const dados = await listarFichasDoDia(env, data);
-              await writeJson(env, KEY, { _ts: Date.now(), dados });
-              console.log(`[qualidade] refresh fichas: ${dados.fichas.length} OPs`);
+              const nd = await listarFichasDoDia(env, data);
+              await writeJson(env, KEY, { _ts: Date.now(), dados: nd });
+              console.log(`[qualidade] refresh fichas: ${nd.fichas.length} OPs`);
             } catch (e) { console.error(`[qualidade] refresh fichas: ${e.message}`); }
           })());
-          return json(cached.dados);
+          dados = cached.dados;
+        } else {
+          // sem cache (primeira vez) — calcula ao vivo e guarda
+          dados = await listarFichasDoDia(env, data);
+          await writeJson(env, KEY, { _ts: Date.now(), dados });
         }
-        // sem cache (primeira vez) — calcula ao vivo e guarda
-        const dados = await listarFichasDoDia(env, data);
-        await writeJson(env, KEY, { _ts: Date.now(), dados });
+        // estado fresco (D1 + insumos) a cada request — rodapés quase instantâneos
+        try { await anexarEstadoFichas(env, dados.fichas); } catch (e) { console.error(`[qualidade] estado: ${e.message}`); }
         return json(dados);
       } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
     }
