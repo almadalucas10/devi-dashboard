@@ -597,13 +597,24 @@ export default {
     }
     if (url.pathname.startsWith("/api/qualidade/ficha/") && url.pathname.endsWith("/arquivo")) {
       try {
-        const { linkPdfDaOp, lerFichaSalva } = await import("./qualidade.js");
+        const { linkPdfDaOp, lerFichaSalva, pdfDaFicha } = await import("./qualidade.js");
         const op = decodeURIComponent(url.pathname.split("/").slice(-2)[0]);
-        const n = Number(op);
-        const link = await linkPdfDaOp(env, Number.isInteger(n) && String(n) === String(op) ? n : op);
+        const nCodOP = Number(url.searchParams.get("nCodOP")) || op;
+        // 1) PDF anexado na OP (Omie)
+        const link = await linkPdfDaOp(env, nCodOP);
         if (link) return Response.redirect(link, 302);
+        // 2) sem anexo: gera o PDF a partir do documento salvo no R2 (chave pela OP)
         const ficha = await lerFichaSalva(env, op);
-        if (ficha) return json(ficha);
+        if (ficha && ficha.blocos) {
+          const pdf = await pdfDaFicha(ficha);
+          const num = String(ficha.op || op).replace(/\D/g, "").slice(-3) || op;
+          return new Response(pdf, {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `inline; filename="ficha-qualidade-${num}.pdf"`,
+            },
+          });
+        }
         return json({ erro: "sem PDF anexado e sem documento salvo no R2 para " + op }, 404);
       } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
     }

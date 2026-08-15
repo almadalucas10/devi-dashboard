@@ -335,7 +335,7 @@ function zipStore(arquivos) {
 }
 
 /** PDF da ficha — seções separadas com barra de título, logo à esquerda em cima (estilo Qualidade V2 / OP Omie) */
-async function pdfDaFicha(ficha) {
+export async function pdfDaFicha(ficha) {
   const doc = await PDFDocument.create();
   const page = doc.addPage([595, 842]);
   const F1 = await doc.embedFont(StandardFonts.Helvetica);
