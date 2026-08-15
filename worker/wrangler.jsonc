@@ -10,6 +10,11 @@
     { "binding": "CACHE_BUCKET", "bucket_name": "devi-dashboard-cache" }
   ],
 
+  "d1_databases": [
+    { "binding": "QUALIDADE_DB", "database_name": "devi-dashboard-qualidade",
+      "database_id": "677111a8-4f42-4f1f-be22-dd1a58fab393", "migrations_dir": "migrations" }
+  ],
+
   "vars": {
     "OMIE_BASE_URL": "https://app.omie.com.br/api/v1",
     "SPREADSHEET_ID": "1ZMvgDkPCU3CMpeS4R0A26xFJQGHJhBAXOTBi73NKs4o",

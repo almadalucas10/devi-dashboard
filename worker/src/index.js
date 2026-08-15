@@ -463,6 +463,35 @@ export default {
         return json(await anexarFichaNaOp(env, nCodOP, { ...ficha, op: ficha.op || op }, debug));
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
+    // Gravação da ficha (R2 + D1)
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "PUT") {
+      try {
+        const { salvarFicha } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const body = await request.json();
+        const ficha = { ...(body.ficha || {}), op: (body.ficha && body.ficha.op) || op };
+        if (!ficha.op || !Object.keys(ficha.blocos || {}).length) {
+          return json({ erro: "envie { ficha } com op e blocos preenchidos" }, 400);
+        }
+        return json(await salvarFicha(env, ficha));
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    // Ficha salva (R2) + fichas do mês (D1)
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "GET") {
+      try {
+        const { lerFichaSalva } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const saved = await lerFichaSalva(env, op);
+        return json({ op, salva: !!saved, ficha: saved || null });
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/mes/")) {
+      try {
+        const { fichasDoMes } = await import("./qualidade.js");
+        const aaaamm = decodeURIComponent(url.pathname.split("/").pop());
+        return json({ mes: aaaamm, fichas: await fichasDoMes(env, aaaamm) });
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/fichas") {
       try {
         const { listarFichasDoDia } = await import("./qualidade.js");

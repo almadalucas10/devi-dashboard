@@ -9,6 +9,7 @@
 
 import { chamarOmie, buscarOPs, buscarTodasPaginas, consultarProduto } from "./omie.js";
 import { ESTRUTURAS, porUnidadeComEstruturas } from "./estruturas.js";
+import { readJson, writeJson } from "./r2.js";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumos.js)
@@ -126,6 +127,69 @@ export async function obterAnexo(env, nIdAnexo, nId) {
   return chamarOmie(env, "/geral/anexo/", "ObterAnexo", {
     nIdAnexo: Number(nIdAnexo), cTabela: CTABELA_OP, nId: Number(nId),
   });
+}
+
+// ============================================================================
+// Gravação da ficha — híbrido: documento completo no R2 + índice queryável no D1
+// R2:  qualidade/fichas/<ano>/<numero>.json   (fonte da verdade)
+// D1:  tabela fichas (metadados) + ncs (não-conformidades)
+// ============================================================================
+export async function salvarFicha(env, ficha) {
+  const op = String(ficha.op || "");
+  const num = op.replace(/\D/g, "").slice(-5);
+  const ano = op.replace(/\D/g, "").slice(0, 4) || "0000";
+  const key = `qualidade/fichas/${ano}/${num || op}.json`;
+
+  // 1) documento completo no R2
+  await writeJson(env, key, ficha);
+
+  // 2) índice no D1
+  const ncs = ficha.naoConformidades || [];
+  const indice = ficha.indiceColeta ? JSON.stringify(ficha.indiceColeta) : null;
+  const blocosStatus = ficha.blocos ? JSON.stringify(
+    Object.fromEntries(Object.entries(ficha.blocos).map(([b, v]) =>
+      [b, Array.isArray(v) ? v.length : (typeof v === "object" && v !== null ? "ok" : String(v ?? ""))]))) : null;
+  const agora = new Date().toISOString();
+  await env.QUALIDADE_DB.prepare(
+    `INSERT INTO fichas (op, n_cod_op, sku, sigla, familia, produto, qtd, un, previsao,
+       situacao, tipo_produto, data_producao, status, registrado_em, atualizado_em,
+       nc_count, indice, blocos_status)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+     ON CONFLICT(op) DO UPDATE SET
+       n_cod_op=?2, sku=?3, sigla=?4, familia=?5, produto=?6, qtd=?7, un=?8,
+       previsao=?9, situacao=?10, tipo_produto=?11, data_producao=?12, status=?13,
+       registrado_em=?14, atualizado_em=?15, nc_count=?16, indice=?17, blocos_status=?18`
+  ).bind(op, ficha.nCodOP ?? null, ficha.sku ?? null, ficha.sigla ?? null,
+         ficha.familia ?? null, ficha.produto ?? null, ficha.qtd ?? null, ficha.un ?? null,
+         ficha.previsao ?? null, ficha.situacao ?? null, ficha.tipoProduto ?? null,
+         ficha.dataProducao ?? null, ficha.status ?? "completa",
+         ficha.registradoEm ?? null, agora, ncs.length, indice, blocosStatus).run();
+
+  // 3) não-conformidades (substitui as anteriores da OP)
+  await env.QUALIDADE_DB.prepare("DELETE FROM ncs WHERE op = ?1").bind(op).run();
+  for (const nc of ncs) {
+    await env.QUALIDADE_DB.prepare(
+      "INSERT INTO ncs (op, bloco, campo, leitura, valor, min, max) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+    ).bind(op, nc.bloco ?? null, nc.campo ?? null, nc.leitura ?? null,
+           nc.valor ?? null, (nc.spec && nc.spec.min) ?? null, (nc.spec && nc.spec.max) ?? null).run();
+  }
+
+  return { ok: true, key, d1: "upsert", ncs: ncs.length };
+}
+
+/** Ficha salva (do R2) — para reabrir/editar */
+export async function lerFichaSalva(env, op) {
+  const num = String(op).replace(/\D/g, "").slice(-5);
+  const ano = String(op).replace(/\D/g, "").slice(0, 4) || "0000";
+  return readJson(env, `qualidade/fichas/${ano}/${num || op}.json`);
+}
+
+/** Fichas salvas no mês (D1) — alimenta o painel/lista */
+export async function fichasDoMes(env, aaaamm) {
+  const r = await env.QUALIDADE_DB.prepare(
+    "SELECT op, sku, produto, data_producao, status, nc_count, indice FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
+  ).bind(aaaamm).all();
+  return r.results || [];
 }
 
 /** Debug — ListarAnexo: descobre o cTabela da OP (anexar arquivo pela interface, ler aqui) */

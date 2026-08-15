@@ -1360,12 +1360,21 @@ async function salvar(){
     + JSON.stringify(d, null, 2);
   s.scrollIntoView({behavior:'smooth'});
 
-  // ---- anexo automático na OP (Omie): PDF da ficha → zip → IncluirAnexo ----
+  // ---- gravação (R2 + D1) + anexo automático na OP (Omie) ----
   const anexo = document.getElementById('anexoStatus');
   if(anexo && nCodOPAtual){
     anexo.style.display = 'block';
-    anexo.textContent = '⏳ Gerando e anexando o PDF na OP…';
     try{
+      anexo.textContent = '⏳ Salvando ficha no banco…';
+      const salva = await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ficha: d })
+      });
+      const sj = await salva.json();
+      if(!sj.ok) throw new Error(sj.erro || 'falha ao salvar no banco');
+      const chave = String(sj.key || '').split('/').pop();
+      anexo.textContent = `✅ Ficha salva no banco (${chave}) — anexando PDF…`;
       const resp = await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1373,10 +1382,10 @@ async function salvar(){
       });
       const j = await resp.json();
       anexo.textContent = j.ok
-        ? `✅ Anexo na OP: ${j.cNomeArquivo || j.nomeArquivo || 'PDF'}`
-        : `⚠ Anexo falhou: ${String(j.erro || '').slice(0, 160)}`;
+        ? `✅ Ficha salva no banco · PDF anexado na OP: ${j.cNomeArquivo || j.nomeArquivo || 'PDF'}`
+        : `✅ Ficha salva no banco · ⚠ Anexo falhou: ${String(j.erro || '').slice(0, 140)}`;
     }catch(e){
-      anexo.textContent = '⚠ Anexo falhou (rede): ' + e.message;
+      anexo.textContent = '⚠ Erro na gravação: ' + e.message;
     }
   }
 }
