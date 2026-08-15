@@ -850,6 +850,14 @@ const BLOCO_POP = {
   formulacao:['POP11','POP12'], carbonatacao:['POP10'], preenvase:['POP11','POP12'],
   recravacao:['POP13'], estoque:['POP15']
 };
+// quais famílias cada POP atende (mesmo mapa de pops.json — evita mostrar
+// ex.: POP 11 Saborização numa OP de refri/chá, onde só vale o POP 12)
+const POP_FAMILIAS = {
+  'POP09':['base'], 'POP10':['kombucha','cha','refri','rtm'], 'POP11':['kombucha'],
+  'POP12':['cha','refri','rtm'], 'POP13':['kombucha','cha','refri','rtm'],
+  'POP14':['insumo'], 'POP15':['kombucha','cha','refri','rtm'], 'POP16':['insumo'],
+  'POP17':['base']
+};
 function urlPOPs(pop, extra){
   const q = [];
   if (pop) q.push('pop=' + encodeURIComponent(pop));
@@ -878,10 +886,16 @@ function injetarLinksPOP(){
   document.querySelectorAll('.sec[data-sec]').forEach(sec => {
     if (sec.classList.contains('hid')) return;
     if (sec.hasAttribute('data-consulta') || sec.hasAttribute('data-registro')) return;
-    const pops = BLOCO_POP[sec.dataset.sec];
-    if (!pops || sec.querySelector('.linkPOP')) return;
     const cab = sec.querySelector('.cab');
     if (!cab) return;
+    // remove links antigos e reinjeta — reflete a família da OP atual (não fica preso
+    // ao POP injetado na carga, quando ainda não havia OP aberta)
+    cab.querySelectorAll('.linkPOP').forEach(l => l.remove());
+    let pops = BLOCO_POP[sec.dataset.sec] || [];
+    // filtra pelos POPs aplicáveis à família do SKU da OP (ex.: POP 11 só kombucha)
+    const fam = (PRODUTOS[skuAtual] || {}).familia || 'kombucha';
+    pops = pops.filter(c => (POP_FAMILIAS[c] || []).includes(fam));
+    if (!pops.length) return;
     const link = document.createElement('button');
     link.type = 'button';
     link.className = 'linkPOP';

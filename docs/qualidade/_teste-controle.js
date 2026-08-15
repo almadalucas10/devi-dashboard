@@ -18,6 +18,7 @@ function mockFetch(url, opts) {
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [
       { op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 },
       { op: '2026/00517', sku: 'RF002', qtd: 7435, nCodOP: 9226163665 },
+      { op: '2026/00518', sku: 'FX001', qtd: 4464, nCodOP: 9226000001 },
     ] }) });
   }
   if (u.includes('/api/qualidade/controle/pc3') && m === 'GET') {
@@ -88,7 +89,9 @@ setTimeout(() => {
     ok(linkPOPs.some(t => t.includes('POP 10')), 'bloco Carbonatação com ver POP 10 (' + linkPOPs.join(', ') + ')');
     ok(linkPOPs.some(t => t.includes('POP 13')), 'bloco Recravação com ver POP 13');
     ok(linkPOPs.some(t => t.includes('POP 15')), 'bloco Estoque com ver POP 15');
-    ok(linkPOPs.some(t => t.includes('POP 11')), 'bloco Pré-envase com ver POP 11/12');
+    // OP 528 = CH003 (família cha): pré-envase mostra só POP 12 — POP 11 (saborização) é kombucha
+    ok(linkPOPs.some(t => t.includes('POP 12')), 'bloco Pré-envase com ver POP 12 (cha): ' + linkPOPs.join(', '));
+    ok(!linkPOPs.some(t => t.includes('POP 11')), 'POP 11 NÃO aparece em OP de chá (só kombucha)');
     ok($('#ctlRecentes').querySelectorAll('.ctlRec').length === 2, 'lista unificada (2 registros, todas as OPs)');
     ok(!gets.includes('GET?op'), 'carregamento unificado, sem filtro por OP');
 
@@ -148,6 +151,11 @@ setTimeout(() => {
           if (btn10) btn10.click();
           ok($('#modalPOPViewer').style.display === 'flex' && (fr.src || '').includes('pop=POP10'), 'link ver POP 10 abre no modal: ' + fr.src);
           window.fecharPOPViewer();
+
+          // ---- kombucha: pré-envase volta a mostrar POP 11/12 ----
+          window.abrirOp('2026/00518'); // FX001
+          const linkK = $$('.linkPOP').map(a => a.textContent.trim());
+          ok(linkK.some(t => t.includes('POP 11')) && !linkK.some(t => t.includes('POP 12')), 'kombucha: pré-envase com POP 11 apenas (' + linkK.join(', ') + ')');
           console.log(`\n${pass} passaram, ${fail} falharam`);
           process.exit(fail ? 1 : 0);
         }, 160);
