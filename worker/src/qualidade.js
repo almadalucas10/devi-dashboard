@@ -101,7 +101,28 @@ export async function listarFichasDoDia(env, dataIso) {
       status: "sem ficha",
     });
   }
-  return { data: dataIso, fichas: fichas.filter((f) => f.op || f.nCodOP) };
+  const lista = fichas.filter((f) => f.op || f.nCodOP);
+  // Estado das fichas salvas (D1) — status, NC e blocos preenchidos, p/ o portal
+  try {
+    const ops = lista.map((f) => f.op).filter(Boolean);
+    if (ops.length) {
+      const ph = ops.map(() => "?").join(",");
+      const r = await env.QUALIDADE_DB.prepare(
+        `SELECT op, status, nc_count, blocos_status FROM fichas WHERE op IN (${ph})`
+      ).bind(...ops).all();
+      const porOp = new Map((r.results || []).map((x) => [x.op, x]));
+      for (const f of lista) {
+        const s = porOp.get(f.op);
+        if (s) {
+          f.status = s.status || "parcial";
+          f.nc = Number(s.nc_count || 0);
+          try { f.blocos_status = s.blocos_status ? JSON.parse(s.blocos_status) : null; }
+          catch (e) { f.blocos_status = null; }
+        }
+      }
+    }
+  } catch (e) { console.error(`[qualidade] d1 fichas: ${e.message}`); }
+  return { data: dataIso, fichas: lista };
 }
 
 /** Catálogo completo de produtos Omie (ListarProdutos, arrayKey correto) — cache 10 min. */
