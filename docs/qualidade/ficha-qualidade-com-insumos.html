@@ -267,6 +267,8 @@
   .opc .l1{font-size:15px; font-weight:700}
   .opc .l1 span{color:var(--az)}
   .opc .l2{font-size:12px; color:var(--txt3); margin-top:2px}
+  .opc .l3{font-size:12px; margin-top:3px; font-weight:600; color:var(--txt3)}
+  .opc .l3.fer{color:var(--al2)}
   .opc .r{text-align:right}
   .opc .q{font-size:13px; color:var(--txt2)}
   .st{font-size:11px; padding:2px 9px; border-radius:20px; white-space:nowrap; display:inline-block; margin-top:4px}
@@ -561,9 +563,14 @@ function renderLista(){
     const f = FICHAS[o.op];
     const [cls, label] = f ? (f.nc ? ST.nc : (f.completa ? ST.completa : ST.parcial)) : ST.nova;
     const p = (o.sku && PRODUTOS[o.sku]) || {};
+    const ehBase = o.sku === 'FX000';
+    const info = ehBase
+      ? (o.data ? `<span class="l3 fer">⏳ ${diasFermentacao(o.data) ?? '—'} dias de fermentação</span>` : '')
+      : (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '');
     return `<div class="opc" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
-        <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div></div>
+        <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div>
+        ${info}</div>
       <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
         <span class="st ${cls}">${label}</span></div></div>`;
   };
@@ -989,6 +996,15 @@ const somaMesesBR = (br, meses) => {
 };
 // OP "2026/00528" → "528" (3 últimos dígitos)
 const abreviaOp = s => { const d = String(s || '').replace(/\D/g, ''); return d.slice(-3) || s; };
+// Dias de fermentação (base): da data da OP (início) até hoje
+const diasFermentacao = br => {
+  const m = String(br || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const ini = new Date(+m[3], +m[2] - 1, +m[1]);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const dias = Math.round((hoje - ini) / 864e5);
+  return dias >= 0 ? dias : null;
+};
 
 function montarInsumos(){
   const el = document.getElementById('insumos');
