@@ -32,7 +32,13 @@ function mockFetch(url, opts) {
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, linha: 3, registrado: [] }) });
   }
   if (u.includes('/api/qualidade/ficha/')) {
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({ itens: [] }) });
+    const ncod = u.split('/ficha/').pop();
+    if (ncod === '9226163665') { // OP 517 — resposta atrasada (simula rede lenta)
+      return new Promise(res => setTimeout(() => res({ ok: true, json: () => Promise.resolve({
+        itens: [], ficha: { op: '2026/00517', blocos: { preEnvase: { pH: 3.55, brix: 4.5, carbonatacao: 1.5 } } } }) }), 80));
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({
+      itens: [], ficha: { op: '2026/00528', blocos: { preEnvase: { pH: 3.3, brix: 4.5, carbonatacao: 1.5 } } } }) });
   }
   return Promise.resolve({ ok: false, json: () => Promise.resolve({ erro: 'não mockado ' + u }) });
 }
@@ -114,8 +120,16 @@ setTimeout(() => {
         ok($('#pc3Op').value === '528', 'OP permanece após gravar');
         ok(!window.localStorage.getItem('pc3Draft-528'), 'draft limpo após gravar');
         ok($('#pc3Hi').value === '' && $('#pc3Resp').value === '', 'form limpo após gravar');
-        console.log(`\n${pass} passaram, ${fail} falharam`);
-        process.exit(fail ? 1 : 0);
+
+        // ---- RACE: resposta atrasada da OP 517 NÃO pode vazar para a 528 ----
+        window.abrirOp('2026/00517'); // dispara fetch lento (80ms) da 517
+        window.abrirOp('2026/00528'); // troca rápido; fetch da 528 aplica pH 3.3
+        const pH = $('input[data-c="pH"]');
+        setTimeout(() => {
+          ok(pH.value === '3.3', 'pH da 528 mantido após resposta atrasada da 517 chegar (era ' + pH.value + ')');
+          console.log(`\n${pass} passaram, ${fail} falharam`);
+          process.exit(fail ? 1 : 0);
+        }, 160);
       }, 60);
     }, 60);
   }, 60);

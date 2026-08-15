@@ -1040,6 +1040,8 @@ async function carregarInsumosReais(op, nCodOP){
   try{
     const r = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(nCodOP || op));
     const j = await r.json();
+    // resposta defasada? se o usuário já trocou de OP, descarta (evita ficha de uma OP vazar para outra)
+    if(op !== opAtual) return;
     if(j.itens && j.itens.length){
       folhaInfo = { previsao: j.previsao || '', situacao: j.situacao || '',
                     tipoProduto: j.tipoProduto || '' };
@@ -1054,8 +1056,11 @@ async function carregarInsumosReais(op, nCodOP){
       atualizarInsumosChk();
     }
     // reabre a ficha salva (rascunho/completa) — popula os campos e a barra de progresso;
-    // rascunho local (mais recente) tem precedência e já foi aplicado em abrirOp
-    if(j.ficha && j.ficha.blocos && !carregarLocal(op)) aplicarFichaSalva(j.ficha);
+    // rascunho local (mais recente) tem precedência e já foi aplicado em abrirOp;
+    // se o usuário já digitou algo, não sobrescreve com a ficha do servidor
+    const digitou = [...document.querySelectorAll('.sec input, .sec select, .sec textarea')]
+      .some(i => i.value.trim() !== '');
+    if(j.ficha && j.ficha.blocos && !carregarLocal(op) && !digitou) aplicarFichaSalva(j.ficha);
   }catch(e){}
 }
 
