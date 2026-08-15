@@ -645,7 +645,7 @@ function renderLista(){
 
 function mostrarLista(){ document.body.classList.add('lista'); renderLista(); }
 function mostrarFicha(){ document.body.classList.remove('lista'); }
-function voltarLista(){ mostrarLista(); }
+function voltarLista(){ salvarLocal(); salvarRascunho(true); mostrarLista(); }
 
 // ---- Arquivo das fichas: lista das salvas (D1) + abrir o PDF anexado na OP ----
 const fmtDataBR = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -686,7 +686,9 @@ async function abrirArquivo(){
 
 function fecharArquivo(){ const m = document.getElementById('modalArquivo'); if(m) m.style.display = 'none'; }
 
+let _resetando = false; // evita o auto-salvar durante o reset (não sobrescreve rascunho)
 function resetarFicha(){
+  _resetando = true;
   conferidos.clear();
   nc = 0; nEs = 0; nf = 0; nr = 0; // reinicia os contadores de linha
   document.querySelectorAll('.sec input, .sec select, .sec textarea').forEach(e => {
@@ -707,6 +709,7 @@ function resetarFicha(){
   const anexoStatus = document.getElementById('anexoStatus');
   if(anexoStatus) anexoStatus.style.display = 'none';
   try { window.scrollTo(0, 0); } catch(e) {}
+  _resetando = false;
 }
 
 function abrirOp(op){
@@ -803,6 +806,8 @@ async function carregarInsumosReais(op, nCodOP){
     }
     // reabre a ficha salva (rascunho/completa) — popula os campos e a barra de progresso
     if(j.ficha && j.ficha.blocos) aplicarFichaSalva(j.ficha);
+    // rascunho local (mais recente que o servidor) tem precedência
+    carregarLocal(op);
   }catch(e){}
 }
 
@@ -1461,7 +1466,11 @@ function atualizar(){
   const ass = (opAtual||'') + '|' + visiveis.map(s => {
     const b = s.querySelector('[data-est]'); return b ? b.textContent : '';
   }).join(',');
-  if(ass !== _assinaturaRascunho && opAtual){ _assinaturaRascunho = ass; salvarRascunho(); }
+  if(ass !== _assinaturaRascunho && opAtual && !_resetando){
+    _assinaturaRascunho = ass;
+    salvarLocal();
+    salvarRascunho();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1558,9 +1567,22 @@ function montarPayload(){
 // Auto-salva (rascunho no R2/D1) quando o estado dos blocos muda — em tempo real
 let _timerRascunho = null;
 let _assinaturaRascunho = '';
-function salvarRascunho(){
+// Persistência local (localStorage) — salva a cada mudança, sobrevive a navegação/offline
+function salvarLocal(){
+  if(!opAtual || location.protocol === 'file:') return;
+  try{ localStorage.setItem('ficha_rascunho_' + opAtual, JSON.stringify(montarPayload())); }catch(e){}
+}
+function carregarLocal(op){
+  try{
+    const local = localStorage.getItem('ficha_rascunho_' + (op || opAtual));
+    if(local){ const d = JSON.parse(local); if(d && d.blocos) aplicarFichaSalva(d); return true; }
+  }catch(e){}
+  return false;
+}
+
+function salvarRascunho(imediato){
   clearTimeout(_timerRascunho);
-  _timerRascunho = setTimeout(async () => {
+  const exec = async () => {
     if(!nCodOPAtual || !opAtual || location.protocol === 'file:') return;
     try{
       const d = montarPayload();
@@ -1574,7 +1596,9 @@ function salvarRascunho(){
         body: JSON.stringify({ ficha: d })
       });
     }catch(e){ console.error('rascunho:', e.message); }
-  }, 900);
+  };
+  if(imediato) exec();
+  else _timerRascunho = setTimeout(exec, 900);
 }
 
 async function salvar(){
@@ -1660,6 +1684,7 @@ async function salvar(){
       anexo.textContent = j.ok
         ? `✅ Ficha salva no banco · PDF anexado na OP: ${j.cNomeArquivo || j.nomeArquivo || 'PDF'}`
         : `✅ Ficha salva no banco · ⚠ Anexo falhou: ${String(j.erro || '').slice(0, 140)}`;
+      if(j.ok){ try{ localStorage.removeItem('ficha_rascunho_' + opAtual); }catch(e){} }
     }catch(e){
       anexo.textContent = '⚠ Erro na gravação: ' + e.message;
     }
