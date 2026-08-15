@@ -11,6 +11,7 @@ import { buscarEstoqueInsumos } from "./insumos.js";
 import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
 import { atualizarAgregadoVendas, recalcularCobertura } from "./cobertura.js";
 import { enriquecerEstoqueRuptura } from "./ruptura.js";
+import { hojeBrasil } from "./fuso.js";
 import { R2_KEYS } from "./constants.js";
 
 // ============================================================================
@@ -115,8 +116,8 @@ async function runLightSync(env) {
     try {
       const dashData = await readJson(env, R2_KEYS.dashboard);
       if (dashData && dashData.calGrid) {
-        const hoje = new Date();
-        const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
+        const h = hojeBrasil();
+        const kcal = extrairKPIsDoCalendario(dashData.calGrid, h.ano, h.mes);
         if (!partial.kpis || partial.kpis.erro) partial.kpis = {};
         Object.assign(partial.kpis, {
           planejadoMes: kcal.planejadoMes,
@@ -204,21 +205,29 @@ async function runHeavySync(env) {
     try {
       const dashData = await readJson(env, R2_KEYS.dashboard);
       if (dashData && dashData.calGrid) {
-        const hoje = new Date();
-        const kcal = extrairKPIsDoCalendario(dashData.calGrid, hoje.getFullYear(), hoje.getMonth() + 1);
+        const h = hojeBrasil();
+        const kcal = extrairKPIsDoCalendario(dashData.calGrid, h.ano, h.mes);
         if (data.kpis && !data.kpis.erro) {
           data.kpis.planejadoMes = kcal.planejadoMes;
           data.kpis.realizadoMes = kcal.realizadoMes;
           data.kpis.eficienciaMes = kcal.eficienciaMes;
           data.kpis.pendentesMes = kcal.pendentesMes;
           if (data.tendenciaProducao && data.tendenciaProducao.valores) {
-            const mesIdx = new Date().getMonth();
+            const mesIdx = h.mes - 1;
             data.tendenciaProducao.valores[mesIdx] = kcal.realizadoMes;
             data.kpis.realizadoAno = data.tendenciaProducao.valores.reduce((a,v)=>a+v,0);
           }
         }
       }
     } catch (e) { console.error(`[heavy] ⚠️ KPIs calendário: ${e.message}`); }
+
+    // Qualidade — pré-aquece a lista de OPs abertas (cache do formulário do tablet)
+    try {
+      const { listarFichasDoDia } = await import("./qualidade.js");
+      const dados = await listarFichasDoDia(env, new Date().toISOString().slice(0, 10));
+      await writeJson(env, R2_KEYS.qualidadeFichas, { _ts: Date.now(), dados });
+      console.log(`[heavy] ✅ Qualidade fichas: ${dados.fichas.length} OPs`);
+    } catch (e) { console.error(`[heavy] ⚠️ Qualidade fichas: ${e.message}`); }
 
     await writeJson(env, R2_KEYS.omie, data);
     await writeSyncMeta(env, { omie: Date.now() });
@@ -257,7 +266,7 @@ export default {
       return new Response(null, {
         headers: {
           "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "*",
         },
       });
@@ -341,6 +350,15 @@ export default {
       } catch(e) { return json({ erro: e.message }, 500); }
     }
 
+    if (url.pathname === "/api/debug/sa-email") {
+      // E-mail do service account (para compartilhar a planilha com ele)
+      try {
+        const saJson = env.GOOGLE_SERVICE_ACCOUNT_JSON;
+        const sa = saJson ? JSON.parse(saJson) : null;
+        return json({ client_email: sa ? sa.client_email : null, temCredencial: !!saJson });
+      } catch(e) { return json({ erro: e.message }, 500); }
+    }
+
     if (url.pathname === "/api/debug/sheets-tabs") {
       // Lista as abas da planilha (procurar ficha técnica / estruturas)
       try {
@@ -392,7 +410,278 @@ export default {
       } catch(e) { return json({ erro: e.message }, 500); }
     }
 
-    if (url.pathname === "/api/health") {
+    
+    if (url.pathname === "/api/debug/remessas") {
+      // Sonda a API de Remessas do OMIE (vendas/remessa) — pra exibir na Fila e impactar Reposição
+      try {
+        const { chamarOmie } = await import("./omie.js");
+        const tenta = async (ep, mt) => {
+          try {
+            const r = await chamarOmie(env, ep, mt, { pagina: 1, registros_por_pagina: 50, apenas_importado_api: "N" });
+            const lista = Array.isArray(r) ? r : (r.remessas || r.listaRemessas || r.cadastros || r.lista || []);
+            return { ok: true, chaves: Object.keys(r).slice(0, 20), total: r.nTotRegistros || r.total_de_registros || r.total || lista.length, n: lista.length, amostra: lista[0] || null };
+          } catch(e) { return { ok: false, erro: e.message.slice(0, 120) }; }
+        };
+        const r1 = await tenta("/vendas/remessa/", "ListarRemessas");
+        const r2 = await tenta("/vendas/remessa/", "PesquisarRemessas");
+        return json({ ListarRemessas: r1, PesquisarRemessas: r2 });
+      } catch(e) { return json({ erro: e.message.slice(0, 150) }, 500); }
+    }
+
+    // ================= QUALIDADE — fichas do dia e ficha de uma OP =================
+    // Cache R2 com TTL + stale-while-revalidate: o Omie ao vivo leva 10-40s e pende;
+    // o cache garante resposta rápida e estável. O sync (cron 30min) aquece a lista.
+    if (url.pathname === "/api/qualidade/debug/anexo") {
+      try {
+        const { obterAnexo } = await import("./qualidade.js");
+        const nIdAnexo = url.searchParams.get("nIdAnexo");
+        const nId = url.searchParams.get("nId");
+        if (!nIdAnexo || !nId) return json({ erro: "passe ?nIdAnexo= e ?nId=" }, 400);
+        return json(await obterAnexo(env, nIdAnexo, nId));
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    // Debug — ler abas/cabeçalhos de uma planilha com a service account
+    // GET /api/qualidade/debug/sheet?spreadsheetId=ID[&range=A1:Z3]
+    if (url.pathname === "/api/qualidade/debug/sheet") {
+      try {
+        const { getAccessToken, getValues, listSheets, appendValues, deleteRows } = await import("./sheets.js");
+        const id = url.searchParams.get("spreadsheetId") || "";
+        const range = url.searchParams.get("range") || "A1:Z3";
+        const token = await getAccessToken(env);
+        let sa = null;
+        try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}"); } catch(e) {}
+        if (!id) return json({ client_email: sa?.client_email || null, tabs: null, values: null });
+        const tabs = await listSheets(env, token, id);
+        // limpeza: apaga linhas de teste (qualquer célula contendo "TESTE") sem anexar
+        const limpar = url.searchParams.get("limpar") === "1";
+        const tab = url.searchParams.get("tab") || "";
+        if (limpar && tab) {
+          const existentes = await getValues(env, token, `${tab}!A1:N2000`, id);
+          let removidas = 0;
+          for (let i = existentes.length - 1; i >= 0; i--) {
+            const celulas = (existentes[i] || []).join(" ");
+            if (celulas.includes("TESTE")) {
+              const sh = tabs.find((t) => t.title === tab);
+              await deleteRows(env, token, id, sh.sheetId, i, i + 1);
+              removidas++;
+            }
+          }
+          return json({ ok: true, limpar: true, removidas, tab });
+        }
+        // teste reversível: append + delete da linha (verifica escrita sem poluir)
+        const teste = url.searchParams.get("teste") === "1";
+        if (teste && tab) {
+          // 0) limpa resíduos de testes anteriores (varre A:B, apaga de baixo p/ cima)
+          const existentes = await getValues(env, token, `${tab}!A1:B2000`, id);
+          for (let i = existentes.length - 1; i >= 0; i--) {
+            if (String(existentes[i] && existentes[i][0] || "").trim() === "TESTE") {
+              const sh = tabs.find((t) => t.title === tab);
+              await deleteRows(env, token, id, sh.sheetId, i, i + 1);
+            }
+          }
+          // 1) append de uma linha de teste
+          const r = await appendValues(env, token, id, tab, [["TESTE", "linha temporária de verificação — pode apagar"]]);
+          const raw = r && r.updates;
+          const rng = (raw && raw.updatedRange) || "";
+          // updatedRange ex.: "Indicadores Refri e Chá!A1006:B1006" → linha 1006
+          const cells = rng.split("!").pop().split(":");
+          const row = parseInt((cells[0] || "").replace(/\D/g, ""), 10);
+          const sheet = tabs.find((t) => t.title === tab);
+          if (row && sheet && row <= 2000) {
+            await deleteRows(env, token, id, sheet.sheetId, row - 1, row);
+            return json({ ok: true, teste: "append+delete OK", linha: row, tab, raw });
+          }
+          return json({ ok: true, teste: "append OK (linha não apagada)", linha: row, tab, raw });
+        }
+        const values = await getValues(env, token, range, id);
+        return json({ client_email: sa?.client_email || null, spreadsheetId: id, tabs, values });
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+    // Debug — mostra a linha que seria gravada na planilha de indicadores (sem escrever)
+    // GET /api/qualidade/debug/sheets-mapping?op=<op ou nCodOP>
+    if (url.pathname === "/api/qualidade/debug/sheets-mapping") {
+      try {
+        const { lerFichaSalva } = await import("./qualidade.js");
+        const { montarLinhaIndicadores } = await import("./qualidade-sheets.js");
+        const op = url.searchParams.get("op") || "";
+        if (!op) return json({ erro: "passe ?op=" }, 400);
+        const ficha = await lerFichaSalva(env, op);
+        if (!ficha) return json({ erro: "ficha não encontrada no R2 para " + op }, 404);
+        return json({ op, ...montarLinhaIndicadores(ficha) });
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+    // Simulação — grava a ficha na planilha de indicadores e destaca a linha em verde
+    // POST /api/qualidade/debug/sheets-simulacao  body: { ficha: {...} }
+    if (url.pathname === "/api/qualidade/debug/sheets-simulacao" && request.method === "POST") {
+      try {
+        const { getAccessToken, appendValues, listSheets, formatRange } = await import("./sheets.js");
+        const { montarLinhaIndicadores } = await import("./qualidade-sheets.js");
+        const body = await request.json();
+        const ficha = body.ficha || body;
+        if (!Object.keys(ficha.blocos || {}).length) return json({ erro: "envie { ficha } com blocos" }, 400);
+        const id = env.INDICADORES_SPREADSHEET_ID;
+        if (!id) return json({ erro: "INDICADORES_SPREADSHEET_ID não configurado" }, 500);
+        const { tab, linha } = montarLinhaIndicadores(ficha);
+        const token = await getAccessToken(env);
+        const r = await appendValues(env, token, id, tab, [linha]);
+        const rng = (r && r.updates && r.updates.updatedRange) || "";
+        const row = parseInt(rng.split("!").pop().split(":")[0].replace(/\D/g, ""), 10);
+        const sheets = await listSheets(env, token, id);
+        const sheet = sheets.find((s) => s.title === tab);
+        if (row && sheet) {
+          // verde claro #C6EFCE — destaca o que foi preenchido automaticamente
+          await formatRange(env, token, id, sheet.sheetId, row - 1, row, 0, linha.length, { r: 0.776, g: 0.937, b: 0.808 });
+        }
+        return json({ ok: true, tab, linhaNum: row, atualizadas: r.updates ? r.updates.updatedRows : null, linha });
+      } catch(e) { return json({ erro: e.message.slice(0, 400) }, 500); }
+    }
+    if (url.pathname === "/api/qualidade/debug/anexos") {
+      try {
+        const { listarAnexos } = await import("./qualidade.js");
+        const nId = url.searchParams.get("nId");
+        const cTabela = url.searchParams.get("cTabela") || "";
+        if (!nId) return json({ erro: "passe ?nId=NCODOP da OP" }, 400);
+        return json(await listarAnexos(env, nId, cTabela));
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "POST") {
+      try {
+        const { anexarFichaNaOp } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const body = await request.json();
+        const nCodOP = Number(body.nCodOP || op);
+        const ficha = body.ficha || {};
+        const debug = url.searchParams.get("debug") === "1";
+        if (!nCodOP || !Object.keys(ficha.blocos || {}).length) {
+          return json({ erro: "envie { nCodOP, ficha } com blocos preenchidos" }, 400);
+        }
+        // Data autoritativa: relê a data corrente da OP no Omie — se a OP mudou de dia,
+        // a conclusão usa o dia novo (não o que o form fotografou ao abrir). Não-fatal.
+        try {
+          const { fichaDaOp } = await import("./qualidade.js");
+          const atual = await fichaDaOp(env, nCodOP, false, false);
+          if (atual && atual.data) ficha.dataProducao = atual.data;
+        } catch (e) { console.error(`[qualidade] dataDaOp: ${e.message}`); }
+        const res = await anexarFichaNaOp(env, nCodOP, { ...ficha, op: ficha.op || op }, debug);
+        // Fechamento: além do anexo no Omie, registra a ficha na planilha de indicadores
+        if (!debug && res && res.ok) {
+          try {
+            const { registrarFichaNosIndicadores } = await import("./qualidade-sheets.js");
+            res.sheets = await registrarFichaNosIndicadores(env, { ...ficha, op: ficha.op || op, nCodOP });
+          } catch (e) { res.sheets = { ok: false, erro: e.message.slice(0, 200) }; }
+        }
+        return json(res);
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    // Gravação da ficha (R2 + D1)
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "PUT") {
+      try {
+        const { salvarFicha } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const body = await request.json();
+        const ficha = { ...(body.ficha || {}), op: (body.ficha && body.ficha.op) || op };
+        if (!ficha.op || !Object.keys(ficha.blocos || {}).length) {
+          return json({ erro: "envie { ficha } com op e blocos preenchidos" }, 400);
+        }
+        return json(await salvarFicha(env, ficha));
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    // Ficha salva (R2) + fichas do mês (D1)
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "GET") {
+      try {
+        const { lerFichaSalva, fichaDaOp } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const comSaldo = url.searchParams.get("saldo") !== "0";
+        const raw = url.searchParams.get("raw") === "1";
+        if (raw) return json(await fichaDaOp(env, op, false, true));
+        // Dados frescos da OP (itens, previsao, data...) com cache por ficha;
+        // salva/ficha = documento da ficha já gravada (R2), se existir.
+        const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
+        const FRESCO_MS = 20 * 60 * 1000;
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
+          const saved = await lerFichaSalva(env, op);
+          return json({ ...cached.dados, salva: !!saved, ficha: saved || null });
+        }
+        if (cached && cached._ts) {
+          // stale: responde com o cache e refresca em background
+          ctx.waitUntil((async () => {
+            try {
+              const dados = await fichaDaOp(env, op, comSaldo);
+              await writeJson(env, KEY, { _ts: Date.now(), dados });
+            } catch (e) { console.error(`[qualidade] refresh ficha ${op}: ${e.message}`); }
+          })());
+          const saved = await lerFichaSalva(env, op);
+          return json({ ...cached.dados, salva: !!saved, ficha: saved || null });
+        }
+        const dados = await fichaDaOp(env, op, comSaldo);
+        await writeJson(env, KEY, { _ts: Date.now(), dados });
+        const saved = await lerFichaSalva(env, op);
+        return json({ ...dados, salva: !!saved, ficha: saved || null });
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/mes/")) {
+      try {
+        const { fichasDoMes } = await import("./qualidade.js");
+        const aaaamm = decodeURIComponent(url.pathname.split("/").pop());
+        return json({ mes: aaaamm, fichas: await fichasDoMes(env, aaaamm) });
+      } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
+    }
+    if (url.pathname === "/api/qualidade/fichas") {
+      try {
+        const { listarFichasDoDia } = await import("./qualidade.js");
+        const data = url.searchParams.get("data") || new Date().toISOString().slice(0, 10);
+        const KEY = R2_KEYS.qualidadeFichas;
+        const FRESCO_MS = 15 * 60 * 1000;
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
+          return json(cached.dados);
+        }
+        if (cached && cached._ts) {
+          // stale: responde com o cache e refresca em background (usuário nunca espera o Omie)
+          ctx.waitUntil((async () => {
+            try {
+              const dados = await listarFichasDoDia(env, data);
+              await writeJson(env, KEY, { _ts: Date.now(), dados });
+              console.log(`[qualidade] refresh fichas: ${dados.fichas.length} OPs`);
+            } catch (e) { console.error(`[qualidade] refresh fichas: ${e.message}`); }
+          })());
+          return json(cached.dados);
+        }
+        // sem cache (primeira vez) — calcula ao vivo e guarda
+        const dados = await listarFichasDoDia(env, data);
+        await writeJson(env, KEY, { _ts: Date.now(), dados });
+        return json(dados);
+      } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/ficha/")) {
+      try {
+        const { fichaDaOp } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").pop());
+        const comSaldo = url.searchParams.get("saldo") !== "0";
+        const raw = url.searchParams.get("raw") === "1";
+        if (raw) return json(await fichaDaOp(env, op, false, true));
+        const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
+        const FRESCO_MS = 20 * 60 * 1000;
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
+          return json(cached.dados);
+        }
+        if (cached && cached._ts) {
+          ctx.waitUntil((async () => {
+            try {
+              const dados = await fichaDaOp(env, op, comSaldo);
+              await writeJson(env, KEY, { _ts: Date.now(), dados });
+            } catch (e) { console.error(`[qualidade] refresh ficha ${op}: ${e.message}`); }
+          })());
+          return json(cached.dados);
+        }
+        const dados = await fichaDaOp(env, op, comSaldo);
+        await writeJson(env, KEY, { _ts: Date.now(), dados });
+        return json(dados);
+      } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
+    }
+if (url.pathname === "/api/health") {
       const dash = await readJson(env, R2_KEYS.dashboard);
       const omie = await readJson(env, R2_KEYS.omie);
       return json({ ok: true, dashboard: !!dash, omie: !!omie });
@@ -411,6 +700,17 @@ export default {
     if (url.pathname === "/api/sync" && request.method === "POST") {
       ctx.waitUntil(runHeavySync(env));
       return json({ ok: true, message: "sync pesado disparado em background" });
+    }
+
+    if (url.pathname === "/api/sync/vendas" && request.method === "POST") {
+      const t0 = Date.now();
+      try {
+        const agregado = await atualizarAgregadoVendas(env);
+        await writeSyncMeta(env, { vendas: Date.now() });
+        return json({ ok: true, janelaDias: agregado.janelaDias, skus: Object.keys(agregado.skus || {}).length, elapsedMs: Date.now() - t0 });
+      } catch (e) {
+        return json({ erro: e.message, elapsedMs: Date.now() - t0 }, 500);
+      }
     }
 
     if (url.pathname === "/api/sync/light" && request.method === "POST") {

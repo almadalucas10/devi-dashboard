@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>PR1 · Ficha de Produção — Qualidade</title>
+<style>
+  :root{
+    --bg:#0a0f16; --painel:#0d141c; --campo:#141d27; --linha:#1f2a36; --trilho:#1c2733;
+    --txt:#e8eef4; --txt2:#cfe0ee; --txt3:#8b98a5;
+    --ok:#22c55e; --al:#f59e0b; --er:#ef4444; --az:#3b82f6;
+    --ok2:#4ade80; --al2:#fbbf24; --er2:#f87171;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; max-width:100%}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt); overflow-x:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-text-size-adjust:100%}
+
+  .topo{position:sticky; top:0; z-index:20; background:#0c1219;
+    border-bottom:1px solid var(--linha); padding:10px 14px}
+  .logo-row{display:flex; justify-content:flex-start; margin-bottom:8px}
+  .logo{height:64px; width:auto; object-fit:contain; display:block}
+  .t1{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
+  .logo-col{flex-shrink:0}
+  .logo-col .logo{height:56px}
+  .info{flex:0 1 auto; min-width:0}
+  .prod{font-size:20px; font-weight:700; color:var(--txt); margin-top:2px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; letter-spacing:-.3px}
+  .prod .op{font-size:13px; font-weight:600; color:var(--txt3); white-space:nowrap}
+  .prod .op b{color:var(--txt2); font-size:17px; font-weight:800}
+  .prod .sigla{background:var(--az); color:#fff; padding:2px 12px; border-radius:9px;
+    font-size:19px; font-weight:800; letter-spacing:1px}
+  .prod .sku{background:var(--linha); color:var(--txt2); padding:2px 10px; border-radius:9px;
+    font-size:13px; font-weight:700; letter-spacing:.4px}
+  .datas{flex:1; display:flex; justify-content:center; gap:10px; flex-wrap:wrap}
+  .datas .dl{background:var(--campo); border:1.5px solid var(--linha); border-radius:10px;
+    padding:5px 14px; text-align:center}
+  .datas .dl .lbl{display:block; font-size:9.5px; letter-spacing:1.4px; color:var(--txt3);
+    text-transform:uppercase; font-weight:700}
+  .datas .dl b{display:block; font-size:18px; font-weight:800; color:var(--txt); letter-spacing:.3px}
+  .meta{font-size:13px; color:var(--txt3); text-align:right; white-space:nowrap}
+  .meta b{font-size:18px; font-weight:800; color:var(--txt2); letter-spacing:-.3px}
+  .meta span{font-size:12px; color:var(--txt3)}
+  .prog{height:4px; background:var(--linha); border-radius:2px; margin-top:9px; overflow:hidden}
+  .prog i{display:block; height:100%; background:var(--ok); width:0%; transition:width .3s}
+  .progtxt{font-size:11px; color:var(--txt3); margin-top:4px}
+
+  .wrap{padding:14px; display:flex; flex-direction:column; gap:12px; max-width:820px; margin:0 auto}
+
+  .sec{background:var(--painel); border:1px solid var(--linha); border-radius:12px; overflow:hidden}
+  .sec.hid{display:none}
+  .cab{display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer; user-select:none}
+  .cab h2{font-size:15px; font-weight:600; margin:0; flex:1}
+  .est{font-size:11px; padding:2px 9px; border-radius:20px; white-space:nowrap;
+    background:var(--linha); color:var(--txt3)}
+  .est.done{background:#12241a; color:var(--ok2)}
+  .est.parc{background:#2a2412; color:var(--al2)}
+  .est.err{background:#2a1216; color:var(--er2)}
+  .est.info{background:#0f1a24; color:#7dd3fc}
+  .chev{color:var(--txt3); font-size:13px; transition:transform .2s}
+  .sec.ab .chev{transform:rotate(90deg)}
+  .corpo{display:none; padding:0 14px 14px}
+  .sec.ab .corpo{display:block}
+
+  .g2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .g3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .campo{display:flex; flex-direction:column; gap:4px; min-width:0}
+  .campo label{font-size:11px; color:var(--txt3)}
+  input,select{background:var(--campo); border:1.5px solid var(--linha); border-radius:8px;
+    color:var(--txt); font-size:17px; padding:11px 12px; width:100%; min-height:46px;
+    font-family:inherit; outline:none; transition:border-color .15s}
+  input:focus,select:focus{border-color:var(--az)}
+  input.ok{border-color:var(--ok)} input.al{border-color:var(--al)}
+  input.er{border-color:var(--er); background:#1c1214}
+  input.info{border-color:var(--az)}
+  .msg{font-size:11px; min-height:14px}
+  .msg.ok{color:var(--ok2)} .msg.al{color:var(--al2)} .msg.er{color:var(--er2)}
+  .msg.info{color:#7dd3fc}
+
+  /* ---------- insumos ---------- */
+  .ins{background:var(--campo); border-left:3px solid var(--ok); border-radius:0 7px 7px 0;
+    padding:8px 11px; margin-bottom:6px; cursor:pointer; transition:background .15s}
+  .ins:active{background:#182330}
+  .ins.falta{border-left-color:var(--er)}
+  .ins.nivel2{margin-left:14px; border-left-color:var(--linha); background:#111a23}
+  .ins.conf{background:#0f2218}
+  .ins.conf .ins-nm{text-decoration:line-through; color:var(--txt3)}
+  .ins-l1{display:flex; justify-content:space-between; align-items:center; gap:9px}
+  .chk{width:24px; height:24px; flex:none; border:2px solid var(--linha); border-radius:7px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:15px;
+    color:transparent; transition:all .15s; background:transparent}
+  .chk.on{background:var(--ok); border-color:var(--ok); color:#06110a}
+  .ins-nm{font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1}
+  .ins-q{font-size:16px; font-weight:700; white-space:nowrap}
+  .ins-l2{font-size:11px; color:var(--txt3); margin-top:2px; display:flex;
+    justify-content:space-between; gap:8px}
+  .ins-tr{height:4px; background:var(--trilho); border-radius:2px; overflow:hidden; margin-top:5px}
+  .ins-tr i{display:block; height:100%}
+
+  /* ---------- folha da OP (clone do modelo Omie) ---------- */
+  .folha{background:#f4f1e8; color:#1c1c1c; border:1px solid #d8d2c0; border-radius:6px;
+    padding:14px 16px; font-size:13px; box-shadow:0 1px 5px rgba(0,0,0,.35)}
+  .fl-emp{font-weight:700; letter-spacing:.4px; font-size:12px; text-transform:uppercase; text-align:center; color:#222}
+  .fl-op{font-size:16px; font-weight:700; margin:7px 0 5px; text-align:center}
+  .fl-linha{display:flex; justify-content:space-between; gap:8px; font-size:12px; margin:2px 0; flex-wrap:wrap}
+  .fl-linha b{font-weight:600}
+  .fl-prod{font-size:13px; font-weight:600; margin:7px 0 2px}
+  .fl-cab{border-bottom:2px solid #222; padding-bottom:8px; margin-bottom:6px}
+  .fl-titulo{font-weight:700; margin:8px 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.4px}
+  .folha table{width:100%; border-collapse:collapse; font-size:12px}
+  .folha thead th{text-align:left; border-bottom:2px solid #222; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.3px; padding:4px 6px; color:#333}
+  .folha tbody td{border-bottom:1px solid #cfc9b6; padding:5px 6px; vertical-align:top}
+  .folha tbody tr{cursor:pointer}
+  .folha tbody tr:hover{background:#ece8da}
+  .folha tbody tr.conf{background:#e1efe0}
+  .folha tbody tr.conf .fl-desc{text-decoration:line-through; color:#666}
+  .fl-cod{font-weight:700; font-size:12px}
+  .fl-desc{color:#444; font-size:11.5px; margin-top:1px}
+  .fl-q{white-space:nowrap; font-weight:600; text-align:right}
+  .fl-est{white-space:nowrap; text-align:right; font-weight:600}
+  .folha .fl-chk{width:34px; text-align:center}
+  .folha .chk{width:22px; height:22px; border:1.5px solid #777; border-radius:4px;
+    background:#fff; font-size:13px}
+  .folha .chk.on{background:#22c55e; border-color:#22c55e; color:#fff}
+
+  /* ---------- cards: aba escura como o de insumos; conteúdo interno em painel de papel ---------- */
+  .sec.paper{background:var(--painel); border:1px solid var(--linha); border-radius:12px; overflow:hidden}
+  .sec.paper .corpo{background:#f4f1e8; color:#1c1c1c; border:1px solid #d8d2c0; border-radius:8px;
+    padding:12px; margin:0 6px 8px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .sec.paper .cab h2{color:var(--txt)}
+  .sec.paper .chev{color:var(--txt3)}
+  .sec.paper .est{background:var(--linha); color:var(--txt3)}
+  .sec.paper .est.done{background:#12241a; color:var(--ok2)}
+  .sec.paper .est.parc{background:#2a2412; color:var(--al2)}
+  .sec.paper .est.err{background:#2a1216; color:var(--er2)}
+  .sec.paper .est.info{background:#0f1a24; color:#7dd3fc}
+  /* dentro do painel de papel: campos claros */
+  .sec.paper label{color:#555; font-weight:600}
+  .sec.paper input, .sec.paper select, .sec.paper textarea{background:#fff; border-color:#b8b2a0; color:#222}
+  .sec.paper textarea{font-size:15px; padding:11px 12px; font-family:inherit; resize:vertical; border-radius:8px}
+  .sec.paper input:focus, .sec.paper select:focus, .sec.paper textarea:focus{border-color:#3b82f6}
+  .sec.paper input.ok{border-color:#22c55e}
+  .sec.paper input.al{border-color:#f59e0b}
+  .sec.paper input.er{border-color:#ef4444; background:#fdecec}
+  .sec.paper input.info{border-color:#3b82f6}
+  .sec.paper .msg{color:#666}
+  .sec.paper .msg.ok{color:#15803d}
+  .sec.paper .msg.al{color:#b45309}
+  .sec.paper .msg.er{color:#b91c1c}
+  .sec.paper .msg.info{color:#2563eb}
+  .sec.paper .avi{background:#f7f1dc; border-left-color:#f59e0b; color:#6b5a2a}
+  .sec.paper .avi b{color:#b45309}
+  .sec.paper .avi.az{background:#e8eef5; border-left-color:#3b82f6}
+  .sec.paper .avi.az b{color:#2563eb}
+  .sec.paper .btn{background:#fff; border-color:#b8b2a0; color:#444}
+  .sec.paper .btn:active{background:#ece8da}
+  .sec.paper .btn.pri{background:#3b82f6; border-color:#3b82f6; color:#fff}
+  .sec.paper .bx{color:#8a7f6a}
+  .sec.paper .cb-cab, .sec.paper .es-cab, .sec.paper .fb-cab, .sec.paper .rc-cab{color:#666}
+
+  /* ---------- mobile (cabe dentro do viewport, sem cortar a direita) ---------- */
+  @media (max-width: 480px){
+    .topo{padding:8px 10px}
+    .t1{flex-wrap:wrap; row-gap:4px}
+    .logo-col .logo{height:44px}
+    .prod{font-size:17px}
+    .prod .sigla{font-size:16px}
+    .datas .dl{padding:4px 10px}
+    .datas .dl b{font-size:15px}
+    .meta b{font-size:16px}
+    .wrap{padding:10px; gap:10px}
+    .folha{padding:10px 8px; font-size:12px}
+    .sec.paper .corpo{padding:10px; margin:0 4px 6px}
+    /* linhas dinâmicas compactas — time/date não estouram a grade */
+    .cb, .es, .fb, .rc{gap:5px}
+    .cb input, .es input, .es select, .fb input, .rc input{font-size:13.5px; padding:8px 5px; min-height:40px}
+    .cb, .cb-cab{grid-template-columns:1fr 1fr 1fr 1fr 26px}
+    .fb, .fb-cab{grid-template-columns:1fr 1fr 1fr 1fr 1fr 26px}
+    .rc, .rc-cab{grid-template-columns:1fr 1fr 1fr 26px}
+    .es, .es-cab{grid-template-columns:50px 1fr 1fr 1fr 26px}
+    .fl-op{font-size:14px; margin:6px 0 4px}
+    .fl-linha{font-size:11px}
+    .folha table{table-layout:fixed; font-size:11px}
+    .folha col:nth-child(2){width:72px}
+    .folha col:nth-child(3){width:36px}
+    .folha col:nth-child(4){width:82px}
+    .folha col:nth-child(5){width:26px}
+    .folha thead th{padding:3px 4px; font-size:9.5px}
+    .folha tbody td{padding:4px 4px}
+    .fl-desc{font-size:10.5px; word-break:break-word}
+    .fl-q{font-size:11px}
+    .fl-est{font-size:10.5px}
+    .folha .fl-chk{width:26px}
+  }
+
+  /* ---------- carbonatacao ---------- */
+  .cb-cab{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+  .cb{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .cb input{font-size:15px; padding:9px 8px; min-height:42px}
+  .bx{background:none; border:none; color:#6c7d8c; font-size:19px; cursor:pointer}
+
+  /* ---------- fermentação (Base Kombucha / PC04) ---------- */
+  .fb-cab{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+  .fb{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .fb input{font-size:15px; padding:9px 8px; min-height:42px}
+
+  /* ---------- recravacao (leituras dinâmicas, sem data) ---------- */
+  .rc{display:grid; grid-template-columns:1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .rc input{font-size:15px; padding:9px 8px; min-height:42px}
+  .rc-cab{display:grid; grid-template-columns:1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+
+  /* ---------- estoque (envios) ---------- */
+  .es-cab{display:grid; grid-template-columns:70px 1fr 1fr 1fr 34px; gap:7px;
+    font-size:10px; color:var(--txt3); padding:0 2px 6px}
+  .es{display:grid; grid-template-columns:70px 1fr 1fr 1fr 34px; gap:7px; margin-bottom:7px}
+  .es input,.es select{font-size:15px; padding:9px 8px; min-height:42px}
+  /* permite encolher abaixo do tamanho nativo (time/date têm largura mínima intrínseca) */
+  .cb input, .es input, .es select, .fb input, .rc input{min-width:0}
+
+  .btn{background:var(--campo); border:1.5px solid var(--linha); color:var(--txt2);
+    border-radius:8px; padding:11px 16px; font-size:14px; cursor:pointer;
+    font-family:inherit; min-height:46px; width:100%}
+  .btn:active{background:#1c2733}
+  .btn.pri{background:var(--az); border-color:var(--az); color:#fff; font-weight:600}
+
+  .avi{border-left:3px solid var(--al); background:#1a1410; border-radius:0 6px 6px 0;
+    padding:9px 12px; font-size:12px; color:var(--txt2); line-height:1.5; margin-bottom:12px}
+  .avi b{color:var(--al2)}
+  .avi.az{border-left-color:var(--az); background:#0f1721}
+  .avi.az b{color:#7dd3fc}
+
+  .rod{padding:0 14px 30px; max-width:820px; margin:0 auto}
+  .resumo{display:none; background:var(--painel); border:1px solid var(--linha);
+    border-radius:12px; padding:12px 14px; margin-bottom:12px}
+  .resumo h3{font-size:12px; letter-spacing:.5px; color:var(--txt3); margin:0 0 8px; font-weight:600}
+  .resumo ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px}
+  .resumo li{font-size:13px; color:var(--txt2); display:flex; justify-content:space-between; gap:10px}
+  .resumo li b{font-weight:600; color:var(--txt)}
+  .resumo .nc{color:var(--er2); font-size:12px; margin-top:8px}
+  .resumo .nc b{color:var(--er2)}
+  pre{background:#0c1219; border:1px solid var(--linha); border-radius:9px; padding:12px;
+    font-size:11px; color:var(--txt2); overflow-x:auto; white-space:pre-wrap; word-break:break-word}
+
+  /* ---------- navegação / lista de OPs abertas ---------- */
+  .nav{display:flex; gap:8px; margin-bottom:10px}
+  .btnNav{display:inline-flex; width:auto; padding:8px 13px; font-size:13px; text-decoration:none}
+  #btnVoltar{display:none}
+  body:not(.lista) #btnVoltar{display:inline-flex}
+
+  #viewLista{display:none; max-width:820px; margin:0 auto; padding:14px}
+  body.lista #viewLista{display:block}
+  body.lista .topo, body.lista .wrap, body.lista .rod{display:none}
+  .topoLista{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap}
+  .topoAcoes{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .topoLista h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
+  .topoLista .sub{font-size:12px; color:var(--txt3); margin-top:2px}
+  .grupo{font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+    color:var(--txt3); margin:16px 2px 8px}
+  .grupo:first-child{margin-top:0}
+
+  .opc{background:var(--painel); border:1px solid var(--linha); border-radius:12px;
+    padding:12px 14px; margin-bottom:9px; cursor:pointer; display:flex;
+    justify-content:space-between; align-items:center; gap:10px; transition:background .15s}
+  .opc:active{background:#182330}
+  .opc .l1{font-size:15px; font-weight:700}
+  .opc .l1 span{color:var(--az)}
+  .opc .l2{font-size:12px; color:var(--txt3); margin-top:2px}
+  .opc .l3{font-size:12px; margin-top:3px; font-weight:600; color:var(--txt3)}
+  .opc .l3.fer{color:var(--al2)}
+  .opc .l3.fer.ok{color:var(--ok2)}
+  .opc .l3.fer.er{color:var(--er2); font-weight:800}
+  .opc .l3.fer-alta{color:var(--er2); font-weight:800}
+  .opc .r{text-align:right}
+  .opc .q{font-size:13px; color:var(--txt2)}
+  .st{font-size:11px; padding:2px 9px; border-radius:20px; white-space:nowrap; display:inline-block; margin-top:4px}
+  .st.nova{background:var(--linha); color:var(--txt3)}
+  .st.parcial{background:#2a2412; color:var(--al2)}
+  .st.completa{background:#12241a; color:var(--ok2)}
+  .st.nc{background:#2a1216; color:var(--er2)}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div class="nav">
+    <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
+    <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
+  </div>
+  <div class="t1">
+    <div class="logo-col"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
+    <div class="info">
+      <div class="prod">
+        <span class="op">OP <b id="opNum">#528</b></span>
+        <span id="opSigla" class="sigla">CCM</span>
+        <span id="opNome">Chá Camomila Maracujá</span>
+        <span id="opSku" class="sku">CH003</span>
+      </div>
+    </div>
+    <div class="datas">
+      <span class="dl"><span class="lbl">Fabricação</span><b id="opFab">14/08/2026</b></span>
+      <span class="dl"><span class="lbl">Validade</span><b id="opVal">14/04/2027</b></span>
+    </div>
+    <div class="meta" id="opMeta"><b>4.464 latas</b><span> · 1.201 L</span></div>
+  </div>
+  <div class="prog"><i id="pb"></i></div>
+  <div class="progtxt" id="pt">0 de 4 blocos preenchidos</div>
+</div>
+
+<!-- ============ LISTA DE OPs ABERTAS (painel do formulário) ============ -->
+<div id="viewLista">
+  <div class="logo-row"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
+    <div class="topoLista">
+    <div>
+      <h1>Fichas do dia — OPs abertas</h1>
+      <div class="sub">12/08/2026 · toque na OP para abrir a ficha · em produção a lista vem de <b>ListarOrdemProducao</b> (lExibirItens)</div>
+    </div>
+    <div class="topoAcoes">
+      <button class="btn btnNav" onclick="baixarArquivoOPs()">📄 Arquivo das OPs</button>
+      <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
+    </div>
+  </div>
+  <div id="opLista"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ INSUMOS — consulta ============ -->
+  <div class="sec ab" data-sec="insumos" data-consulta>
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span>
+      <h2>Folha da OP</h2>
+      <span class="est info" id="insChk">0 de 9 conferidos</span>
+    </div>
+    <div class="corpo">
+      <div id="insumos"></div>
+    </div>
+  </div>
+
+  <!-- ============ CARBONATAÇÃO ============ -->
+  <div class="sec paper" data-sec="carbonatacao">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Carbonatação</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="cb-cab"><span>Horário</span><span>Temp °C</span><span>P. cilindro</span><span>P. tanque</span><span></span></div>
+      <div id="cbLin"></div>
+      <button class="btn" onclick="addCarb()">+ Adicionar leitura</button>
+    </div>
+  </div>
+
+  <!-- ============ PRÉ-ENVASE ============ -->
+  <div class="sec paper" data-sec="preenvase">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Parâmetros pré-envase</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="avi" id="avisoPre">
+        <b>Sem especificação cadastrada</b> para pH, Brix e carbonatação deste produto.
+        Os valores são registrados sem validação automática — cada campo mostra
+        <span style="color:#7dd3fc">"sem especificação"</span> como aviso, nunca aprova em silêncio.
+      </div>
+      <div class="g3">
+        <div class="campo"><label>pH</label>
+          <input type="text" inputmode="decimal" data-c="pH" data-spec="pH" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Brix</label>
+          <input type="text" inputmode="decimal" data-c="brix" data-spec="brix" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Carbonatação</label>
+          <input type="text" inputmode="decimal" data-c="carb" data-spec="carbonatacao" data-req><div class="msg"></div></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Responsável</label>
+        <input type="text" data-c="respPre" data-req><div class="msg"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ RECRAVAÇÃO — 1 medição por lote ============ -->
+  <div class="sec paper" data-sec="recravacao">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Recravação</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="avi az">
+        <b>Uma leitura por lata</b> — durante o envase. Sleek 269 ml:
+        altura <b>2,50–2,65</b> · espessura <b>1,00–1,10</b> · transpasse <b>0,80–0,90</b> mm
+      </div>
+      <div class="rc-cab"><span>Altura</span><span>Espessura</span><span>Transpasse</span><span></span></div>
+      <div id="rcLin"></div>
+      <button class="btn" onclick="addRec()">+ Adicionar leitura</button>
+    </div>
+  </div>
+
+  <!-- ============ ESTOQUE ============ -->
+  <div class="sec paper" data-sec="estoque">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Envio para estoque</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="es-cab"><span>Horário</span><span>Quantidade</span><span>Tipo</span><span>Responsável</span><span></span></div>
+      <div id="esLin"></div>
+      <button class="btn" onclick="addEstoque()">+ Adicionar envio</button>
+    </div>
+  </div>
+
+  <!-- ============ BASE KOMBUCHA (FX000) — PC04 Qualidade Kombucha V2 ============ -->
+  <div class="sec paper hid" data-sec="starter">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Starter da Fermentação</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="g2">
+        <div class="campo"><label>Tanque</label>
+          <input type="text" data-c="tanqueSt" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Fonte</label>
+          <input type="text" data-c="fonteSt" data-req><div class="msg"></div></div>
+      </div>
+      <div class="g3">
+        <div class="campo"><label>pH</label>
+          <input type="text" inputmode="decimal" data-c="phSt" data-req><div class="msg"></div></div>
+        <div class="campo"><label>°Brix</label>
+          <input type="text" inputmode="decimal" data-c="brixSt" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Volume starter (L)</label>
+          <input type="text" inputmode="decimal" data-c="volSt" data-req><div class="msg"></div></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Volume do tanque (L)</label>
+        <input type="text" inputmode="decimal" data-c="volTanque" data-req><div class="msg"></div></div>
+    </div>
+  </div>
+
+  <div class="sec paper hid" data-sec="fermentacao">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Fermentação</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="fb-cab"><span>Data</span><span>pH</span><span>°Brix</span><span>Temp °C</span><span>ABV %</span><span></span></div>
+      <div id="ferLin"></div>
+      <button class="btn" onclick="addFer()">+ Adicionar leitura</button>
+    </div>
+  </div>
+
+  <div class="sec paper hid" data-sec="filtracao">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Filtração</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="g2">
+        <div class="campo"><label>Volume (L)</label>
+          <input type="text" inputmode="decimal" data-c="volFi" data-req><div class="msg"></div></div>
+        <div class="campo"><label>Tempo (min)</label>
+          <input type="text" inputmode="decimal" data-c="tempoFi" data-req><div class="msg"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec paper hid" data-sec="produtoAcabado">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Produto Acabado</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <div class="campo"><label>Produto</label>
+        <input type="text" data-c="prodPA" data-req><div class="msg"></div></div>
+      <div class="g3" style="margin-top:10px">
+        <div class="campo"><label>°Brix do Produto</label>
+          <input type="text" inputmode="decimal" data-c="brixPA" data-req><div class="msg"></div></div>
+        <div class="campo"><label>pH do Produto</label>
+          <input type="text" inputmode="decimal" data-c="phPA" data-req><div class="msg"></div></div>
+        <div class="campo"><label>ABV (%)</label>
+          <input type="text" inputmode="decimal" data-c="abvPA" data-req><div class="msg"></div></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Brix Suco</label>
+        <input type="text" inputmode="decimal" data-c="brixSucoPA" data-req><div class="msg"></div></div>
+    </div>
+  </div>
+
+  <div class="sec paper hid" data-sec="observacoes">
+    <div class="cab" onclick="alterna(this)">
+      <span class="chev">▸</span><h2>Observações do Processo</h2><span class="est" data-est>—</span>
+    </div>
+    <div class="corpo">
+      <textarea data-c="obs" data-req style="width:100%; min-height:70px"></textarea>
+    </div>
+  </div>
+
+</div>
+
+<div class="rod">
+  <div class="resumo" id="resumo"></div>
+  <div id="anexoStatus" style="display:none; margin-bottom:10px; font-size:13px; color:var(--txt2)"></div>
+  <button class="btn pri" onclick="salvar()">Concluir ficha</button>
+  <pre id="saida" style="display:none"></pre>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Especificações — em produção vêm de qualidade/spec/*.json no R2
+// recravacao: pronta, do fabricante (Uniti).
+// produtos: gerado da planilha de indicadores (média) em 14/08/2026 —
+//   alvo = média, min/max = faixa observada. Ver spec/produtos-estatisticas.md
+//   (null = registra sem validar, com aviso — nunca aprova em silêncio)
+// ---------------------------------------------------------------------------
+const SPEC = {
+  recravacao: {
+    altura:     { min: 2.50, alvo: 2.60, max: 2.65 },
+    espessura:  { min: 1.00, alvo: 1.05, max: 1.10 },
+    transpasse: { min: 0.80, alvo: 0.85, max: 0.90 }
+  }
+};
+
+const PRODUTOS = {
+  FX000: {nome:'Base Kombucha',familia:'kombucha',pH:null,brix:null,carbonatacao:null,abv:null},
+  // pH/Brix = Padrão dos Produtos (PDF oficial Dêvi) — alvo = meio da faixa
+  CH001: {nome:'Chá Verde Pêssego',familia:'cha',pH:{min:3.2,alvo:3.28,max:3.35}, brix:{min:4.5,alvo:4.75,max:5}, carbonatacao:{min:1.5,alvo:1.54,max:1.7}, abv:null},
+  CH002: {nome:'Chá Hibisco Morango',familia:'cha',pH:{min:3.0,alvo:3.15,max:3.3}, brix:{min:6.5,alvo:6.75,max:7}, carbonatacao:{min:1.5,alvo:1.57,max:2}, abv:null},
+  CH003: {nome:'Chá Camomila Maracujá',familia:'cha',pH:{min:2.8,alvo:2.95,max:3.1}, brix:{min:4.5,alvo:4.75,max:5}, carbonatacao:{min:1.5,alvo:1.55,max:1.7}, abv:null},
+  CH004: {nome:'Chá Mate Limão',familia:'cha',pH:{min:3.7,alvo:3.8,max:3.9}, brix:{min:2.0,alvo:2.25,max:2.5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
+  FX001: {nome:'Komb Frutas Vermelhas',familia:'kombucha',pH:{min:3.25,alvo:3.38,max:3.5}, brix:{min:3.5,alvo:3.75,max:4}, carbonatacao:{min:1.5,alvo:1.6,max:2.4}, abv:{min:0.1,alvo:0.53,max:1.82}},
+  FX002: {nome:'Komb Abacaxi Gengibre',familia:'kombucha',pH:{min:3.4,alvo:3.53,max:3.65}, brix:{min:3.5,alvo:3.75,max:4}, carbonatacao:{min:1.5,alvo:1.59,max:2.2}, abv:{min:0.18,alvo:0.39,max:1.2}},
+  FX003: {nome:'Komb Maçã Gengibre',familia:'kombucha',pH:{min:3.4,alvo:3.53,max:3.65}, brix:{min:3.5,alvo:3.75,max:4}, carbonatacao:{min:1.5,alvo:1.6,max:2.2}, abv:{min:0.12,alvo:0.31,max:0.58}},
+  FX006: {nome:'Komb Mirtilo Morango',familia:'kombucha',pH:{min:3.35,alvo:3.45,max:3.55}, brix:{min:3.5,alvo:3.75,max:4}, carbonatacao:{min:1.5,alvo:1.61,max:2.2}, abv:{min:0.2,alvo:0.41,max:0.75}},
+  FX007: {nome:'Komb Pink Lemonade',familia:'kombucha',pH:{min:3.0,alvo:3.15,max:3.3}, brix:{min:3.0,alvo:3.25,max:3.5}, carbonatacao:{min:1.5,alvo:1.61,max:2.2}, abv:{min:0.1,alvo:0.43,max:1.75}},
+  RF001: {nome:'Refri Limão Siciliano',familia:'refri',pH:{min:3.25,alvo:3.38,max:3.5}, brix:{min:4.0,alvo:4.25,max:4.5}, carbonatacao:{min:1.5,alvo:1.55,max:2}, abv:null},
+  RF002: {nome:'Refri Frutas Vermelhas',familia:'refri',pH:{min:3.3,alvo:3.43,max:3.55}, brix:{min:4.5,alvo:4.75,max:5}, carbonatacao:{min:1.5,alvo:1.57,max:2}, abv:null},
+  RF003: {nome:'Refri Guaraná Açaí',familia:'refri',pH:{min:3.5,alvo:3.65,max:3.8}, brix:{min:4.0,alvo:4.25,max:4.5}, carbonatacao:{min:1.5,alvo:1.61,max:2.2}, abv:null},
+  RF004: {nome:'Refri Uva',familia:'refri',pH:{min:3.4,alvo:3.5,max:3.6}, brix:{min:4.5,alvo:4.75,max:5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
+  RF005: {nome:'Refri Laranja',familia:'refri',pH:{min:3.7,alvo:3.8,max:3.9}, brix:{min:4.5,alvo:4.75,max:5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
+  RTM001: {nome:'Refri Limão Mônica',familia:'refri',pH:{min:3.36,alvo:3.37,max:3.39}, brix:{min:3.5,alvo:4.18,max:5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
+  RTM002: {nome:'Refri Uva Mônica',familia:'refri',pH:{min:3.2,alvo:3.4,max:3.53}, brix:{min:4,alvo:4.37,max:5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
+  RTM003: {nome:'Refri Laranja Mônica',familia:'refri',pH:{min:3.76,alvo:3.83,max:3.94}, brix:{min:4,alvo:4.1,max:4.5}, carbonatacao:{min:1.5,alvo:1.5,max:1.5}, abv:null},
+};
+const SIGLA = { FX000:'BASE',CH001:'CVP',CH002:'CML',CH003:'CCM',CH004:'CHM',FX001:'KFV',FX002:'KABX',
+  FX003:'KMÇ',FX006:'KMIR',FX007:'KPL',RF001:'RLS',RF002:'RFV',RF003:'RGA',RF004:'RLA',
+  RF005:'RUV',RTM001:'RTMLA',RTM002:'RTMLS',RTM003:'RTMUV' };
+// SKU da ficha — sempre derivado da OP aberta (sem seletor no cabeçalho)
+let skuAtual = 'FX001';
+const produtoAtual = () => PRODUTOS[skuAtual] || {};
+
+// ---------------------------------------------------------------------------
+// OPs abertas do dia — em produção vêm de ListarOrdemProducao (lExibirItens).
+// FICHAS guarda o estado das fichas já salvas (mock) para a lista mostrar status.
+// ---------------------------------------------------------------------------
+const OPS = [
+  { op: '528', sigla: 'KPL',   sku: 'FX007', qtd: 4464 },
+  { op: '527', sigla: 'KFV',   sku: 'FX001', qtd: 4464 },
+  { op: '526', sigla: 'RLS2K', sku: 'RF001', qtd: 7435 },
+  { op: '525', sigla: 'CHM2K', sku: 'CH004', qtd: 7435 },
+  { op: '524', sigla: 'KABX/3', sku: 'FX002', qtd: 3000 },
+  { op: '523', sigla: 'CVP',   sku: 'CH001', qtd: 4464 }
+];
+const FICHAS = {
+  '527': { blocos: 2, total: 4, nc: true,  completa: false },
+  '524': { blocos: 4, total: 4, nc: false, completa: true },
+  '523': { blocos: 1, total: 4, nc: false, completa: false }
+};
+let opAtual = null;
+let nCodOPAtual = null; // nCodOP da OP aberta — usado no anexo automático na OP
+let opQtd = 4464; // quantidade da OP aberta — escala a lista de insumos
+let opUn = 'UND';  // unidade da OP aberta (ex.: L para Base Kombucha)
+let opData = '';   // data da OP (DD/MM/AAAA) — vira Data de Produção na conclusão
+let receitaReal = null;          // insumos reais da OP (endpoint) — substitui o mock
+let folhaInfo = null;            // campos do cabeçalho da folha (previsao/situacao/tipoProduto)
+const receitasCache = {};        // op → insumos reais já carregados
+
+function statusFicha(op){ return FICHAS[op]; }
+
+function renderLista(){
+  const ST = { nova: ['nova', 'sem ficha'], parcial: ['parcial', 'parcial'],
+               completa: ['completa', 'completa'], nc: ['nc', 'não conforme'] };
+  const card = o => {
+    const f = FICHAS[o.op];
+    const [cls, label] = f ? (f.nc ? ST.nc : (f.completa ? ST.completa : ST.parcial)) : ST.nova;
+    const p = (o.sku && PRODUTOS[o.sku]) || {};
+    const ehBase = o.sku === 'FX000';
+    const dFer = (ehBase && o.data) ? diasFermentacao(o.data) : null;
+    const corFer = dFer == null ? '' : (dFer >= 11 ? ' er' : (dFer >= 7 ? ' al' : ' ok'));
+    const info = ehBase
+      ? (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
+      : (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '');
+    return `<div class="opc" onclick="abrirOp('${o.op}')">
+      <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
+        <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div>
+        ${info}</div>
+      <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
+        <span class="st ${cls}">${label}</span></div></div>`;
+  };
+  // separa as bases (FX000) dos demais SKUs
+  const base   = OPS.filter(o => o.sku === 'FX000');
+  const outros = OPS.filter(o => o.sku !== 'FX000');
+  const grupos = [];
+  if(outros.length) grupos.push(`<div class="grupo">Produtos acabados (${outros.length})</div>` + outros.map(card).join(''));
+  if(base.length)   grupos.push(`<div class="grupo">Base Kombucha (${base.length})</div>` + base.map(card).join(''));
+  document.getElementById('opLista').innerHTML = grupos.join('');
+}
+
+function mostrarLista(){ document.body.classList.add('lista'); renderLista(); }
+function mostrarFicha(){ document.body.classList.remove('lista'); }
+function voltarLista(){ mostrarLista(); }
+
+// ---- Arquivo das OPs (download .txt) — separado em acabados (17 SKUs) e bases ----
+function textoArquivoOPs(){
+  const l = [];
+  const agora = new Date();
+  l.push('DÊVI — FICHAS DO DIA (OPs abertas)');
+  l.push('Gerado em: ' + agora.toLocaleDateString('pt-BR') + ' ' +
+    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  l.push('');
+  const base = OPS.filter(o => o.sku === 'FX000');
+  const outros = OPS.filter(o => o.sku !== 'FX000');
+  l.push(`=== PRODUTOS ACABADOS (${outros.length} SKUs) ===`);
+  outros.forEach(o => {
+    const p = (o.sku && PRODUTOS[o.sku]) || {};
+    const qtdTxt = (o.un === 'L')
+      ? `${o.qtd.toLocaleString('pt-BR')} L`
+      : `${o.qtd.toLocaleString('pt-BR')} latas${sufixoL(o.qtd, o.un)}`;
+    l.push(`  OP ${o.op} · ${o.sigla} · ${p.nome || o.sku} · Fab: ${o.data || '—'} · ${qtdTxt}`);
+  });
+  l.push('');
+  l.push(`=== BASE KOMBUCHA (${base.length}) ===`);
+  base.forEach(o => {
+    const d = diasFermentacao(o.data);
+    l.push(`  OP ${o.op} · ${o.sigla} · Base Kombucha · Início: ${o.data || '—'} · ` +
+      `${d != null ? d + ' dias de fermentação' : 'sem data'} · ${o.qtd.toLocaleString('pt-BR')} L`);
+  });
+  return l.join('\n');
+}
+
+function baixarArquivoOPs(){
+  const blob = new Blob([textoArquivoOPs()], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `OPs-${new Date().toISOString().slice(0, 10)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+function resetarFicha(){
+  conferidos.clear();
+  nc = 0; nEs = 0; nf = 0; nr = 0; // reinicia os contadores de linha
+  document.querySelectorAll('.sec input, .sec select, .sec textarea').forEach(e => {
+    e.value = ''; e.classList.remove('ok', 'al', 'er', 'info');
+  });
+  document.querySelectorAll('.msg').forEach(m => { m.textContent = ''; m.className = 'msg'; });
+  document.getElementById('cbLin').innerHTML = '';
+  document.getElementById('esLin').innerHTML = '';
+  document.getElementById('ferLin').innerHTML = '';
+  document.getElementById('rcLin').innerHTML = '';
+  montarInsumos();
+  addCarb();
+  addEstoque();
+  addFer();
+  addRec();
+  document.getElementById('resumo').style.display = 'none';
+  document.getElementById('saida').style.display = 'none';
+  const anexoStatus = document.getElementById('anexoStatus');
+  if(anexoStatus) anexoStatus.style.display = 'none';
+  try { window.scrollTo(0, 0); } catch(e) {}
+}
+
+function abrirOp(op){
+  const o = OPS.find(x => x.op === op);
+  if(!o) return;
+  opAtual = op;
+  nCodOPAtual = o.nCodOP || null;
+  opQtd = o.qtd || 4464;
+  opUn = o.un || (o.sku === 'FX000' ? 'L' : 'UND');
+  opData = o.data || (folhaInfo && folhaInfo.previsao) || '';
+  receitaReal = receitasCache[op] || null;
+  const sku = o.sku || skuAtual;
+  const nome = (PRODUTOS[sku] && PRODUTOS[sku].nome) || o.sigla || sku;
+  const volL = litrosOP(o.qtd, o.un);
+  document.getElementById('opNum').textContent = '#' + abreviaOp(op);
+  document.getElementById('opSigla').textContent = o.sigla || SIGLA[sku] || sku;
+  document.getElementById('opNome').textContent = nome;
+  document.getElementById('opSku').textContent = sku || '';
+  const fab = opData || '12/08/2026';
+  document.getElementById('opFab').textContent = fab;
+  document.getElementById('opVal').textContent = somaMesesBR(fab, 8) || '—';
+  document.getElementById('opMeta').innerHTML =
+    (o.un === 'L')
+      ? `<b>${o.qtd.toLocaleString('pt-BR')} L</b>`
+      : `<b>${o.qtd.toLocaleString('pt-BR')} latas</b><span>${volL ? ' · ' + volL.toLocaleString('pt-BR') + ' L' : ''}</span>`;
+  skuAtual = sku; // SKU vem do worker (autoritativo) — sem herdar o da OP anterior
+  aplicarSku();
+  resetarFicha();
+  mostrarFicha();
+  carregarInsumosReais(op, o.nCodOP);
+}
+
+// ---- integração com o endpoint do worker (mock quando file:// ou offline) ----
+const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
+async function carregarOPS(){
+  mostrarLista();
+  const el = document.getElementById('opLista');
+  if(location.protocol === 'file:') return; // demo: mantém o mock
+  if(el) el.innerHTML = '<div class="sub" style="padding:14px;color:var(--txt3)">Carregando OPs do Omie…</div>';
+  try{
+    const r = await fetch(WORKER_URL + '/api/qualidade/fichas');
+    const j = await r.json();
+    if(j.fichas && j.fichas.length){
+      OPS.length = 0;
+      j.fichas.forEach(f => OPS.push({
+        op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
+        nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
+        data: f.data || ''
+      }));
+      OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
+      renderLista();
+    } else {
+      OPS.length = 0;
+      if(el) el.innerHTML = '<div class="sub" style="padding:14px;color:var(--txt3)">Nenhuma OP aberta no momento.</div>';
+    }
+  }catch(e){
+    if(el) el.innerHTML = '<div class="sub" style="padding:14px;color:var(--er2)">Não foi possível carregar as OPs do Omie — verifique o worker (' + e.message + ')</div>';
+  }
+}
+
+async function carregarInsumosReais(op, nCodOP){
+  if(location.protocol === 'file:') return;
+  try{
+    const r = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(nCodOP || op));
+    const j = await r.json();
+    if(j.itens && j.itens.length){
+      folhaInfo = { previsao: j.previsao || '', situacao: j.situacao || '',
+                    tipoProduto: j.tipoProduto || '' };
+      if (j.data) opData = j.data; // data corrente da OP (se mudou de dia, atualiza)
+      receitaReal = j.itens.map(i => ({
+        cod: String(i.codigo || i.cod), nome: i.nome || i.codigo, un: i.un || '',
+        quantidade: i.quantidade ?? null, saldo: i.saldo ?? null,
+        reservado: i.reservado || ''
+      }));
+      receitasCache[op] = receitaReal;
+      montarInsumos();
+      atualizarInsumosChk();
+    }
+  }catch(e){}
+}
+
+// ---------------------------------------------------------------------------
+// Blocos por família — backend-qualidade §7. barril não tem carbonatação
+// nem recravação. O insumos (consulta) nunca entra na contagem de progresso.
+// ---------------------------------------------------------------------------
+const BLOCO_FAMILIA = {
+  base: ['starter','fermentacao','filtracao','produtoAcabado','observacoes'], // FX000 — PC04 Qualidade Kombucha V2
+  kombucha: ['carbonatacao','preenvase','recravacao','estoque'],
+  refri:    ['carbonatacao','preenvase','recravacao','estoque'],
+  cha:      ['carbonatacao','preenvase','recravacao','estoque'],
+  barril:   ['preenvase','estoque']
+};
+
+// ---------------------------------------------------------------------------
+// Insumos por SKU (receita do produto) — em produção vêm de
+// ConsultarOrdemProducao (itensDetalhes) cruzados com o saldo do almoxarifado.
+// A lista troca junto com a OP aberta (skuAtual).
+// ---------------------------------------------------------------------------
+const RECEITAS = {
+  // Base Kombucha (FX000) — estrutura real (estruturas.js): Chá Verde + Açúcar
+  FX000: [
+    { cod:'MP05', nome:'Chá Verde Orgânico', un:'kg', porUnidade:0.006, saldo:null },
+    { cod:'PRD00338', nome:'Açúcar Cristal Org.', un:'kg', porUnidade:0.035, saldo:null },
+  ],
+  CH001: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RCH001', nome:'Rótulo Chá Verde Pêssego', un:'', porUnidade:1, saldo:35712 },
+    { cod:'MPC004', nome:'Conc. maçã e pêssego', un:'', porUnidade:0.010567, saldo:283 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.002287, saldo:41 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.001865, saldo:17 },
+    { cod:'MPC030', nome:'Conc. (30)', un:'', porUnidade:0.00075, saldo:17 },
+    { cod:'MPC011', nome:'Conc. (11)', un:'', porUnidade:0.000437, saldo:8 },
+    { cod:'MPC020', nome:'Conc. (20)', un:'', porUnidade:0.000403, saldo:7 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000323, saldo:7 },
+    { cod:'MPR015', nome:'Aroma (015)', un:'', porUnidade:0.000168, saldo:5 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.00015, saldo:3 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MP044', nome:'Aroma (044)', un:'', porUnidade:0.000038, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000026, saldo:2 },
+  ],
+  CH002: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RCH002', nome:'Rótulo Chá Hibisco Morango', un:'', porUnidade:1, saldo:40176 },
+    { cod:'MPR029', nome:'Suco conc. frutas vermelhas', un:'kg', porUnidade:0.009496, saldo:170 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.009254, saldo:83 },
+    { cod:'MPR018', nome:'Suco conc. maçã e morango', un:'kg', porUnidade:0.005649, saldo:50 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.003093, saldo:55 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR015', nome:'Aroma (015)', un:'', porUnidade:0.000887, saldo:28 },
+    { cod:'MPR011', nome:'Aroma (011)', un:'', porUnidade:0.000323, saldo:4 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000269, saldo:6 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000011, saldo:2 },
+  ],
+  CH003: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RCH003', nome:'Rótulo Chá Camomila Maracujá', un:'', porUnidade:1, saldo:8928 },
+    { cod:'MPC002', nome:'Conc. maçã e maracujá', un:'', porUnidade:0.008985, saldo:160 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.00577, saldo:52 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.005491, saldo:98 },
+    { cod:'MPC005', nome:'Conc. maracujá', un:'', porUnidade:0.003093, saldo:97 },
+    { cod:'MPC006', nome:'Conc. camomila', un:'', porUnidade:0.000526, saldo:19 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000134, saldo:3 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000134, saldo:2 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000027, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000027, saldo:2 },
+  ],
+  CH004: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RCH004', nome:'Rótulo Chá Mate Limão', un:'', porUnidade:1, saldo:13392 },
+    { cod:'MP032', nome:'Concentrado chá-mate', un:'L', porUnidade:0.004277, saldo:76 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.001089, saldo:10 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.000768, saldo:14 },
+    { cod:'MPR007', nome:'Aroma (007)', un:'', porUnidade:0.000592, saldo:21 },
+    { cod:'MPA001', nome:'Limão (aroma)', un:'', porUnidade:0.000484, saldo:19 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000323, saldo:7 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000269, saldo:6 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.00015, saldo:3 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000064, saldo:2 },
+  ],
+  FX001: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RFX001', nome:'Rótulo Komb Frutas Vermelhas', un:'', porUnidade:1, saldo:13392 },
+    { cod:'PRD00338', nome:'Açúcar orgânico', un:'kg', porUnidade:0.0087759, saldo:235 },
+    { cod:'MP003', nome:'Amora', un:'kg', porUnidade:0.00797987, saldo:71 },
+    { cod:'MP03', nome:'Framboesa', un:'kg', porUnidade:0.00342093, saldo:31 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP05', nome:'Chá verde', un:'kg', porUnidade:0.00150444, saldo:27 },
+    { cod:'MPR024', nome:'Suco conc. frutas vermelhas', un:'kg', porUnidade:0.000139, saldo:4 },
+  ],
+  FX002: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RFX002', nome:'Rótulo Komb Abacaxi Gengibre', un:'', porUnidade:1, saldo:17856 },
+    { cod:'MP09', nome:'Abacaxi (suco)', un:'L', porUnidade:0.0198478, saldo:709 },
+    { cod:'PRD00338', nome:'Açúcar orgânico', un:'kg', porUnidade:0.00908446, saldo:243 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP05', nome:'Chá verde', un:'kg', porUnidade:0.00155734, saldo:28 },
+    { cod:'MP021', nome:'Gengibre', un:'kg', porUnidade:0.00037, saldo:3 },
+    { cod:'MP020', nome:'Abacaxi (aroma)', un:'', porUnidade:0.000051, saldo:2 },
+  ],
+  FX003: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RFX003', nome:'Rótulo Komb Maçã Gengibre', un:'', porUnidade:1, saldo:22320 },
+    { cod:'PRD00338', nome:'Açúcar orgânico', un:'kg', porUnidade:0.00933786, saldo:250 },
+    { cod:'MP030', nome:'Suco org. conc. maçã 70º', un:'kg', porUnidade:0.004333, saldo:39 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP05', nome:'Chá verde', un:'kg', porUnidade:0.00160078, saldo:29 },
+    { cod:'MP021', nome:'Gengibre', un:'kg', porUnidade:0.000371, saldo:3 },
+  ],
+  FX006: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RFX006', nome:'Rótulo Komb Mirtilo Morango', un:'', porUnidade:1, saldo:35712 },
+    { cod:'PRD00338', nome:'Açúcar orgânico', un:'kg', porUnidade:0.00877587, saldo:235 },
+    { cod:'MP04', nome:'Morango', un:'kg', porUnidade:0.00433129, saldo:58 },
+    { cod:'MP003', nome:'Amora', un:'kg', porUnidade:0.00296351, saldo:26 },
+    { cod:'MP02', nome:'Mirtilo', un:'kg', porUnidade:0.00296351, saldo:119 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP05', nome:'Chá verde', un:'kg', porUnidade:0.00150443, saldo:27 },
+    { cod:'MPR011', nome:'Aroma (011)', un:'', porUnidade:0.000076, saldo:2 },
+  ],
+  FX007: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RFX007', nome:'Rótulo Komb Pink Lemonade', un:'', porUnidade:1, saldo:40176 },
+    { cod:'MP006', nome:'Limão', un:'L', porUnidade:0.0138471, saldo:309 },
+    { cod:'PRD00338', nome:'Açúcar orgânico', un:'kg', porUnidade:0.00863055, saldo:231 },
+    { cod:'MP04', nome:'Morango', un:'kg', porUnidade:0.00672525, saldo:90 },
+    { cod:'MP03', nome:'Framboesa', un:'kg', porUnidade:0.00403515, saldo:36 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP05', nome:'Chá verde', un:'kg', porUnidade:0.00147952, saldo:26 },
+    { cod:'MPA001', nome:'Limão (aroma)', un:'', porUnidade:0.000152, saldo:6 },
+  ],
+  RF001: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'RRF001', nome:'Rótulo Refri Limão Siciliano', un:'', porUnidade:1, saldo:22320 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.010895, saldo:97 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.0027, saldo:96 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.001601, saldo:29 },
+    { cod:'MPA001', nome:'Limão (aroma)', un:'', porUnidade:0.000758, saldo:30 },
+    { cod:'MPR007', nome:'Aroma (007)', un:'', porUnidade:0.000426, saldo:15 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000269, saldo:6 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000067, saldo:2 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000054, saldo:2 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000054, saldo:2 },
+  ],
+  RF002: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRF002', nome:'Rótulo Refri Frutas Vermelhas', un:'', porUnidade:1, saldo:26784 },
+    { cod:'MPR029', nome:'Suco conc. frutas vermelhas', un:'kg', porUnidade:0.009159, saldo:164 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.005919, saldo:53 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR023', nome:'Aroma (023)', un:'', porUnidade:0.000568, saldo:15 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000538, saldo:12 },
+    { cod:'MPR024', nome:'Suco conc. frutas vermelhas', un:'kg', porUnidade:0.000332, saldo:10 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000135, saldo:3 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000086, saldo:3 },
+    { cod:'MP044', nome:'Aroma (044)', un:'', porUnidade:0.000022, saldo:2 },
+  ],
+  RF003: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRF003', nome:'Rótulo Refri Guaraná Açaí', un:'', porUnidade:1, saldo:31248 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.010923, saldo:98 },
+    { cod:'MPR002', nome:'Açaí', un:'kg', porUnidade:0.006405, saldo:86 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR006', nome:'Aroma (006)', un:'', porUnidade:0.00253, saldo:79 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.000565, saldo:10 },
+    { cod:'MPR015', nome:'Aroma (015)', un:'', porUnidade:0.000279, saldo:9 },
+    { cod:'MPR004', nome:'Aroma (004)', un:'', porUnidade:0.000269, saldo:6 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000161, saldo:4 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000135, saldo:2 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000135, saldo:3 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000081, saldo:3 },
+    { cod:'MPR009', nome:'Aroma (009)', un:'', porUnidade:0.000027, saldo:2 },
+  ],
+  RF004: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRF004', nome:'Rótulo Refri Uva', un:'', porUnidade:1, saldo:35712 },
+    { cod:'MP045', nome:'Suco conc. uva clarificado', un:'kg', porUnidade:0.010814, saldo:386 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.001816, saldo:16 },
+    { cod:'MP036', nome:'Uva (aroma)', un:'', porUnidade:0.000853, saldo:30 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000387, saldo:9 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000215, saldo:5 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.00014, saldo:2 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000094, saldo:3 },
+  ],
+  RF005: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRF005', nome:'Rótulo Refri Laranja', un:'', porUnidade:1, saldo:40176 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.007263, saldo:65 },
+    { cod:'MP034', nome:'Suco conc. laranja', un:'kg', porUnidade:0.005009, saldo:134 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP022', nome:'Laranja (aroma)', un:'', porUnidade:0.000828, saldo:11 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000229, saldo:5 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000135, saldo:3 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000094, saldo:3 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000054, saldo:2 },
+  ],
+  RTM001: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRTM001', nome:'Rótulo Refri Limão Mônica', un:'', porUnidade:1, saldo:35712 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.010895, saldo:97 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.0027, saldo:96 },
+    { cod:'MPR021', nome:'Suco limão conc. clarificado', un:'L', porUnidade:0.001601, saldo:29 },
+    { cod:'MPA001', nome:'Limão (aroma)', un:'', porUnidade:0.000758, saldo:30 },
+    { cod:'MPR007', nome:'Aroma (007)', un:'', porUnidade:0.000426, saldo:15 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000269, saldo:6 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000067, saldo:2 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000054, saldo:2 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000054, saldo:2 },
+  ],
+  RTM002: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRTM003', nome:'Rótulo Refri Laranja Mônica', un:'', porUnidade:1, saldo:8928 },
+    { cod:'MP045', nome:'Suco conc. uva clarificado', un:'kg', porUnidade:0.010814, saldo:386 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.001816, saldo:16 },
+    { cod:'MP036', nome:'Uva (aroma)', un:'', porUnidade:0.000853, saldo:30 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.00043, saldo:10 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000215, saldo:5 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.00014, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000094, saldo:3 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000054, saldo:2 },
+  ],
+  RTM003: [
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:31248 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:35712 },
+    { cod:'RRTM002', nome:'Rótulo Refri Uva Mônica', un:'', porUnidade:1, saldo:40176 },
+    { cod:'MPR010', nome:'Suco conc. maçã 70º Brix', un:'kg', porUnidade:0.007263, saldo:65 },
+    { cod:'MP034', nome:'Suco conc. laranja', un:'kg', porUnidade:0.005009, saldo:134 },
+    { cod:'MP018', nome:'Goma arábica', un:'kg', porUnidade:0.00269, saldo:96 },
+    { cod:'MP022', nome:'Laranja (aroma)', un:'', porUnidade:0.000828, saldo:11 },
+    { cod:'MPR013', nome:'Ácido cítrico', un:'kg', porUnidade:0.000229, saldo:5 },
+    { cod:'MPA032', nome:'Ácido ascórbico', un:'', porUnidade:0.000135, saldo:3 },
+    { cod:'MPR012', nome:'Sorbato de potássio', un:'kg', porUnidade:0.000108, saldo:2 },
+    { cod:'MPR016', nome:'Aroma (016)', un:'', porUnidade:0.000094, saldo:3 },
+    { cod:'MPR022', nome:'Conservante', un:'kg', porUnidade:0.000054, saldo:2 },
+  ],
+  default: [
+    { cod:'BASE', nome:'Base do produto', un:'L', porUnidade:1, saldo:1200 },
+    { cod:'EMB01', nome:'Lata sleek 269 ml', un:'un', porUnidade:1, saldo:88000 },
+    { cod:'EMB02', nome:'Tampa 202 SOT', un:'un', porUnidade:1, saldo:92000 }
+  ]
+};
+const insumosAtuais = () => RECEITAS[skuAtual] || RECEITAS.default;
+
+const n = v => { const x = parseFloat(String(v).replace(',','.')); return isNaN(x)?null:x; };
+// DD/MM/AAAA → YYYY-MM-DD (formato do payload da ficha)
+const iso = s => { const m = String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; };
+const fmt = v => v.toLocaleString('pt-BR',{maximumFractionDigits:1});
+// formata quantidade de insumo: grandes sem casa decimal, pequenas com até 4
+const fmtQ = v => v >= 10 ? Math.round(v).toLocaleString('pt-BR')
+  : v >= 1 ? v.toLocaleString('pt-BR',{maximumFractionDigits:1})
+  : v.toLocaleString('pt-BR',{maximumFractionDigits:4});
+
+// ---------------------------------------------------------------------------
+// Insumos — conferência do operador. Toque no item marca/desmarca.
+// Em produção a lista vem de ConsultarOrdemProducao (itensDetalhes) cruzada
+// com o saldo do almoxarifado (PosicaoEstoque individual).
+const conferidos = new Set();
+
+// lista de insumos: real (endpoint) se houver; senão o mock explodido pela OP
+function insumosDaOp(){
+  if(receitaReal && receitaReal.length) return receitaReal;
+  return insumosAtuais().map(i => ({ cod: i.cod, nome: i.nome, un: i.un, saldo: i.saldo,
+    quantidade: i.porUnidade * (opQtd || 4464) }));
+}
+
+const FAMILIA_NOME = { kombucha: 'Kombuchas', refri: 'Refrigerantes', cha: 'Chás', barril: 'Barril' };
+const fmtFolha = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 6 });
+// Litros equivalentes — lata sleek 269 ml (0,269 L/un). Base (un 'L') já vem em litros.
+const litrosOP = (qtd, un) => (un === 'L') ? null : Math.round((qtd || 0) * 0.269);
+const sufixoL = (qtd, un) => { const l = litrosOP(qtd, un); return l ? ' · ' + l.toLocaleString('pt-BR') + ' L' : ''; };
+// Soma meses a uma data DD/MM/AAAA (validade = fabricação + 8 meses)
+const somaMesesBR = (br, meses) => {
+  const m = String(br || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return '';
+  const d = new Date(+m[3], +m[2] - 1 + meses, +m[1]);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};
+// OP "2026/00528" → "528" (3 últimos dígitos)
+const abreviaOp = s => { const d = String(s || '').replace(/\D/g, ''); return d.slice(-3) || s; };
+// Dias de fermentação (base): da data da OP (início) até hoje
+const diasFermentacao = br => {
+  const m = String(br || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const ini = new Date(+m[3], +m[2] - 1, +m[1]);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const dias = Math.round((hoje - ini) / 864e5);
+  return dias >= 0 ? dias : null;
+};
+
+function montarInsumos(){
+  const el = document.getElementById('insumos');
+  const lista = insumosDaOp();
+  const info = folhaInfo || {};
+  const p = PRODUTOS[skuAtual] || {};
+  const fam = FAMILIA_NOME[p.familia] || p.familia || '';
+  const qtd = opQtd || 4464;
+  el.innerHTML = `
+    <div class="folha">
+      <div class="fl-cab">
+        <div class="fl-emp">DEVI Produção de Bebidas LTDA</div>
+        <div class="fl-op">Ordem de Produção Nº ${opAtual || '—'}</div>
+        <div class="fl-linha">
+          <span>Previsão de Conclusão: <b>${info.previsao || '—'}</b></span>
+          <span>Situação: <b>${info.situacao || 'Em andamento'}</b></span>
+        </div>
+        <div class="fl-prod">${skuAtual} - ${p.nome || skuAtual}</div>
+        <div class="fl-linha">
+          <span>Tipo de Produto: <b>${info.tipoProduto || '04 - Produto Acabado'}</b></span>
+          <span>Família: <b>${fam || '—'}</b></span>
+          <span>Quantidade a Produzir: <b>${fmt(qtd)} ${opUn}${sufixoL(qtd, opUn)}</b></span>
+        </div>
+      </div>
+      <div class="fl-titulo">Itens da Ordem de Produção</div>
+      <table>
+        <colgroup><col><col><col><col><col></colgroup>
+        <thead><tr><th>Descrição do Item</th><th style="text-align:right">Quantidade</th><th>Unidade</th><th style="text-align:right">Estoque</th><th class="fl-chk"></th></tr></thead>
+        <tbody>
+          ${lista.map(i => {
+            const qtde = i.quantidade ?? 0;
+            const semSaldo = i.saldo === null || i.saldo === undefined;
+            const falta = !semSaldo && i.saldo < qtde;
+            const conf = conferidos.has(i.cod) ? 'conf' : '';
+            const est = semSaldo ? '—' : (falta ? 'falta ' + fmtQ(qtde - i.saldo) : fmt(i.saldo)) + ' ' + (i.un || '');
+            return `<tr class="${conf}" onclick="toggleInsumo('${i.cod}')">
+              <td>
+                <div class="fl-cod">${i.cod}</div>
+                <div class="fl-desc">${i.nome || i.cod}</div>
+              </td>
+              <td class="fl-q">${fmtFolha(qtde)}</td>
+              <td>${i.un || '—'}</td>
+              <td class="fl-est" style="color:${falta ? '#b91c1c' : '#333'}">${est}</td>
+              <td class="fl-chk"><span class="chk" id="chk_${i.cod}">✓</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  atualizarInsumosChk();
+}
+
+function toggleInsumo(cod){
+  if(conferidos.has(cod)) conferidos.delete(cod); else conferidos.add(cod);
+  const chk = document.getElementById('chk_' + cod);
+  if(chk){
+    chk.classList.toggle('on', conferidos.has(cod));
+    chk.parentElement.parentElement.classList.toggle('conf', conferidos.has(cod));
+  }
+  atualizarInsumosChk();
+}
+
+function atualizarInsumosChk(){
+  const b = document.getElementById('insChk');
+  const lista = receitaReal && receitaReal.length ? receitaReal : insumosAtuais();
+  if(b) b.textContent = `${conferidos.size} de ${lista.length} conferidos`;
+}
+
+// ---------------------------------------------------------------------------
+// spec null → aviso azul "sem especificação", nunca verde (não aprovar em silêncio)
+function validar(inp, spec){
+  const msg = inp.parentElement.querySelector('.msg');
+  const v = n(inp.value);
+  inp.classList.remove('ok','al','er','info');
+  if(msg){ msg.textContent=''; msg.className='msg'; }
+  if(inp.value.trim()==='') return null;
+  if(!spec){
+    // Sem especificação: campo numérico valida formato; campo de texto registra sem validar
+    const im = inp.getAttribute('inputmode');
+    if(v===null && (im === 'decimal' || im === 'numeric')){
+      inp.classList.add('er');
+      if(msg){msg.textContent='valor inválido'; msg.className='msg er';} return 'er';
+    }
+    inp.classList.add('info');
+    if(msg){msg.textContent='sem especificação — registrado sem validar'; msg.className='msg info';} return 'info';
+  }
+  if(v===null){ inp.classList.add('er');
+    if(msg){msg.textContent='valor inválido'; msg.className='msg er';} return 'er'; }
+  if(v < spec.min || v > spec.max){
+    inp.classList.add('er');
+    if(msg){ msg.textContent=`fora — ${spec.min.toFixed(2)} a ${spec.max.toFixed(2)}`; msg.className='msg er'; }
+    return 'er';
+  }
+  const folga = (spec.max - spec.min) * 0.15;
+  if(v < spec.min+folga || v > spec.max-folga){
+    inp.classList.add('al');
+    if(msg){ msg.textContent='no limite'; msg.className='msg al'; }
+    return 'al';
+  }
+  inp.classList.add('ok');
+  if(msg){ msg.textContent='ok'; msg.className='msg ok'; }
+  return 'ok';
+}
+
+// Recravação — campos estáticos no HTML (1 medição por lote);
+// os listeners de validação ficam no bloco de init, no fim do script.
+
+let nc = 0;
+function addCarb(){
+  const el = document.getElementById('cbLin');
+  const id = nc++;
+  const d = document.createElement('div');
+  d.className='cb';
+  d.innerHTML=`<input type="time" data-c="cb_${id}_h">
+    <input type="text" inputmode="decimal" data-c="cb_${id}_t" placeholder="°C">
+    <input type="text" inputmode="decimal" data-c="cb_${id}_pc" placeholder="cil">
+    <input type="text" inputmode="decimal" data-c="cb_${id}_pt" placeholder="tan">
+    <button class="bx" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  el.appendChild(d);
+  d.querySelectorAll('input').forEach(i=>i.addEventListener('input', atualizar));
+  atualizar();
+}
+
+// Envio para estoque — mesmo padrão da carbonatação: N linhas dinâmicas
+let nEs = 0;
+function addEstoque(){
+  const el = document.getElementById('esLin');
+  const id = nEs++;
+  const d = document.createElement('div');
+  d.className='es';
+  d.innerHTML=`<input type="time" data-c="es_${id}_h">
+    <input type="text" inputmode="numeric" data-c="es_${id}_q" placeholder="un">
+    <input type="text" data-c="es_${id}_t" placeholder="tipo">
+    <input type="text" data-c="es_${id}_r" placeholder="resp">
+    <button class="bx" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  el.appendChild(d);
+  d.querySelectorAll('input, select').forEach(i=>i.addEventListener('input', atualizar));
+  atualizar();
+}
+
+// Fermentação da Base Kombucha (PC04) — linhas: Data | pH | °Brix | Temp | ABV
+let nf = 0;
+function addFer(){
+  const el = document.getElementById('ferLin');
+  const id = nf++;
+  const d = document.createElement('div');
+  d.className='fb';
+  d.innerHTML=`<input type="date" data-c="fer_${id}_d">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_ph" placeholder="pH">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_br" placeholder="°Brix">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_tp" placeholder="°C">
+    <input type="text" inputmode="decimal" data-c="fer_${id}_ab" placeholder="%">
+    <button class="bx" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  el.appendChild(d);
+  d.querySelectorAll('input').forEach(i=>i.addEventListener('input', atualizar));
+  atualizar();
+}
+
+// Recravação — leituras dinâmicas sem data: Altura | Espessura | Transpasse
+let nr = 0;
+function addRec(){
+  const el = document.getElementById('rcLin');
+  const id = nr++;
+  const d = document.createElement('div');
+  d.className='rc';
+  d.innerHTML=`<input type="text" inputmode="decimal" data-c="rec_${id}_altura" data-rec="altura" placeholder="2,60">
+    <input type="text" inputmode="decimal" data-c="rec_${id}_espessura" data-rec="espessura" placeholder="1,05">
+    <input type="text" inputmode="decimal" data-c="rec_${id}_transpasse" data-rec="transpasse" placeholder="0,85">
+    <button class="bx" onclick="this.parentElement.remove(); atualizar()">×</button>`;
+  el.appendChild(d);
+  d.querySelectorAll('input[data-rec]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{ validar(inp, SPEC.recravacao[inp.dataset.rec]); atualizar(); });
+  });
+  atualizar();
+}
+
+function alterna(c){ c.parentElement.classList.toggle('ab'); }
+
+// ---------------------------------------------------------------------------
+function secVisiveis(){
+  return [...document.querySelectorAll('.sec')].filter(
+    s => !s.hasAttribute('data-consulta') && !s.classList.contains('hid'));
+}
+
+// true quando todos os campos obrigatórios do bloco estão preenchidos
+// (observações não entra — campo livre). Mesma lógica do progresso.
+function secPreenchida(sec){
+  const nome = sec.dataset.sec;
+  const linhaOk = l => [...l.querySelectorAll('input, select')].every(i => i.value.trim() !== '');
+  if(nome === 'carbonatacao' || nome === 'fermentacao' || nome === 'estoque'){
+    const sel = nome === 'carbonatacao' ? '.cb' : nome === 'fermentacao' ? '.fb' : '.es';
+    const linhas = sec.querySelectorAll(sel);
+    return linhas.length > 0 && [...linhas].every(linhaOk);
+  }
+  if(nome === 'recravacao'){
+    const l = sec.querySelectorAll('.rc');
+    return l.length > 0 && [...l].every(x => [...x.querySelectorAll('input[data-rec]')].every(i => i.value.trim() !== ''));
+  }
+  const req = sec.querySelectorAll('[data-req]');
+  return req.length > 0 && [...req].every(x => x.value.trim() !== '');
+}
+
+function aplicarFamilia(fam){
+  fam = fam || 'kombucha';
+  const blocos = BLOCO_FAMILIA[fam] || BLOCO_FAMILIA.kombucha;
+  document.querySelectorAll('.sec[data-sec]').forEach(sec=>{
+    if(sec.hasAttribute('data-consulta')) return; // insumos: sempre visível, não é bloco de família
+    const nome = sec.dataset.sec;
+    sec.classList.toggle('hid', !blocos.includes(nome));
+    if(!blocos.includes(nome)) sec.classList.remove('ab');
+  });
+  atualizar();
+}
+
+// SKU atual → nome/sigla/sku no topo (spans do cabeçalho) e família (derivada do SKU)
+function aplicarSku(){
+  const sku = skuAtual;
+  const p = PRODUTOS[sku] || {};
+  const set = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v || ''; };
+  set('opSigla', SIGLA[sku] || sku);
+  set('opNome', p.nome || sku);
+  set('opSku', sku);
+  aplicarFamilia(sku === 'FX000' ? 'base' : (p.familia || 'kombucha'));
+  atualizarAvisoSpec();
+}
+
+function atualizarAvisoSpec(){
+  const sku = skuAtual;
+  const p = PRODUTOS[sku] || {};
+  const aviso = document.getElementById('avisoPre');
+  if(!aviso) return;
+  const tem = p.pH && p.pH.min != null;
+  if(tem){
+    const f = s => `${s.min.toFixed(2)}–${s.max.toFixed(2)}`;
+    aviso.className = 'avi az';
+    aviso.innerHTML =
+      `<b>Spec do ${sku}</b> (padrão do produto) — pH <b>${f(p.pH)}</b> (alvo ${p.pH.alvo.toFixed(2)})`
+      + ` · Brix <b>${f(p.brix)}</b> (alvo ${p.brix.alvo.toFixed(2)})`
+      + ` · Carbonatação <b>${f(p.carbonatacao)}</b> (alvo ${p.carbonatacao.alvo.toFixed(2)}).`
+      + ` Fora da faixa fica vermelho.`;
+  } else {
+    aviso.className = 'avi';
+    aviso.innerHTML =
+      `<b>Sem especificação cadastrada</b> para ${sku}. Os valores são registrados`
+      + ` sem validação automática — nunca aprova em silêncio.`;
+  }
+}
+
+function atualizar(){
+  let completas = 0;
+  const visiveis = secVisiveis();
+  visiveis.forEach(sec=>{
+    const b = sec.querySelector('[data-est]');
+    const nome = sec.dataset.sec;
+    let feito=0, total=0, erro=false;
+
+    if(nome==='carbonatacao'){
+      const l = sec.querySelectorAll('.cb'); total = l.length;
+      l.forEach(x=>{ if([...x.querySelectorAll('input')].every(i=>i.value.trim()!=='')) feito++; });
+      b.textContent = total===0 ? '—' : `${feito} de ${total}`;
+    } else if(nome==='estoque'){
+      const l = sec.querySelectorAll('.es'); total = l.length;
+      l.forEach(x=>{ if([...x.querySelectorAll('input, select')].every(i=>i.value.trim()!=='')) feito++; });
+      b.textContent = total===0 ? '—' : `${feito} de ${total}`;
+    } else if(nome==='fermentacao'){
+      const l = sec.querySelectorAll('.fb'); total = l.length;
+      l.forEach(x=>{ if([...x.querySelectorAll('input')].every(i=>i.value.trim()!=='')) feito++; });
+      b.textContent = total===0 ? '—' : `${feito} de ${total}`;
+    } else if(nome==='recravacao'){
+      const l = sec.querySelectorAll('.rc'); total = l.length;
+      l.forEach(x=>{
+        const ins = [...x.querySelectorAll('input[data-rec]')];
+        if(ins.every(i=>i.value.trim()!=='')) feito++;
+        if(ins.some(i=>i.classList.contains('er'))) erro=true;
+      });
+      b.textContent = total===0 ? '—' : `${feito} de ${total}`;
+    } else {
+      const r = sec.querySelectorAll('[data-req]'); total = r.length;
+      r.forEach(x=>{ if(x.value.trim()!=='') feito++; });
+      b.textContent = feito===0 ? '—' : `${feito} de ${total}`;
+    }
+
+    b.className='est';
+    if(total>0 && feito===total){
+      if(erro){ b.className='est err'; b.textContent='fora de spec'; }
+      else { b.className='est done'; b.textContent='completo'; }
+      completas++;
+    } else if(feito>0) b.className='est parc';
+  });
+
+  const totalBlocos = visiveis.length;
+  document.getElementById('pb').style.width = (totalBlocos ? completas/totalBlocos*100 : 0)+'%';
+  document.getElementById('pt').textContent =
+    `${completas} de ${totalBlocos} blocos preenchidos`;
+}
+
+// ---------------------------------------------------------------------------
+async function salvar(){
+  const sku = skuAtual;
+  const fam = (PRODUTOS[sku] || {}).familia || 'kombucha';
+  const g = c => { const e=document.querySelector(`[data-c="${c}"]`);
+    return e && e.value.trim()!=='' ? e.value.trim() : null; };
+
+  // Bloqueia fechamento com campo obrigatório em branco (observações fica de fora)
+  // e com itens da folha da OP ainda não conferidos.
+  const pendentes = secVisiveis().filter(s =>
+    s.dataset.sec !== 'observacoes' && !secPreenchida(s));
+  const itensFolha = insumosDaOp();
+  const folhaIncompleta = itensFolha.length > 0 && conferidos.size < itensFolha.length;
+  if(pendentes.length || folhaIncompleta){
+    const res = document.getElementById('resumo');
+    res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>` +
+      pendentes.map(s => `<li><span>${s.querySelector('h2').textContent}</span>` +
+        `<b style="color:var(--er2)">${s.querySelector('[data-est]').textContent}</b></li>`).join('') +
+      (folhaIncompleta
+        ? `<li><span>Folha da OP</span><b style="color:var(--er2)">${conferidos.size} de ${itensFolha.length} conferidos</b></li>`
+        : '') +
+      `</ul><div class="nc"><b>Preencha os campos pendentes e confira todos os itens da folha para concluir a ficha.</b></div>`;
+    res.style.display = 'block';
+    const saida = document.getElementById('saida');
+    saida.style.display = 'none';
+    res.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  const d = { op: opAtual || '2026/00527', nCodOP: nCodOPAtual || 0, sku:sku, sigla:SIGLA[sku]||'',
+              familia:fam, dataProducao: iso(opData) || '2026-08-12', blocos:{} };
+  if(folhaInfo){
+    d.previsao = folhaInfo.previsao || '';
+    d.situacao = folhaInfo.situacao || '';
+    d.tipoProduto = folhaInfo.tipoProduto || '';
+  }
+  // nome curto do produto (coluna Sabor/Produto da planilha de indicadores)
+  d.produto = (PRODUTOS[sku] && PRODUTOS[sku].nome) || SIGLA[sku] || sku;
+
+  // um bloco por vez — na versão real cada um grava ao sair (PATCH /bloco/:nome)
+  secVisiveis().forEach(sec=>{
+    const nome = sec.dataset.sec;
+    if(nome==='carbonatacao'){
+      d.blocos.carbonatacao = [...document.querySelectorAll('.cb')].map(l=>{
+        const v=[...l.querySelectorAll('input')].map(i=>i.value.trim());
+        return { hora:v[0]||null, temperatura:n(v[1]), pressaoCilindro:n(v[2]), pressaoTanque:n(v[3]) };
+      }).filter(x=>x.hora||x.temperatura);
+    } else if(nome==='preenvase'){
+      d.blocos.preEnvase = { pH:n(g('pH')), brix:n(g('brix')),
+                             carbonatacao:n(g('carb')), responsavel:g('respPre') };
+    } else if(nome==='recravacao'){
+      d.blocos.recravacao = [...document.querySelectorAll('.rc')].map(l=>{
+        const v=[...l.querySelectorAll('input[data-rec]')].map(i=>i.value.trim());
+        return { altura:n(v[0]), espessura:n(v[1]), transpasse:n(v[2]) };
+      }).filter(x=>x.altura!==null||x.espessura!==null||x.transpasse!==null);
+    } else if(nome==='estoque'){
+      d.blocos.estoque = [...document.querySelectorAll('.es')].map(l=>{
+        const v=[...l.querySelectorAll('input, select')].map(i=>i.value.trim());
+        return { hora:v[0]||null, quantidade:n(v[1]), tipo:v[2]||null, responsavel:v[3]||null };
+      }).filter(x=>x.quantidade!==null);
+    } else if(nome==='starter'){
+      d.blocos.starter = { tanque:g('tanqueSt'), fonte:g('fonteSt'),
+                           pH:n(g('phSt')), brix:n(g('brixSt')),
+                           volume:n(g('volSt')), volumeTanque:n(g('volTanque')) };
+    } else if(nome==='fermentacao'){
+      d.blocos.fermentacao = [...document.querySelectorAll('.fb')].map(l=>{
+        const v=[...l.querySelectorAll('input')].map(i=>i.value.trim());
+        return { data:v[0]||null, pH:n(v[1]), brix:n(v[2]), temperatura:n(v[3]), abv:n(v[4]) };
+      }).filter(x=>x.data||x.pH);
+    } else if(nome==='filtracao'){
+      d.blocos.filtracao = { volume:n(g('volFi')), tempo:n(g('tempoFi')) };
+    } else if(nome==='produtoAcabado'){
+      d.blocos.produtoAcabado = { produto:g('prodPA'), brix:n(g('brixPA')), pH:n(g('phPA')),
+                                  abv:n(g('abvPA')), brixSuco:n(g('brixSucoPA')) };
+    } else if(nome==='observacoes'){
+      d.blocos.observacoes = g('obs') || '';
+    }
+  });
+
+  const fora=[];
+  (d.blocos.recravacao||[]).forEach((rec, i)=>{
+    ['altura','espessura','transpasse'].forEach(k=>{
+      const v=rec[k], s=SPEC.recravacao[k];
+      if(v!==null && (v<s.min||v>s.max))
+        fora.push({ bloco:'recravacao', leitura:i+1, campo:k, valor:v, spec:{min:s.min,max:s.max} });
+    });
+  });
+  // pré-envase — contra a spec do SKU selecionado (se houver)
+  const prodSpec = produtoAtual();
+  ['pH','brix','carbonatacao'].forEach(k=>{
+    const v = (d.blocos.preEnvase||{})[k];
+    const s = prodSpec[k];
+    if(v !== null && s && s.min != null && (v < s.min || v > s.max))
+      fora.push({ bloco:'preEnvase', campo:k, valor:v, spec:{min:s.min,max:s.max} });
+  });
+  d.naoConformidades = fora;
+  d.conferenciaInsumos = insumosDaOp().map(i => ({
+    codigo: i.cod,
+    conferido: conferidos.has(i.cod),
+    conferidoEm: conferidos.has(i.cod) ? new Date().toISOString() : null
+  }));
+  d.indiceColeta = skuAtual === 'FX000'
+    ? { pH: !!g('phSt') || !!g('phPA'), brix: !!g('brixSt') || !!g('brixPA'),
+        temperatura: !!g('fer_0_tp'), abv: !!g('abvPA') || !!g('fer_0_ab'),
+        carbonatacao: false, recravacao: false }
+    : { pH:!!g('pH'), brix:!!g('brix'), carbonatacao:!!g('carb'),
+        recravacao: (d.blocos.recravacao||[]).length > 0,
+        abv:false };
+  d.status = 'completa';
+  d.registradoEm = new Date().toISOString();
+
+  // ---- resumo legível + payload para conferência ----
+  const linhas = secVisiveis().map(sec=>{
+    const b = sec.querySelector('[data-est]');
+    return `<li><span>${sec.querySelector('h2').textContent}</span><b>${b.textContent}</b></li>`;
+  });
+  linhas.unshift(`<li><span>Insumos (conferência)</span><b>${conferidos.size} de ${insumosDaOp().length}</b></li>`);
+  const ncTxt = fora.length
+    ? `<div class="nc"><b>⚠ ${fora.length} não-conformidade(s):</b> ` +
+      fora.map(f=>`${f.campo} ${f.valor} — spec ${f.spec.min} a ${f.spec.max}`).join(' · ') + `</div>`
+    : `<div class="nc" style="color:var(--ok2)"><b>✓ Sem não-conformidades</b></div>`;
+
+  const res = document.getElementById('resumo');
+  res.innerHTML = `<h3>RESUMO DA FICHA</h3><ul>${linhas.join('')}</ul>${ncTxt}`;
+  res.style.display='block';
+
+  // registra o estado da OP na lista (voltar → status atualizado)
+  const tot = secVisiveis().length;
+  const feitos = document.querySelectorAll(
+    '.sec:not([data-consulta]):not(.hid) [data-est].done, .sec:not([data-consulta]):not(.hid) [data-est].err').length;
+  if(opAtual) FICHAS[opAtual] = { blocos: feitos, total: tot, nc: fora.length > 0, completa: feitos === tot };
+
+  const s = document.getElementById('saida');
+  s.style.display='block';
+  s.textContent = '// payload — na versão real, um PATCH /api/qualidade/ficha/:op/bloco/:nome por bloco\n'
+    + `// OP #${opAtual || '—'} salva — volte em "← OPs abertas" para ver o status na lista\n\n`
+    + JSON.stringify(d, null, 2);
+  s.scrollIntoView({behavior:'smooth'});
+
+  // ---- gravação (R2 + D1) + anexo automático na OP (Omie) ----
+  const anexo = document.getElementById('anexoStatus');
+  if(anexo && nCodOPAtual){
+    anexo.style.display = 'block';
+    try{
+      anexo.textContent = '⏳ Salvando ficha no banco…';
+      const salva = await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ficha: d })
+      });
+      const sj = await salva.json();
+      if(!sj.ok) throw new Error(sj.erro || 'falha ao salvar no banco');
+      const chave = String(sj.key || '').split('/').pop();
+      anexo.textContent = `✅ Ficha salva no banco (${chave}) — anexando PDF…`;
+      const resp = await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nCodOP: nCodOPAtual, ficha: d })
+      });
+      const j = await resp.json();
+      anexo.textContent = j.ok
+        ? `✅ Ficha salva no banco · PDF anexado na OP: ${j.cNomeArquivo || j.nomeArquivo || 'PDF'}`
+        : `✅ Ficha salva no banco · ⚠ Anexo falhou: ${String(j.erro || '').slice(0, 140)}`;
+    }catch(e){
+      anexo.textContent = '⚠ Erro na gravação: ' + e.message;
+    }
+  }
+}
+
+montarInsumos();
+addCarb();
+addEstoque();
+addFer();
+addRec();
+// SKU da ficha vem da OP aberta — sem seletor no cabeçalho
+skuAtual = 'FX001';
+aplicarSku();
+document.querySelectorAll('input[data-rec]').forEach(inp=>{
+  inp.addEventListener('input', ()=>{ validar(inp, SPEC.recravacao[inp.dataset.rec]); atualizar(); });
+});
+document.querySelectorAll('input[data-req], select[data-req], textarea[data-req]').forEach(i=>{
+  const k=i.dataset.spec;
+  i.addEventListener('input', ()=>{ validar(i, k ? produtoAtual()[k] ?? null : null); atualizar(); });
+  i.addEventListener('change', atualizar);
+});
+atualizar();
+
+// view inicial: ?op= abre direto a ficha da OP; sem parâmetro, carrega a lista
+// (do endpoint quando servido pelo worker; mock local em file://)
+const qp = new URLSearchParams(location.search).get('op');
+if(qp && OPS.some(o => o.op === qp)) abrirOp(qp); else carregarOPS();
+</script>
+</body>
+</html>

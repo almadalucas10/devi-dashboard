@@ -96,10 +96,10 @@ export async function getAccessToken(env) {
 }
 
 /**
- * Lê um range da planilha.
+ * Lê um range da planilha (spreadsheetId opcional — default: env.SPREADSHEET_ID).
  */
-export async function getValues(env, token, range) {
-  const url = `${SHEETS_API}/${env.SPREADSHEET_ID}/values/${encodeURIComponent(range)}?valueRenderOption=FORMATTED_VALUE`;
+export async function getValues(env, token, range, spreadsheetId = env.SPREADSHEET_ID) {
+  const url = `${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(range)}?valueRenderOption=FORMATTED_VALUE`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -112,10 +112,94 @@ export async function getValues(env, token, range) {
 }
 
 /**
+ * Lista os títulos das abas de uma planilha (spreadsheetId opcional).
+ */
+export async function listSheets(env, token, spreadsheetId = env.SPREADSHEET_ID) {
+  const url = `${SHEETS_API}/${spreadsheetId}?fields=sheets.properties.title,sheets.properties.sheetId`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets list: ${res.status} ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return (data.sheets || []).map((s) => ({ title: s.properties.title, sheetId: s.properties.sheetId }));
+}
+
+/**
+ * Anexa uma linha (ou várias) ao final de uma aba (values.append — INSERT_ROWS).
+ */
+export async function appendValues(env, token, spreadsheetId, sheetName, values) {
+  const url = `${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(sheetName + "!A1")}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ values }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets append ${sheetName}: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
+ * Aplica cor de fundo a um range (repeatCell) — usado para destacar linhas de teste.
+ */
+export async function formatRange(env, token, spreadsheetId, sheetId, startRow, endRow, startCol, endCol, color) {
+  const url = `${SHEETS_API}/${spreadsheetId}:batchUpdate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requests: [{
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: startRow, endRowIndex: endRow,
+            startColumnIndex: startCol, endColumnIndex: endCol,
+          },
+          cell: { userEnteredFormat: { backgroundColor: { red: color.r, green: color.g, blue: color.b } } },
+          fields: "userEnteredFormat.backgroundColor",
+        },
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets format: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
+ * Apaga linhas de uma aba (batchUpdate deleteDimension) — usado no teste reversível.
+ */
+export async function deleteRows(env, token, spreadsheetId, sheetId, startIndex, endIndex) {
+  const url = `${SHEETS_API}/${spreadsheetId}:batchUpdate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: { range: { sheetId, dimension: "ROWS", startIndex, endIndex } },
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets deleteRow: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
  * Escreve um valor em uma única célula (ex: A1).
  */
-export async function setValue(env, token, range, value) {
-  const url = `${SHEETS_API}/${env.SPREADSHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+export async function setValue(env, token, range, value, spreadsheetId = env.SPREADSHEET_ID) {
+  const url = `${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
   const res = await fetch(url, {
     method: "PUT",
     headers: {

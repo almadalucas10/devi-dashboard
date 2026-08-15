@@ -2,6 +2,8 @@
 // Fila de Pedidos — port de buscarFilaDePedidos()
 // ============================================================================
 import { chamarOmie, buscarTodasPaginas } from "./omie.js";
+import { hojeBrasilDate } from "./fuso.js";
+import { construirCacheProdutos } from "./kpis.js";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -38,7 +40,7 @@ async function construirCacheClientes(env, maxPaginas = 10) {
 }
 
 export async function buscarFilaDePedidos(env) {
-  const hoje = new Date();
+  const hoje = hojeBrasilDate();
   const dataInicial = new Date(hoje.getTime() - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000);
   const dDtInicial = dataParaStr(dataInicial);
   const dDtFinal = dataParaStr(hoje);
@@ -207,4 +209,75 @@ export async function buscarFilaDePedidos(env) {
   }
 
   return resultado;
+}
+
+// ============================================================================
+// Remessas — remessas ativas (não faturadas e não canceladas) do OMIE
+// ============================================================================
+
+export async function buscarRemessas(env) {
+  const remessas = await buscarTodasPaginas(
+    env,
+    "/produtos/remessa/",
+    "ListarRemessas",
+    (pagina) => ({ nPagina: pagina }),
+    { arrayKey: "remessas", totalPagesKey: "nTotalPaginas", pageDelay: 400 }
+  );
+
+  // Só remessas em aberto (aguardando execução/faturamento)
+  const ativas = remessas.filter((r) => {
+    const cab = r.cabec || {};
+    return cab.faturada !== "S" && cab.cCancelado !== "S";
+  });
+  if (ativas.length === 0) return [];
+
+  // Mapa numérico (nCodProd) → SKU (CH001…)
+  const cacheProd = await construirCacheProdutos(env);
+  const codParaSku = {};
+  for (const sku of Object.keys(cacheProd)) {
+    const cp = cacheProd[sku];
+    if (cp && cp.codigo_produto) codParaSku[String(cp.codigo_produto)] = sku;
+  }
+
+  const nomesCache = await construirCacheClientes(env, 3);
+
+  const resultado = [];
+  for (const rem of ativas) {
+    const cab = rem.cabec || {};
+    const itens = (rem.produtos || [])
+      .map((pr) => ({ codigo: codParaSku[String(pr.nCodProd)] || null, qtde: pr.nQtde || 0 }))
+      .filter((i) => i.codigo);
+    const totalUnidades = itens.reduce((s, i) => s + i.qtde, 0);
+    const rec = {
+      origem: "remessa",
+      numero: cab.cNumeroRemessa,
+      etapa: "remessa",
+      dataPrevisao: cab.dPrevisao || "",
+      valorTotal: cab.nValorTotal || 0,
+      totalUnidades,
+      quantidadeSkus: itens.length,
+      itens,
+    };
+    if (cab.nCodCli) {
+      rec.codigoCliente = cab.nCodCli;
+      rec.cliente = nomesCache[cab.nCodCli] || null;
+    }
+    resultado.push(rec);
+  }
+  return resultado;
+}
+
+// Fila de pedidos + remessas em aberto (a Reposição calcula por cima da fila,
+// então as remessas impactam a necessidade automaticamente).
+export async function buscarFilaComRemessas(env) {
+  const fila = await buscarFilaDePedidos(env);
+  try {
+    const remessas = await buscarRemessas(env);
+    if (remessas.length === 0) return fila;
+    console.log(`✅ Remessas ativas: ${remessas.length}`);
+    return fila.concat(remessas);
+  } catch (e) {
+    console.warn(`⚠️ Remessas ignoradas: ${e.message}`);
+    return fila; // remessas nunca derrubam a fila
+  }
 }

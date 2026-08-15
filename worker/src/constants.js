@@ -4,7 +4,7 @@
 // ============================================================================
 
 // Google Sheets
-export const SPREADSHEET_ID = "1dVTXuNhf9QWrz0kyh7i9S0SNJ43O5GZD";
+export const SPREADSHEET_ID = "1ZMvgDkPCU3CMpeS4R0A26xFJQGHJhBAXOTBi73NKs4o";
 export const SHEET_NAMES = {
   dashboard: "Dashboard",
   lote: "Produção por Lote",
@@ -83,4 +83,5 @@ export const R2_KEYS = {
   omie: "omie.json",
   syncMeta: "sync-meta.json",
   token: "google-token.json",
+  qualidadeFichas: "qualidade-fichas-v2.json",
 };

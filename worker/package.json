@@ -9,5 +9,8 @@
     "tail": "wrangler tail"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
 }

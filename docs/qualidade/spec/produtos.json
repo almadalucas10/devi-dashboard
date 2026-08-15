@@ -1,0 +1,410 @@
+{
+  "CH001": {
+    "nome": "Chá Verde Pêssego",
+    "familia": "cha",
+    "pH": {
+      "min": 3.2,
+      "alvo": 3.28,
+      "max": 3.35
+    },
+    "brix": {
+      "min": 4.5,
+      "alvo": 4.75,
+      "max": 5.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.54,
+      "max": 1.7
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "CH002": {
+    "nome": "Chá Hibisco Morango",
+    "familia": "cha",
+    "pH": {
+      "min": 3.0,
+      "alvo": 3.15,
+      "max": 3.3
+    },
+    "brix": {
+      "min": 6.5,
+      "alvo": 6.75,
+      "max": 7.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.57,
+      "max": 2
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "CH003": {
+    "nome": "Chá Camomila Maracujá",
+    "familia": "cha",
+    "pH": {
+      "min": 2.8,
+      "alvo": 2.95,
+      "max": 3.1
+    },
+    "brix": {
+      "min": 4.5,
+      "alvo": 4.75,
+      "max": 5.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.55,
+      "max": 1.7
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "CH004": {
+    "nome": "Chá Mate Limão",
+    "familia": "cha",
+    "pH": {
+      "min": 3.7,
+      "alvo": 3.8,
+      "max": 3.9
+    },
+    "brix": {
+      "min": 2.0,
+      "alvo": 2.25,
+      "max": 2.5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.5,
+      "max": 1.5
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "FX001": {
+    "nome": "Komb Frutas Vermelhas",
+    "familia": "kombucha",
+    "pH": {
+      "min": 3.25,
+      "alvo": 3.38,
+      "max": 3.5
+    },
+    "brix": {
+      "min": 3.5,
+      "alvo": 3.75,
+      "max": 4.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.6,
+      "max": 2.4
+    },
+    "abv": {
+      "min": 0.1,
+      "alvo": 0.53,
+      "max": 1.82
+    }
+  },
+  "FX002": {
+    "nome": "Komb Abacaxi Gengibre",
+    "familia": "kombucha",
+    "pH": {
+      "min": 3.4,
+      "alvo": 3.52,
+      "max": 3.65
+    },
+    "brix": {
+      "min": 3.5,
+      "alvo": 3.75,
+      "max": 4.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.59,
+      "max": 2.2
+    },
+    "abv": {
+      "min": 0.18,
+      "alvo": 0.39,
+      "max": 1.2
+    }
+  },
+  "FX003": {
+    "nome": "Komb Maçã Gengibre",
+    "familia": "kombucha",
+    "pH": {
+      "min": 3.4,
+      "alvo": 3.52,
+      "max": 3.65
+    },
+    "brix": {
+      "min": 3.5,
+      "alvo": 3.75,
+      "max": 4.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.6,
+      "max": 2.2
+    },
+    "abv": {
+      "min": 0.12,
+      "alvo": 0.31,
+      "max": 0.58
+    }
+  },
+  "FX006": {
+    "nome": "Komb Mirtilo Morango",
+    "familia": "kombucha",
+    "pH": {
+      "min": 3.35,
+      "alvo": 3.45,
+      "max": 3.55
+    },
+    "brix": {
+      "min": 3.5,
+      "alvo": 3.75,
+      "max": 4.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.61,
+      "max": 2.2
+    },
+    "abv": {
+      "min": 0.2,
+      "alvo": 0.41,
+      "max": 0.75
+    }
+  },
+  "FX007": {
+    "nome": "Komb Pink Lemonade",
+    "familia": "kombucha",
+    "pH": {
+      "min": 3.0,
+      "alvo": 3.15,
+      "max": 3.3
+    },
+    "brix": {
+      "min": 3.0,
+      "alvo": 3.25,
+      "max": 3.5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.61,
+      "max": 2.2
+    },
+    "abv": {
+      "min": 0.1,
+      "alvo": 0.43,
+      "max": 1.75
+    }
+  },
+  "RF001": {
+    "nome": "Refri Limão Siciliano",
+    "familia": "refri",
+    "pH": {
+      "min": 3.25,
+      "alvo": 3.38,
+      "max": 3.5
+    },
+    "brix": {
+      "min": 4.0,
+      "alvo": 4.25,
+      "max": 4.5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.55,
+      "max": 2
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RF002": {
+    "nome": "Refri Frutas Vermelhas",
+    "familia": "refri",
+    "pH": {
+      "min": 3.3,
+      "alvo": 3.42,
+      "max": 3.55
+    },
+    "brix": {
+      "min": 4.5,
+      "alvo": 4.75,
+      "max": 5.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.57,
+      "max": 2
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RF003": {
+    "nome": "Refri Guaraná Açaí",
+    "familia": "refri",
+    "pH": {
+      "min": 3.5,
+      "alvo": 3.65,
+      "max": 3.8
+    },
+    "brix": {
+      "min": 4.0,
+      "alvo": 4.25,
+      "max": 4.5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.61,
+      "max": 2.2
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RF004": {
+    "nome": "Refri Uva",
+    "familia": "refri",
+    "pH": {
+      "min": 3.4,
+      "alvo": 3.5,
+      "max": 3.6
+    },
+    "brix": {
+      "min": 4.5,
+      "alvo": 4.75,
+      "max": 5.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.5,
+      "max": 1.5
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RF005": {
+    "nome": "Refri Laranja",
+    "familia": "refri",
+    "pH": {
+      "min": 3.7,
+      "alvo": 3.8,
+      "max": 3.9
+    },
+    "brix": {
+      "min": 4.5,
+      "alvo": 4.75,
+      "max": 5.0
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.5,
+      "max": 1.5
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RTM001": {
+    "nome": "Refri Limão Mônica",
+    "familia": "refri",
+    "pH": {
+      "min": 3.36,
+      "alvo": 3.37,
+      "max": 3.39
+    },
+    "brix": {
+      "min": 3.5,
+      "alvo": 4.18,
+      "max": 5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.5,
+      "max": 1.5
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RTM002": {
+    "nome": "Refri Uva Mônica",
+    "familia": "refri",
+    "pH": {
+      "min": 3.2,
+      "alvo": 3.4,
+      "max": 3.53
+    },
+    "brix": {
+      "min": 4,
+      "alvo": 4.37,
+      "max": 5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.5,
+      "max": 1.5
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  },
+  "RTM003": {
+    "nome": "Refri Laranja Mônica",
+    "familia": "refri",
+    "pH": {
+      "min": 3.76,
+      "alvo": 3.83,
+      "max": 3.94
+    },
+    "brix": {
+      "min": 4,
+      "alvo": 4.1,
+      "max": 4.5
+    },
+    "carbonatacao": {
+      "min": 1.5,
+      "alvo": 1.5,
+      "max": 1.5
+    },
+    "abv": {
+      "min": null,
+      "alvo": null,
+      "max": null
+    }
+  }
+}
