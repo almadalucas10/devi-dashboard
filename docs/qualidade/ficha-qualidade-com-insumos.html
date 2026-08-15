@@ -283,6 +283,9 @@
   .opc .bq.on{background:#12241a; color:var(--ok2)}
   .opc .bq.parc{background:#2a2412; color:var(--al2)}
   .opc .bqcount{font-size:10.5px; color:var(--txt3); margin-left:auto; font-weight:700}
+  .opc.nc-flag{border:1.5px solid var(--er); background:#1a1114}
+  .opc.nc-flag .l1 span{color:var(--er2)}
+  .opc.nc-flag .l2{color:#d8a0a0}
 
   /* ---------- arquivo das fichas (modal) ---------- */
   .modal{display:none; position:fixed; inset:0; z-index:50; background:rgba(4,8,12,.74);
@@ -656,7 +659,7 @@ function renderLista(){
     } else if (demo) {
       blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
     }
-    return `<div class="opc" onclick="abrirOp('${o.op}')">
+    return `<div class="opc${o.nc ? ' nc-flag' : ''}" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
         <div class="l2">${p.nome || o.sku}</div>
         ${info}${blocosTxt}</div>
@@ -912,6 +915,22 @@ function aplicarFichaSalva(f){
   // conferência de insumos salva — re-renderiza as linhas (checkmarks) após aplicar
   (f.conferenciaInsumos||[]).forEach(c => { if(c.conferido) conferidos.add(c.codigo); });
   if(f.conferenciaInsumos && f.conferenciaInsumos.some(c => c.conferido)) montarInsumos();
+  // destaca em vermelho os campos não conformes (localização rápida do operador)
+  ((f.naoConformidades)||[]).forEach(nc => {
+    const map = { pH:'pH', brix:'brix', carbonatacao:'carb' };
+    let c = null;
+    if (nc.bloco === 'preEnvase') c = map[nc.campo];
+    else if (nc.bloco === 'recravacao') c = `rec_${(nc.leitura||1)-1}_${nc.campo}`;
+    else if (nc.bloco === 'starter') c = { pH:'phSt', brix:'brixSt' }[nc.campo];
+    else if (nc.bloco === 'produtoAcabado') c = { pH:'phPA', brix:'brixPA', abv:'abvPA' }[nc.campo];
+    if (!c) return;
+    const e = document.querySelector(`[data-c="${c}"]`);
+    if (e) {
+      e.classList.add('er');
+      const msg = e.parentElement.querySelector('.msg');
+      if (msg) { msg.textContent = 'fora de spec'; msg.className = 'msg er'; }
+    }
+  });
   atualizar();
 }
 
