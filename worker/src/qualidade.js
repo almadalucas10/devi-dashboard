@@ -182,10 +182,19 @@ export async function salvarFicha(env, ficha) {
   const indice = ficha.indiceColeta ? JSON.stringify(ficha.indiceColeta) : null;
   const blocosStatus = ficha.blocos ? JSON.stringify(
     Object.fromEntries(Object.entries(ficha.blocos).map(([b, v]) => {
-      if (Array.isArray(v)) return [b, v.length];
-      if (v && typeof v === "object")
-        return [b, Object.values(v).some((x) => x !== null && x !== undefined && x !== "") ? "ok" : ""];
-      return [b, String(v ?? "")];
+      if (Array.isArray(v)) {
+        // por linha: total de campos vs campos preenchidos
+        const total = v.reduce((s, r) => s + (r && typeof r === "object" ? Object.keys(r).length : 1), 0);
+        const feitos = v.reduce((s, r) => s + (r && typeof r === "object"
+          ? Object.values(r).filter((x) => x !== null && x !== undefined && x !== "").length
+          : (r ? 1 : 0)), 0);
+        return [b, { f: feitos, t: total }];
+      }
+      if (v && typeof v === "object") {
+        const vals = Object.values(v);
+        return [b, { f: vals.filter((x) => x !== null && x !== undefined && x !== "").length, t: vals.length }];
+      }
+      return [b, { f: String(v ?? "") !== "" ? 1 : 0, t: 1 }];
     }))) : null;
   const agora = new Date().toISOString();
   await env.QUALIDADE_DB.prepare(

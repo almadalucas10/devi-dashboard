@@ -276,6 +276,7 @@
   .opc .bq{font-size:10.5px; padding:2px 8px; border-radius:20px; background:var(--linha);
     color:var(--txt3); font-weight:600}
   .opc .bq.on{background:#12241a; color:var(--ok2)}
+  .opc .bq.parc{background:#2a2412; color:var(--al2)}
   .opc .bqcount{font-size:10.5px; color:var(--txt3); margin-left:auto; font-weight:700}
 
   /* ---------- arquivo das fichas (modal) ---------- */
@@ -612,7 +613,7 @@ function renderLista(){
       ? (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '') +
         (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
       : (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '');
-    // blocos preenchidos (rodapé do card) — estado real da ficha salva
+    // blocos preenchidos (rodapé do card) — todos os blocos da família, com estado
     let blocosTxt = '';
     if (o.blocos_status && Object.keys(o.blocos_status).length) {
       const fam = ehBase ? 'base' : (p.familia || 'kombucha');
@@ -620,12 +621,21 @@ function renderLista(){
       // chaves do D1 vêm do form (ex.: preEnvase) — normaliza p/ minúsculas
       const bs = {};
       for (const [k, v] of Object.entries(o.blocos_status)) bs[k.toLowerCase()] = v;
-      const preenchido = v => v != null && v !== '' && v !== 0 && v !== '0' && v !== false;
-      const feitos = nomes.filter(n => preenchido(bs[n.toLowerCase()]));
-      const chips = feitos.map(n => `<span class="bq on">${BLOCO_NOME[n] || n}</span>`).join('');
+      const chips = nomes.map(n => {
+        const st = bs[n.toLowerCase()];
+        let cls = ''; // cinza = vazio
+        if (st && typeof st === 'object') {
+          const f = st.f || 0, t = st.t || 0;
+          if (t > 0 && f >= t) cls = ' on';        // verde = completo
+          else if (f > 0) cls = ' parc';           // amarelo = parcial
+        } else if (st === 'ok' || (typeof st === 'number' && st > 0) || (typeof st === 'string' && st !== '')) {
+          cls = ' on'; // legado: marcado como ok
+        }
+        return `<span class="bq${cls}">${BLOCO_NOME[n] || n}</span>`;
+      }).join('');
       const insu = (o.insumos_conferidos || 0) > 0
         ? `<span class="bq on">🧾 Insumos ${o.insumos_conferidos}/${o.insumos_total}</span>` : '';
-      if(chips || insu) blocosTxt = `<div class="blocos">${insu}${chips}<span class="bqcount">${feitos.length}/${nomes.length}</span></div>`;
+      blocosTxt = `<div class="blocos">${insu}${chips}</div>`;
     } else if (demo) {
       blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
     }
