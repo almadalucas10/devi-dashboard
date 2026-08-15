@@ -634,7 +634,7 @@ function renderLista(){
         return `<span class="bq${cls}">${BLOCO_NOME[n] || n}</span>`;
       }).join('');
       const insu = (o.insumos_conferidos || 0) > 0
-        ? `<span class="bq on">🧾 Insumos ${o.insumos_conferidos}/${o.insumos_total}</span>` : '';
+        ? `<span class="bq${o.insumos_conferidos >= o.insumos_total ? ' on' : ' parc'}">🧾 Insumos ${o.insumos_conferidos}/${o.insumos_total}</span>` : '';
       blocosTxt = `<div class="blocos">${insu}${chips}</div>`;
     } else if (demo) {
       blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
