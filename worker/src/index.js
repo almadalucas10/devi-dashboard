@@ -588,6 +588,34 @@ export default {
     }
     // Ficha salva (R2) + fichas do mês (D1)
     // Arquivo das fichas — lista das salvas (D1) e abertura do PDF anexado na OP
+    // Arquivo de POPs — lista da pasta do Drive (com cache) e download do PDF
+    if (url.pathname === "/api/qualidade/pops") {
+      try {
+        const { listarPOPs } = await import("./pops.js");
+        const folder = url.searchParams.get("folder") || "";
+        const KEY = "qualidade-pops.json";
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < 30 * 60 * 1000 && !folder) {
+          return json(cached.dados);
+        }
+        const dados = await listarPOPs(env, folder);
+        if (!folder && !dados.erro) await writeJson(env, KEY, { _ts: Date.now(), dados });
+        return json(dados);
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/pops/") && url.pathname.endsWith("/pdf")) {
+      try {
+        const { baixarPOP } = await import("./pops.js");
+        const id = decodeURIComponent(url.pathname.split("/").slice(-2)[0]);
+        const { dados, contentType, nome } = await baixarPOP(env, id);
+        return new Response(dados, {
+          headers: {
+            "Content-Type": contentType,
+            "Content-Disposition": `inline; filename="${nome.replace(/[^\w.\- ]/g, "_")}"`,
+          },
+        });
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/arquivo") {
       try {
         const { fichasArquivadas } = await import("./qualidade.js");

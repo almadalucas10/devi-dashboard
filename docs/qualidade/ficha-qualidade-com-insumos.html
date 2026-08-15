@@ -345,6 +345,7 @@
     </div>
     <div class="topoAcoes">
       <button class="btn btnNav" onclick="abrirArquivo()">📄 Arquivo das fichas</button>
+      <button class="btn btnNav" onclick="abrirPOPs()">📋 Arquivo de POPs</button>
       <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
     </div>
   </div>
@@ -528,6 +529,17 @@
   </div>
 </div>
 
+<!-- ============ ARQUIVO DE POPS (modal) ============ -->
+<div class="modal" id="modalPOPs" onclick="if(event.target===this)fecharPOPs()">
+  <div class="modalBox">
+    <div class="modalCab">
+      <h2>📋 Arquivo de POPs — Produção</h2>
+      <button class="bx" style="font-size:24px" onclick="fecharPOPs()">×</button>
+    </div>
+    <div id="popLista" class="modalLista"></div>
+  </div>
+</div>
+
 <script>
 // ---------------------------------------------------------------------------
 // Especificações — em produção vêm de qualidade/spec/*.json no R2
@@ -702,6 +714,38 @@ async function abrirArquivo(){
 }
 
 function fecharArquivo(){ const m = document.getElementById('modalArquivo'); if(m) m.style.display = 'none'; }
+
+// ---- Arquivo de POPs: lista da pasta do Drive + abrir PDF ----
+async function abrirPOPs(){
+  const m = document.getElementById('modalPOPs');
+  if(!m) return;
+  m.style.display = 'flex';
+  const el = document.getElementById('popLista');
+  el.innerHTML = '<div class="sub" style="padding:12px">Carregando POPs…</div>';
+  try{
+    const r = await fetch(WORKER_URL + '/api/qualidade/pops');
+    const j = await r.json();
+    const pops = j.pops || [];
+    if(!pops.length){
+      el.innerHTML = '<div class="sub" style="padding:12px">' +
+        (j.erro ? 'Erro: ' + j.erro : 'Nenhum POP na pasta (ou pasta não configurada).') + '</div>';
+      return;
+    }
+    el.innerHTML = pops.map(p => `
+      <div class="arqItem">
+        <div>
+          <div class="l1"><span>POP ${p.numero}</span>${p.nome ? ' · ' + p.nome.replace(/\.[a-z]+$/i,'') : ''}</div>
+        </div>
+        <div class="r">
+          <a class="btn btnNav" target="_blank" rel="noopener" href="${WORKER_URL}/api/qualidade/pops/${encodeURIComponent(p.id)}/pdf">📄 abrir PDF</a>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML = `<div class="sub" style="padding:12px;color:var(--er2)">Erro ao carregar POPs: ${e.message}</div>`;
+  }
+}
+
+function fecharPOPs(){ const m = document.getElementById('modalPOPs'); if(m) m.style.display = 'none'; }
 
 let _resetando = false; // evita o auto-salvar durante o reset (não sobrescreve rascunho)
 function resetarFicha(){
