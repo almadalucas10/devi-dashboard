@@ -741,6 +741,17 @@ function abrirOp(op){
 
 // ---- integração com o endpoint do worker (mock quando file:// ou offline) ----
 const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
+function preencherOPS(fichas){
+  OPS.length = 0;
+  fichas.forEach(f => OPS.push({
+    op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
+    nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
+    data: f.data || '', status: f.status || '', nc: f.nc || 0,
+    blocos_status: f.blocos_status || null
+  }));
+  OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
+}
+
 async function carregarOPS(){
   mostrarLista();
   const el = document.getElementById('opLista');
@@ -750,14 +761,7 @@ async function carregarOPS(){
     const r = await fetch(WORKER_URL + '/api/qualidade/fichas');
     const j = await r.json();
     if(j.fichas && j.fichas.length){
-      OPS.length = 0;
-      j.fichas.forEach(f => OPS.push({
-        op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
-        nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
-        data: f.data || '', status: f.status || '', nc: f.nc || 0,
-        blocos_status: f.blocos_status || null
-      }));
-      OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
+      preencherOPS(j.fichas);
       renderLista();
     } else {
       OPS.length = 0;
@@ -767,6 +771,17 @@ async function carregarOPS(){
     if(el) el.innerHTML = '<div class="sub" style="padding:14px;color:var(--er2)">Não foi possível carregar as OPs do Omie — verifique o worker (' + e.message + ')</div>';
   }
 }
+
+// Refresh silencioso do portal (tempo real) — só quando a lista está visível
+async function atualizarOPS(){
+  if(location.protocol === 'file:' || !document.body.classList.contains('lista')) return;
+  try{
+    const r = await fetch(WORKER_URL + '/api/qualidade/fichas');
+    const j = await r.json();
+    if(j.fichas && j.fichas.length){ preencherOPS(j.fichas); renderLista(); }
+  }catch(e){ /* silencioso */ }
+}
+setInterval(atualizarOPS, 30000);
 
 async function carregarInsumosReais(op, nCodOP){
   if(location.protocol === 'file:') return;
@@ -786,7 +801,42 @@ async function carregarInsumosReais(op, nCodOP){
       montarInsumos();
       atualizarInsumosChk();
     }
+    // reabre a ficha salva (rascunho/completa) — popula os campos e a barra de progresso
+    if(j.ficha && j.ficha.blocos) aplicarFichaSalva(j.ficha);
   }catch(e){}
+}
+
+// Preenche o formulário com o estado salvo da ficha (reabertura)
+function aplicarFichaSalva(f){
+  if(!f || !f.blocos) return;
+  const b = f.blocos;
+  const setV = (c, v) => { const e = document.querySelector(`[data-c="${c}"]`);
+    if(e && v !== null && v !== undefined && v !== '') e.value = v; };
+  if(b.starter){ setV('tanqueSt',b.starter.tanque); setV('fonteSt',b.starter.fonte);
+    setV('phSt',b.starter.pH); setV('brixSt',b.starter.brix);
+    setV('volSt',b.starter.volume); setV('volTanque',b.starter.volumeTanque); }
+  if(b.preEnvase){ setV('pH',b.preEnvase.pH); setV('brix',b.preEnvase.brix);
+    setV('carb',b.preEnvase.carbonatacao); setV('respPre',b.preEnvase.responsavel); }
+  if(b.filtracao){ setV('volFi',b.filtracao.volume); setV('tempoFi',b.filtracao.tempo); }
+  if(b.produtoAcabado){ setV('prodPA',b.produtoAcabado.produto); setV('brixPA',b.produtoAcabado.brix);
+    setV('phPA',b.produtoAcabado.pH); setV('abvPA',b.produtoAcabado.abv); setV('brixSucoPA',b.produtoAcabado.brixSuco); }
+  if(b.observacoes != null) setV('obs', b.observacoes);
+  (b.carbonatacao||[]).forEach(r => { const id = addCarb();
+    setV(`cb_${id}_h`,r.hora); setV(`cb_${id}_t`,r.temperatura);
+    setV(`cb_${id}_pc`,r.pressaoCilindro); setV(`cb_${id}_pt`,r.pressaoTanque); });
+  (b.estoque||[]).forEach(r => { const id = addEstoque();
+    setV(`es_${id}_h`,r.hora); setV(`es_${id}_q`,r.quantidade);
+    setV(`es_${id}_t`,r.tipo); setV(`es_${id}_r`,r.responsavel); });
+  (b.fermentacao||[]).forEach(r => { const id = addFer();
+    setV(`fer_${id}_d`,r.data); setV(`fer_${id}_ph`,r.pH); setV(`fer_${id}_br`,r.brix);
+    setV(`fer_${id}_tp`,r.temperatura); setV(`fer_${id}_ab`,r.abv); });
+  (b.recravacao||[]).forEach(r => { const id = addRec();
+    setV(`rec_${id}_altura`,r.altura); setV(`rec_${id}_espessura`,r.espessura);
+    setV(`rec_${id}_transpasse`,r.transpasse); });
+  // conferência de insumos salva
+  (f.conferenciaInsumos||[]).forEach(c => { if(c.conferido) conferidos.add(c.codigo); });
+  if(f.conferenciaInsumos) atualizarInsumosChk();
+  atualizar();
 }
 
 // ---------------------------------------------------------------------------
@@ -1229,6 +1279,7 @@ function addCarb(){
   el.appendChild(d);
   d.querySelectorAll('input').forEach(i=>i.addEventListener('input', atualizar));
   atualizar();
+  return id;
 }
 
 // Envio para estoque — mesmo padrão da carbonatação: N linhas dinâmicas
@@ -1246,6 +1297,7 @@ function addEstoque(){
   el.appendChild(d);
   d.querySelectorAll('input, select').forEach(i=>i.addEventListener('input', atualizar));
   atualizar();
+  return id;
 }
 
 // Fermentação da Base Kombucha (PC04) — linhas: Data | pH | °Brix | Temp | ABV
@@ -1264,6 +1316,7 @@ function addFer(){
   el.appendChild(d);
   d.querySelectorAll('input').forEach(i=>i.addEventListener('input', atualizar));
   atualizar();
+  return id;
 }
 
 // Recravação — leituras dinâmicas sem data: Altura | Espessura | Transpasse
@@ -1282,6 +1335,7 @@ function addRec(){
     inp.addEventListener('input', ()=>{ validar(inp, SPEC.recravacao[inp.dataset.rec]); atualizar(); });
   });
   atualizar();
+  return id;
 }
 
 function alterna(c){ c.parentElement.classList.toggle('ab'); }
@@ -1402,37 +1456,21 @@ function atualizar(){
   document.getElementById('pb').style.width = (totalBlocos ? completas/totalBlocos*100 : 0)+'%';
   document.getElementById('pt').textContent =
     `${completas} de ${totalBlocos} blocos preenchidos`;
+
+  // auto-salva rascunho quando o estado dos blocos muda (portal em tempo real)
+  const ass = (opAtual||'') + '|' + visiveis.map(s => {
+    const b = s.querySelector('[data-est]'); return b ? b.textContent : '';
+  }).join(',');
+  if(ass !== _assinaturaRascunho && opAtual){ _assinaturaRascunho = ass; salvarRascunho(); }
 }
 
 // ---------------------------------------------------------------------------
-async function salvar(){
+// Monta o payload da ficha a partir do estado atual do formulário (rascunho: status parcial)
+function montarPayload(){
   const sku = skuAtual;
   const fam = (PRODUTOS[sku] || {}).familia || 'kombucha';
   const g = c => { const e=document.querySelector(`[data-c="${c}"]`);
     return e && e.value.trim()!=='' ? e.value.trim() : null; };
-
-  // Bloqueia fechamento com campo obrigatório em branco (observações fica de fora)
-  // e com itens da folha da OP ainda não conferidos.
-  const pendentes = secVisiveis().filter(s =>
-    s.dataset.sec !== 'observacoes' && !secPreenchida(s));
-  const itensFolha = insumosDaOp();
-  const folhaIncompleta = itensFolha.length > 0 && conferidos.size < itensFolha.length;
-  if(pendentes.length || folhaIncompleta){
-    const res = document.getElementById('resumo');
-    res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>` +
-      pendentes.map(s => `<li><span>${s.querySelector('h2').textContent}</span>` +
-        `<b style="color:var(--er2)">${s.querySelector('[data-est]').textContent}</b></li>`).join('') +
-      (folhaIncompleta
-        ? `<li><span>Folha da OP</span><b style="color:var(--er2)">${conferidos.size} de ${itensFolha.length} conferidos</b></li>`
-        : '') +
-      `</ul><div class="nc"><b>Preencha os campos pendentes e confira todos os itens da folha para concluir a ficha.</b></div>`;
-    res.style.display = 'block';
-    const saida = document.getElementById('saida');
-    saida.style.display = 'none';
-    res.scrollIntoView({ behavior: 'smooth' });
-    return;
-  }
-
   const d = { op: opAtual || '2026/00527', nCodOP: nCodOPAtual || 0, sku:sku, sigla:SIGLA[sku]||'',
               familia:fam, dataProducao: iso(opData) || '2026-08-12', blocos:{} };
   if(folhaInfo){
@@ -1512,8 +1550,63 @@ async function salvar(){
     : { pH:!!g('pH'), brix:!!g('brix'), carbonatacao:!!g('carb'),
         recravacao: (d.blocos.recravacao||[]).length > 0,
         abv:false };
-  d.status = 'completa';
+  d.status = 'parcial';
   d.registradoEm = new Date().toISOString();
+  return d;
+}
+
+// Auto-salva (rascunho no R2/D1) quando o estado dos blocos muda — em tempo real
+let _timerRascunho = null;
+let _assinaturaRascunho = '';
+function salvarRascunho(){
+  clearTimeout(_timerRascunho);
+  _timerRascunho = setTimeout(async () => {
+    if(!nCodOPAtual || !opAtual || location.protocol === 'file:') return;
+    try{
+      const d = montarPayload();
+      const temBloco = Object.keys(d.blocos).some(n => {
+        const v = d.blocos[n];
+        return Array.isArray(v) ? v.length > 0 : (typeof v === 'object' && v !== null) || String(v || '') !== '';
+      });
+      if(!temBloco) return;
+      await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ficha: d })
+      });
+    }catch(e){ console.error('rascunho:', e.message); }
+  }, 900);
+}
+
+async function salvar(){
+  const sku = skuAtual;
+  const fam = (PRODUTOS[sku] || {}).familia || 'kombucha';
+  const g = c => { const e=document.querySelector(`[data-c="${c}"]`);
+    return e && e.value.trim()!=='' ? e.value.trim() : null; };
+
+  // Bloqueia fechamento com campo obrigatório em branco (observações fica de fora)
+  // e com itens da folha da OP ainda não conferidos.
+  const pendentes = secVisiveis().filter(s =>
+    s.dataset.sec !== 'observacoes' && !secPreenchida(s));
+  const itensFolha = insumosDaOp();
+  const folhaIncompleta = itensFolha.length > 0 && conferidos.size < itensFolha.length;
+  if(pendentes.length || folhaIncompleta){
+    const res = document.getElementById('resumo');
+    res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>` +
+      pendentes.map(s => `<li><span>${s.querySelector('h2').textContent}</span>` +
+        `<b style="color:var(--er2)">${s.querySelector('[data-est]').textContent}</b></li>`).join('') +
+      (folhaIncompleta
+        ? `<li><span>Folha da OP</span><b style="color:var(--er2)">${conferidos.size} de ${itensFolha.length} conferidos</b></li>`
+        : '') +
+      `</ul><div class="nc"><b>Preencha os campos pendentes e confira todos os itens da folha para concluir a ficha.</b></div>`;
+    res.style.display = 'block';
+    const saida = document.getElementById('saida');
+    saida.style.display = 'none';
+    res.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  const d = montarPayload();
+  d.status = 'completa';
 
   // ---- resumo legível + payload para conferência ----
   const linhas = secVisiveis().map(sec=>{
