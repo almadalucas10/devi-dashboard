@@ -620,18 +620,24 @@ export default {
     }
     if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "GET") {
       try {
-        const { lerFichaSalva, fichaDaOp } = await import("./qualidade.js");
+        const { lerFichaSalva, lerFichaSalvaPorNcod, fichaDaOp } = await import("./qualidade.js");
         const op = decodeURIComponent(url.pathname.split("/").pop());
         const comSaldo = url.searchParams.get("saldo") !== "0";
         const raw = url.searchParams.get("raw") === "1";
         if (raw) return json(await fichaDaOp(env, op, false, true));
+        // ficha salva: pela OP string; se a URL veio com nCodOP numérico, resolve via D1
+        const fichaSalva = async () => {
+          let s = await lerFichaSalva(env, op);
+          if (!s && /^\d+$/.test(String(op))) s = await lerFichaSalvaPorNcod(env, op);
+          return s;
+        };
         // Dados frescos da OP (itens, previsao, data...) com cache por ficha;
         // salva/ficha = documento da ficha já gravada (R2), se existir.
         const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
         const FRESCO_MS = 20 * 60 * 1000;
         const cached = await readJson(env, KEY);
         if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
-          const saved = await lerFichaSalva(env, op);
+          const saved = await fichaSalva();
           return json({ ...cached.dados, salva: !!saved, ficha: saved || null });
         }
         if (cached && cached._ts) {
@@ -642,12 +648,12 @@ export default {
               await writeJson(env, KEY, { _ts: Date.now(), dados });
             } catch (e) { console.error(`[qualidade] refresh ficha ${op}: ${e.message}`); }
           })());
-          const saved = await lerFichaSalva(env, op);
+          const saved = await fichaSalva();
           return json({ ...cached.dados, salva: !!saved, ficha: saved || null });
         }
         const dados = await fichaDaOp(env, op, comSaldo);
         await writeJson(env, KEY, { _ts: Date.now(), dados });
-        const saved = await lerFichaSalva(env, op);
+        const saved = await fichaSalva();
         return json({ ...dados, salva: !!saved, ficha: saved || null });
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
