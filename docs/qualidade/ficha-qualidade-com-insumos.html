@@ -829,6 +829,9 @@ async function carregarInsumosReais(op, nCodOP){
 function aplicarFichaSalva(f){
   if(!f || !f.blocos) return;
   const b = f.blocos;
+  // limpa as linhas dinâmicas ANTES de aplicar (reabrir não duplica; chamadas repetidas são idempotentes)
+  ['cbLin','esLin','ferLin','rcLin'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
+  nc = 0; nEs = 0; nf = 0; nr = 0;
   const setV = (c, v) => { const e = document.querySelector(`[data-c="${c}"]`);
     if(e && v !== null && v !== undefined && v !== '') e.value = v; };
   if(b.starter){ setV('tanqueSt',b.starter.tanque); setV('fonteSt',b.starter.fonte);
@@ -852,6 +855,11 @@ function aplicarFichaSalva(f){
   (b.recravacao||[]).forEach(r => { const id = addRec();
     setV(`rec_${id}_altura`,r.altura); setV(`rec_${id}_espessura`,r.espessura);
     setV(`rec_${id}_transpasse`,r.transpasse); });
+  // blocos dinâmicos sem dados salvos ganham 1 linha de preenchimento (como o reset)
+  if(!(b.carbonatacao||[]).length) addCarb();
+  if(!(b.estoque||[]).length) addEstoque();
+  if(!(b.fermentacao||[]).length) addFer();
+  if(!(b.recravacao||[]).length) addRec();
   // conferência de insumos salva — re-renderiza as linhas (checkmarks) após aplicar
   (f.conferenciaInsumos||[]).forEach(c => { if(c.conferido) conferidos.add(c.codigo); });
   if(f.conferenciaInsumos && f.conferenciaInsumos.some(c => c.conferido)) montarInsumos();
