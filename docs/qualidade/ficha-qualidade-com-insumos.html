@@ -19,10 +19,10 @@
     border-bottom:1px solid var(--linha); padding:10px 14px}
   .logo-row{display:flex; justify-content:flex-start; margin-bottom:8px}
   .logo{height:64px; width:auto; object-fit:contain; display:block}
-  .t1{display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .t1{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
   .logo-col{flex-shrink:0}
   .logo-col .logo{height:60px}
-  .info{flex:1; min-width:0}
+  .info{flex:0 1 auto; min-width:0}
   .op{font-size:15px; font-weight:700; letter-spacing:-.3px; color:var(--txt3)}
   .op span{color:var(--az); font-size:20px}
   .prod{font-size:21px; font-weight:700; color:var(--txt); margin-top:2px;
@@ -31,8 +31,9 @@
     font-size:20px; font-weight:800; letter-spacing:1px}
   .prod .sku{background:var(--linha); color:var(--txt2); padding:2px 10px; border-radius:9px;
     font-size:14px; font-weight:700; letter-spacing:.4px}
-  .datas{font-size:13px; color:var(--txt3); margin-top:4px; display:flex; gap:14px; flex-wrap:wrap}
-  .datas b{color:var(--txt2); font-weight:700}
+  .datas{flex:1; text-align:center; font-size:15px; color:var(--txt3);
+    display:flex; justify-content:center; gap:18px; flex-wrap:wrap}
+  .datas b{color:var(--txt2); font-weight:800; font-size:16px}
   .meta{font-size:12px; color:var(--txt3); text-align:right; white-space:nowrap}
   .meta b{display:block; font-size:20px; font-weight:800; color:var(--txt2); letter-spacing:-.4px}
   .meta span{font-size:13px; color:var(--txt3)}
@@ -277,7 +278,6 @@
     <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
     <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
   </div>
-  <div class="logo-row"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
   <div class="t1">
     <div class="logo-col"><img class="logo" src="logo-devi.png" alt="Dêvi"></div>
     <div class="info">
@@ -287,10 +287,10 @@
         <span id="opNome">Kombucha Frutas Vermelhas</span>
         <span id="opSku" class="sku">FX001</span>
       </div>
-      <div class="datas">
-        <span>Fabricação: <b id="opFab">12/08/2026</b></span>
-        <span>Validade: <b id="opVal">12/04/2027</b></span>
-      </div>
+    </div>
+    <div class="datas">
+      <span>Fabricação: <b id="opFab">12/08/2026</b></span>
+      <span>Validade: <b id="opVal">12/04/2027</b></span>
     </div>
     <div class="meta" id="opMeta"><b>4.464 latas</b><span>1.201 L</span></div>
   </div>
