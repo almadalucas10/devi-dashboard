@@ -881,19 +881,28 @@ function fecharPOPViewer(){
   if(f) f.src = 'about:blank';
 }
 function abrirPOPsViewer(){ abrirPOPFrame(urlPOPs()); }
+function popDaFolhaAtual(){
+  const fam = (PRODUTOS[skuAtual] || {}).familia || '';
+  return fam === 'kombucha' ? 'POP11' : (['cha','refri','rtm'].includes(fam) ? 'POP12' : null);
+}
 function injetarLinksPOP(){
   document.querySelectorAll('.sec[data-sec]').forEach(sec => {
-    if (sec.classList.contains('hid')) return;
-    if (sec.hasAttribute('data-consulta') || sec.hasAttribute('data-registro')) return;
     const cab = sec.querySelector('.cab');
     if (!cab) return;
     // remove links antigos e reinjeta — reflete a família da OP atual (não fica preso
     // ao POP injetado na carga, quando ainda não havia OP aberta)
     cab.querySelectorAll('.linkPOP').forEach(l => l.remove());
-    let pops = BLOCO_POP[sec.dataset.sec] || [];
-    // filtra pelos POPs aplicáveis à família do SKU da OP (ex.: POP 11 só kombucha)
-    const fam = (PRODUTOS[skuAtual] || {}).familia || 'kombucha';
-    pops = pops.filter(c => (POP_FAMILIAS[c] || []).includes(fam));
+    let pops;
+    if (sec.hasAttribute('data-consulta')) {
+      // Folha da OP (insumos): processo de preparo do líquido — POP 11 (kombucha) / 12 (chá/refri/rtm),
+      // visível mesmo com o card recolhido, ao lado do "X de X conferidos"
+      const f = popDaFolhaAtual();
+      pops = f ? [f] : [];
+    } else {
+      if (sec.classList.contains('hid')) return;
+      const fam = (PRODUTOS[skuAtual] || {}).familia || 'kombucha';
+      pops = (BLOCO_POP[sec.dataset.sec] || []).filter(c => (POP_FAMILIAS[c] || []).includes(fam));
+    }
     if (!pops.length) return;
     const link = document.createElement('button');
     link.type = 'button';
@@ -1537,9 +1546,6 @@ function montarInsumos(){
   const p = PRODUTOS[skuAtual] || {};
   const fam = FAMILIA_NOME[p.familia] || p.familia || '';
   const qtd = opQtd || 4464;
-  // POP do processo de preparo do líquido: 11 (kombucha) ou 12 (chá/refri/rtm) — na folha da OP
-  const popDaFolha = (p.familia === 'kombucha') ? 'POP11'
-    : (['cha','refri','rtm'].includes(p.familia) ? 'POP12' : null);
   el.innerHTML = `
     <div class="folha">
       <div class="fl-cab">
@@ -1555,11 +1561,6 @@ function montarInsumos(){
           <span>Família: <b>${fam || '—'}</b></span>
           <span>Quantidade a Produzir: <b>${fmt(qtd)} ${opUn}${sufixoL(qtd, opUn)}</b></span>
         </div>
-        ${popDaFolha ? `<div class="fl-linha" style="margin-top:6px">
-          <button type="button" onclick="abrirPOPFrame(urlPOPs('${popDaFolha}'))"
-            style="font-size:11px;color:#1e3a5f;cursor:pointer;font-family:inherit;
-            background:#eef3f8;border:1px solid #b8c6d4;border-radius:20px;padding:2px 10px">📖 ver POP ${popDaFolha.replace('POP','')}</button>
-        </div>` : ''}
       </div>
       <div class="fl-titulo">Itens da Ordem de Produção</div>
       <table>

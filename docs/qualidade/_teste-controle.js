@@ -85,15 +85,15 @@ setTimeout(() => {
     ok($('#pc3Ctx').textContent.includes('#528') && $('#pc3Ctx').textContent.includes('CH003'), 'contexto OP+SKU: ' + $('#pc3Ctx').textContent);
 
     // ---- links "ver POP" nos blocos visíveis da ficha (blocoFicha) ----
-    const linkPOPs = $$('.linkPOP').map(a => a.textContent.trim());
+    const linkPOPs = $$('.sec[data-sec]:not([data-consulta]) .linkPOP').map(a => a.textContent.trim()); // só blocos (folha/insumos fica de fora)
     ok(linkPOPs.some(t => t.includes('POP 10')), 'bloco Carbonatação com ver POP 10 (' + linkPOPs.join(', ') + ')');
     ok(linkPOPs.some(t => t.includes('POP 13')), 'bloco Recravação com ver POP 13');
     ok(linkPOPs.some(t => t.includes('POP 15')), 'bloco Estoque com ver POP 15');
     // POP 11/12 saem dos blocos e vão para a FOLHA DA OP (processo de preparo do líquido)
     ok(!linkPOPs.some(t => t.includes('POP 12')), 'POP 12 não fica mais no bloco Pré-envase');
     ok(!linkPOPs.some(t => t.includes('POP 11')), 'POP 11 não aparece nos blocos em OP de chá');
-    const folhaBtn = $('#insumos .folha button');
-    ok(!!folhaBtn && folhaBtn.textContent.includes('POP 12'), 'Folha da OP com ver POP 12 (chá): ' + (folhaBtn ? folhaBtn.textContent : 'sem botão'));
+    const folhaBtn = document.querySelector('.sec[data-sec="insumos"] .cab .linkPOP');
+    ok(!!folhaBtn && folhaBtn.textContent.includes('POP 12'), 'Cabeçalho da Folha da OP com ver POP 12 (chá): ' + (folhaBtn ? folhaBtn.textContent : 'sem botão'));
     ok($('#ctlRecentes').querySelectorAll('.ctlRec').length === 2, 'lista unificada (2 registros, todas as OPs)');
     ok(!gets.includes('GET?op'), 'carregamento unificado, sem filtro por OP');
 
@@ -156,9 +156,9 @@ setTimeout(() => {
 
           // ---- kombucha: pré-envase volta a mostrar POP 11/12 ----
           window.abrirOp('2026/00518'); // FX001 (kombucha)
-          const folhaK = $('#insumos .folha button');
-          ok(!!folhaK && folhaK.textContent.includes('POP 11'), 'Folha da OP kombucha com ver POP 11: ' + (folhaK ? folhaK.textContent : 'sem botão'));
-          const linkK = $$('.linkPOP').map(a => a.textContent.trim());
+          const folhaK = document.querySelector('.sec[data-sec="insumos"] .cab .linkPOP');
+          ok(!!folhaK && folhaK.textContent.includes('POP 11'), 'Cabeçalho da Folha da OP kombucha com ver POP 11: ' + (folhaK ? folhaK.textContent : 'sem botão'));
+          const linkK = $$('.sec[data-sec]:not([data-consulta]) .linkPOP').map(a => a.textContent.trim());
           ok(!linkK.some(t => t.includes('POP 11')) && !linkK.some(t => t.includes('POP 12')), 'blocos kombucha sem POP 11/12 (foram para a folha): ' + linkK.join(', '));
           console.log(`\n${pass} passaram, ${fail} falharam`);
           process.exit(fail ? 1 : 0);
