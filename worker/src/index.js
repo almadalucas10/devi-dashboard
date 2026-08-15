@@ -440,6 +440,22 @@ export default {
         return json(await obterAnexo(env, nIdAnexo, nId));
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
+    // Debug — ler abas/cabeçalhos de uma planilha com a service account
+    // GET /api/qualidade/debug/sheet?spreadsheetId=ID[&range=A1:Z3]
+    if (url.pathname === "/api/qualidade/debug/sheet") {
+      try {
+        const { getAccessToken, getValues, listSheets } = await import("./sheets.js");
+        const id = url.searchParams.get("spreadsheetId") || "";
+        const range = url.searchParams.get("range") || "A1:Z3";
+        const token = await getAccessToken(env);
+        let sa = null;
+        try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}"); } catch(e) {}
+        if (!id) return json({ client_email: sa?.client_email || null, tabs: null, values: null });
+        const tabs = await listSheets(env, token, id);
+        const values = await getValues(env, token, range, id);
+        return json({ client_email: sa?.client_email || null, spreadsheetId: id, tabs, values });
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/debug/anexos") {
       try {
         const { listarAnexos } = await import("./qualidade.js");
