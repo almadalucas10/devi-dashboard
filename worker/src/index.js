@@ -663,7 +663,7 @@ export default {
         const { listarFichasDoDia } = await import("./qualidade.js");
         const data = url.searchParams.get("data") || new Date().toISOString().slice(0, 10);
         const KEY = R2_KEYS.qualidadeFichas;
-        const FRESCO_MS = 15 * 60 * 1000;
+        const FRESCO_MS = 90 * 1000; // portal em tempo real: estado das fichas quase instantâneo
         const cached = await readJson(env, KEY);
         if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
           return json(cached.dados);
