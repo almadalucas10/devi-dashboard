@@ -85,13 +85,14 @@ setTimeout(() => {
     ok($('#pc3Ctx').textContent.includes('#528') && $('#pc3Ctx').textContent.includes('CH003'), 'contexto OP+SKU: ' + $('#pc3Ctx').textContent);
 
     // ---- links "ver POP" nos blocos visíveis da ficha (blocoFicha) ----
-    const linkPOPs = $$('.sec[data-sec]:not([data-consulta]) .linkPOP').map(a => a.textContent.trim()); // só blocos (folha/insumos fica de fora)
-    ok(linkPOPs.some(t => t.includes('POP 10')), 'bloco Carbonatação com ver POP 10 (' + linkPOPs.join(', ') + ')');
-    ok(linkPOPs.some(t => t.includes('POP 13')), 'bloco Recravação com ver POP 13');
-    ok(linkPOPs.some(t => t.includes('POP 15')), 'bloco Estoque com ver POP 15');
+    const linkDe = sec => { const el = document.querySelector('.sec[data-sec="' + sec + '"] .linkPOP'); return el ? el.textContent : ''; };
+    ok(linkDe('carbonatacao').includes('POP 10'), 'bloco Carbonatação com ver POP 10 (' + linkDe('carbonatacao') + ')');
+    ok(linkDe('preenvase').includes('POP 13'), 'bloco Pré-envase com ver POP 13 (' + linkDe('preenvase') + ')');
+    ok(!linkDe('recravacao'), 'bloco Recravação SEM POP 13 (foi para pré-envase)');
+    ok(linkDe('estoque').includes('POP 15'), 'bloco Estoque com ver POP 15');
     // POP 11/12 saem dos blocos e vão para a FOLHA DA OP (processo de preparo do líquido)
-    ok(!linkPOPs.some(t => t.includes('POP 12')), 'POP 12 não fica mais no bloco Pré-envase');
-    ok(!linkPOPs.some(t => t.includes('POP 11')), 'POP 11 não aparece nos blocos em OP de chá');
+    ok(!linkDe('preenvase').includes('POP 12'), 'POP 12 não fica mais no bloco Pré-envase');
+    ok(!document.querySelector('.sec[data-sec="preenvase"] .linkPOP').textContent.includes('POP 11'), 'POP 11 não aparece no Pré-envase em OP de chá');
     const folhaBtn = document.querySelector('.sec[data-sec="insumos"] .cab .linkPOP');
     ok(!!folhaBtn && folhaBtn.textContent.includes('POP 12'), 'Cabeçalho da Folha da OP com ver POP 12 (chá): ' + (folhaBtn ? folhaBtn.textContent : 'sem botão'));
     ok($('#ctlRecentes').querySelectorAll('.ctlRec').length === 2, 'lista unificada (2 registros, todas as OPs)');
