@@ -136,6 +136,17 @@ export async function listarAnexos(env, nId, cTabela = "") {
   });
 }
 
+// Logo (versão preta) servido pelo Pages — cache em memória; sem rede, segue sem logo
+let _logoPng = null;
+async function carregarLogo() {
+  if (_logoPng !== null) return _logoPng;
+  try {
+    const r = await fetch("https://cobertura-completa.dashboard-3gm.pages.dev/docs/qualidade/logo-devi-preta.png");
+    _logoPng = r.ok ? new Uint8Array(await r.arrayBuffer()) : null;
+  } catch (e) { _logoPng = null; }
+  return _logoPng;
+}
+
 // ============================================================================
 // Anexo automático da ficha na OP — cTabela descoberto em 14/08/2026:
 // anexar um arquivo pela interface do Omie e ler com ListarAnexo retorna
@@ -238,17 +249,21 @@ function zipStore(arquivos) {
   return Buffer.concat([...chunks, cdData, eocd]);
 }
 
-/** PDF da ficha — clone fiel da Ordem de Produção do Omie (pdf-lib) */
+/** PDF da ficha — seções separadas com barra de título, logo à esquerda em cima (estilo Qualidade V2 / OP Omie) */
 async function pdfDaFicha(ficha) {
   const doc = await PDFDocument.create();
   const page = doc.addPage([595, 842]);
   const F1 = await doc.embedFont(StandardFonts.Helvetica);
   const F2 = await doc.embedFont(StandardFonts.HelveticaBold);
-  const PRETO = rgb(0.08, 0.08, 0.08);
-  const CINZA = rgb(0.45, 0.45, 0.45);
-  const VERMELHO = rgb(0.8, 0.1, 0.1);
-  const CLARO = rgb(0.94, 0.94, 0.94);
-  const BORDA = rgb(0.75, 0.75, 0.75);
+  const logoBytes = await carregarLogo();
+  const logo = logoBytes ? await doc.embedPng(logoBytes) : null;
+  const AZUL = rgb(0.16, 0.25, 0.36);
+  const AZULC = rgb(0.23, 0.33, 0.47);
+  const VERMELHO = rgb(0.78, 0.12, 0.12);
+  const PRETO = rgb(0.12, 0.12, 0.12);
+  const CINZA = rgb(0.5, 0.5, 0.5);
+  const FUNDOL = rgb(0.96, 0.97, 0.98);
+  const BORDA = rgb(0.78, 0.8, 0.84);
   let y = 810;
   const FAM = { kombucha: "Kombuchas", refri: "Refrigerantes", cha: "Chás", barril: "Barril" };
   const LAB = {
@@ -263,27 +278,27 @@ async function pdfDaFicha(ficha) {
   const t = (s, o = {}) => {
     if (y < 40) return;
     const size = o.size || 10, font = o.bold ? F2 : F1;
-    let x = o.x ?? 50;
-    if (o.center) x = Math.max(50, (595 - font.widthOfTextAtSize(s, size)) / 2);
-    page.drawText(s, { x, y, size, font, color: o.color || PRETO });
+    page.drawText(s, { x: o.x ?? 50, y, size, font, color: o.color || PRETO });
     y -= size * 1.5;
   };
-  const regra = (grossa = false) => {
-    page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: grossa ? 1.8 : 0.6, color: PRETO });
+  const secao = (titulo, cor = AZUL) => {
     y -= 10;
+    page.drawRectangle({ x: 50, y: y - 17, width: 495, height: 17, color: cor });
+    page.drawText(titulo.toUpperCase(), { x: 58, y: y - 12, size: 9.5, font: F2, color: rgb(1, 1, 1) });
+    y -= 17; y -= 6;
   };
   const tabela = (colunas, largs, linhas, opt = {}) => {
-    const rh = opt.rh || 14, fs = opt.fs || 9, fsH = opt.fsH || 9;
+    const rh = opt.rh || 14, fs = opt.fs || 9;
     const xs = []; let acc = 50;
     for (let i = 0; i < colunas.length; i++) { xs.push(acc); acc += largs[i]; }
     const right = acc, yTop = y;
-    if (y - rh < 40) return;
-    page.drawRectangle({ x: 50, y: y - rh, width: right - 50, height: rh, color: CLARO });
-    colunas.forEach((c, i) => page.drawText(c, { x: xs[i] + 4, y: y - 9, size: fsH, font: F2, color: PRETO }));
+    if (y - rh * (1 + linhas.length) < 40) return;
+    page.drawRectangle({ x: 50, y: y - rh, width: right - 50, height: rh, color: AZULC });
+    colunas.forEach((c, i) => page.drawText(c, { x: xs[i] + 4, y: y - 9, size: fs, font: F2, color: rgb(1, 1, 1) }));
     y -= rh;
-    page.drawLine({ start: { x: 50, y }, end: { x: right, y }, thickness: 1, color: PRETO });
-    for (const linha of linhas) {
+    linhas.forEach((linha, li) => {
       if (y - rh < 40) { y = 30; return; }
+      if (li % 2 === 0) page.drawRectangle({ x: 50, y: y - rh, width: right - 50, height: rh, color: FUNDOL });
       linha.forEach((c, i) => {
         let s = String(c ?? "");
         const max = largs[i] - 7;
@@ -291,87 +306,96 @@ async function pdfDaFicha(ficha) {
         page.drawText(s, { x: xs[i] + 4, y: y - 9, size: fs, font: F1, color: PRETO });
       });
       y -= rh;
-      page.drawLine({ start: { x: 50, y }, end: { x: right, y }, thickness: 0.4, color: BORDA });
-    }
+      page.drawLine({ start: { x: 50, y }, end: { x: right, y }, thickness: 0.3, color: BORDA });
+    });
     for (let i = 1; i < colunas.length; i++)
-      page.drawLine({ start: { x: xs[i], y }, end: { x: xs[i], y: yTop }, thickness: 0.4, color: BORDA });
-    y -= 7;
+      page.drawLine({ start: { x: xs[i], y }, end: { x: xs[i], y: yTop }, thickness: 0.3, color: BORDA });
+    y -= 8;
   };
-  const blocoLinhas = (bloco, dados) => {
-    const L = [];
-    if (bloco === "recravacao") (Array.isArray(dados) ? dados : []).forEach((r, i) =>
-      L.push([`#${i + 1}`, `Altura ${fmtN(r.altura)} · Espessura ${fmtN(r.espessura)} · Transpasse ${fmtN(r.transpasse)} mm`]));
-    else if (bloco === "carbonatacao") (Array.isArray(dados) ? dados : []).forEach(r =>
-      L.push([r.hora || "—", `Temp ${fmtN(r.temperatura)}°C · P.cil ${fmtN(r.pressaoCilindro)} · P.tan ${fmtN(r.pressaoTanque)}`]));
-    else if (bloco === "fermentacao") (Array.isArray(dados) ? dados : []).forEach(r =>
-      L.push([r.data || "—", `pH ${fmtN(r.pH)} · Brix ${fmtN(r.brix)} · Temp ${fmtN(r.temperatura)}°C · ABV ${fmtN(r.abv)}%`]));
-    else if (bloco === "estoque") (Array.isArray(dados) ? dados : []).forEach(r =>
-      L.push([r.hora || "—", `${fmtN(r.quantidade)} ${r.tipo || ""} · ${r.responsavel || ""}`]));
-    else if (bloco === "preenvase") [["pH", dados.pH], ["°Brix", dados.brix], ["Carbonatação", dados.carbonatacao], ["Responsável", dados.responsavel]]
-      .forEach(([k, v]) => L.push([k, typeof v === "string" ? v : fmtN(v)]));
-    else if (bloco === "starter") [["Tanque", dados.tanque], ["Fonte", dados.fonte], ["pH", dados.pH], ["°Brix", dados.brix], ["Volume (L)", dados.volume]]
-      .forEach(([k, v]) => L.push([k, typeof v === "string" ? v : fmtN(v)]));
-    else if (bloco === "filtracao") [["Volume (L)", dados.volume], ["Tempo (min)", dados.tempo]]
-      .forEach(([k, v]) => L.push([k, typeof v === "string" ? v : fmtN(v)]));
-    else if (bloco === "produtoAcabado") [["Produto", dados.produto], ["°Brix", dados.brix], ["pH", dados.pH], ["ABV (%)", dados.abv], ["Brix Suco", dados.brixSuco]]
-      .forEach(([k, v]) => L.push([k, typeof v === "string" ? v : fmtN(v)]));
-    else if (bloco === "observacoes") L.push(["Observações", String(dados || "").slice(0, 120) || "—"]);
-    else Object.entries(dados || {}).forEach(([k, v]) => L.push([k, typeof v === "string" ? v : fmtN(v)]));
-    return L;
+  const pares = (paresArr, cols = 2) => {
+    const linhas = [];
+    for (let i = 0; i < paresArr.length; i += cols) {
+      const row = [];
+      for (let j = 0; j < cols; j++) {
+        const p = paresArr[i + j];
+        row.push(p ? p[0] : "", p ? String(p[1]) : "");
+      }
+      linhas.push(row);
+    }
+    const largs = [];
+    for (let j = 0; j < cols; j++) largs.push(70, (495 - cols * 70) / cols);
+    tabela(["Campo", "Valor", "Campo", "Valor"].slice(0, cols * 2), largs, linhas, { rh: 14 });
   };
 
-  // ================= cabeçalho (igual à OP) =================
-  t("DEVI PRODUCAO DE BEBIDAS LTDA", { bold: true, size: 16, center: true });
-  t("FICHA DE QUALIDADE", { size: 11, center: true });
-  y -= 6;
-  t(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
-  t(`Previsão de Conclusão: ${ficha.previsao || "—"}      Situação: ${ficha.situacao || "Em andamento"}`, { size: 10 });
-  t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`, { size: 11 });
-  t(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}`, { size: 10 });
-  regra(true);
-  y += 2;
-
-  // ================= resumo em 4 colunas (como a OP) =================
-  t("RESUMO DA ORDEM DE PRODUÇÃO", { bold: true, size: 10.5 });
-  tabela(["Família", "Quantidade a Produzir", "Peso Líquido", "Peso Bruto"],
-    [150, 140, 110, 95],
-    [[FAM[ficha.familia] || ficha.familia || "—", `${fmtN(ficha.qtd)} ${ficha.un || ""}`, `${fmtN(pesoLiquido())} Kg`, "—"]],
-    { rh: 15, fs: 9.5, fsH: 9 });
-  y -= 2;
-
-  // ================= itens e medições (tabela única) =================
-  t("ITENS E MEDIÇÕES", { bold: true, size: 10.5 });
-  const linhas = [];
-  for (const [bloco, dados] of Object.entries(ficha.blocos || {})) {
-    linhas.push([(LAB[bloco] || bloco).toUpperCase()]);
-    blocoLinhas(bloco, dados).forEach(r => linhas.push(r));
+  // ============ cabeçalho: logo à ESQUERDA em cima (como a OP do Omie) ============
+  if (logo) {
+    const lh = 48, lw = 48 * (1010 / 650);
+    page.drawImage(logo, { x: 50, y: 842 - 14 - lh, width: lw, height: lh });
   }
-  tabela(["Item", "Valor"], [170, 325], linhas, { rh: 13, fs: 9 });
-  y -= 2;
+  t("DEVI PRODUCAO DE BEBIDAS LTDA", { bold: true, size: 15, x: 142 });
+  t("FICHA DE QUALIDADE", { size: 10.5, x: 142 });
+  y -= 8;
+  t(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
+  t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`, { size: 11 });
+  t(`Previsão de Conclusão: ${ficha.previsao || "—"}     Situação: ${ficha.situacao || "Em andamento"}`, { size: 9.5 });
+  t(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}     Quantidade: ${fmtN(ficha.qtd)} ${ficha.un || ""}     Peso Líquido: ${fmtN(pesoLiquido())} Kg`, { size: 9.5 });
+  y -= 4;
+  page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1.2, color: AZUL });
+  y -= 8;
 
-  // ================= não-conformidades =================
+  // ============ seções (uma por bloco, barra de título própria) ============
+  for (const [bloco, dados] of Object.entries(ficha.blocos || {})) {
+    if (y < 120) break;
+    secao(LAB[bloco] || bloco);
+    if (bloco === "recravacao") {
+      const linhas = (Array.isArray(dados) ? dados : []).map((r, i) => [`#${i + 1}`, fmtN(r.altura), fmtN(r.espessura), fmtN(r.transpasse)]);
+      tabela(["Leitura", "Altura (mm)", "Espessura (mm)", "Transpasse (mm)"], [80, 130, 140, 145], linhas);
+    } else if (bloco === "carbonatacao") {
+      const linhas = (Array.isArray(dados) ? dados : []).map(r => [r.hora || "—", fmtN(r.temperatura), fmtN(r.pressaoCilindro), fmtN(r.pressaoTanque)]);
+      tabela(["Horário", "Temp (°C)", "P. cilindro", "P. tanque"], [90, 130, 135, 140], linhas);
+    } else if (bloco === "fermentacao") {
+      const linhas = (Array.isArray(dados) ? dados : []).map(r => [r.data || "—", fmtN(r.pH), fmtN(r.brix), fmtN(r.temperatura), fmtN(r.abv)]);
+      tabela(["Data", "pH", "°Brix", "Temp (°C)", "ABV (%)"], [110, 90, 95, 95, 105], linhas);
+    } else if (bloco === "estoque") {
+      const linhas = (Array.isArray(dados) ? dados : []).map(r => [r.hora || "—", fmtN(r.quantidade), r.tipo || "—", r.responsavel || "—"]);
+      tabela(["Horário", "Quantidade", "Tipo", "Responsável"], [90, 140, 125, 140], linhas);
+    } else if (bloco === "preenvase") {
+      pares([["pH", fmtN(dados.pH)], ["°Brix", fmtN(dados.brix)], ["Carbonatação", fmtN(dados.carbonatacao)], ["Responsável", dados.responsavel || "—"]]);
+    } else if (bloco === "starter") {
+      pares([["Tanque", dados.tanque || "—"], ["Fonte", dados.fonte || "—"], ["pH", fmtN(dados.pH)], ["°Brix", fmtN(dados.brix)], ["Volume (L)", fmtN(dados.volume)]]);
+    } else if (bloco === "filtracao") {
+      pares([["Volume (L)", fmtN(dados.volume)], ["Tempo (min)", fmtN(dados.tempo)]]);
+    } else if (bloco === "produtoAcabado") {
+      pares([["Produto", dados.produto || "—"], ["°Brix", fmtN(dados.brix)], ["pH", fmtN(dados.pH)], ["ABV (%)", fmtN(dados.abv)], ["Brix Suco", fmtN(dados.brixSuco)]]);
+    } else if (bloco === "observacoes") {
+      t(String(dados || "") || "—", { size: 9.5 });
+    } else {
+      pares(Object.entries(dados || {}).map(([k, v]) => [k, typeof v === "string" ? v : fmtN(v)]));
+    }
+    y -= 4;
+  }
+
+  // ============ não-conformidades (barra vermelha) ============
   const ncs = ficha.naoConformidades || [];
   if (ncs.length) {
-    t(`NAO CONFORMIDADES (${ncs.length})`, { bold: true, size: 10, color: VERMELHO });
-    const linhasNC = ncs.map(nc =>
-      [`${nc.bloco || ""}${nc.leitura ? " #" + nc.leitura : ""}/${nc.campo || ""}`,
-       `${fmtN(nc.valor)} (faixa ${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)})`]);
-    tabela(["Bloco/Campo", "Valor"], [170, 325], linhasNC, { rh: 13, fs: 9 });
+    secao(`Não Conformidades (${ncs.length})`, VERMELHO);
+    ncs.forEach(nc => {
+      t(`• ${LAB[nc.bloco] || nc.bloco}${nc.leitura ? " · leitura " + nc.leitura : ""} — ${nc.campo}: ${fmtN(nc.valor)} (faixa ${fmtN(nc.spec && nc.spec.min)} a ${fmtN(nc.spec && nc.spec.max)})`,
+        { size: 9.5, color: VERMELHO });
+    });
+    y -= 4;
   }
 
-  // ================= outras informações + rodapé =================
-  y -= 2;
-  regra(true);
-  t("OUTRAS INFORMAÇÕES", { bold: true, size: 10.5 });
-  tabela(["Campo", "Valor"], [170, 325],
-    [["Registrado em", ficha.registradoEm || "—"], ["Status da ficha", ficha.status || "completa"]],
-    { rh: 13, fs: 9 });
-  y -= 4;
-  regra();
-  y += 12;
-  page.drawText(`Gerado em ${ficha.registradoEm || "—"} · Documento gerado automaticamente pelo sistema de qualidade - Dêvi`,
-    { x: 50, y, size: 8, font: F1, color: CINZA });
-  page.drawText("Página 1 de 1", { x: 470, y, size: 8, font: F1, color: CINZA });
+  // ============ outras informações ============
+  secao("Outras Informações", AZULC);
+  pares([["Registrado em", ficha.registradoEm || "—"], ["Status da ficha", ficha.status || "completa"]]);
+
+  // ============ rodapé ============
+  y -= 6;
+  page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 0.8, color: AZUL });
+  y -= 8;
+  page.drawText("Documento gerado automaticamente pelo sistema de qualidade - Dêvi", { x: 50, y: y - 4, size: 8, font: F1, color: CINZA });
+  page.drawText("Página 1 de 1", { x: 480, y: y - 4, size: 8, font: F1, color: CINZA });
 
   return Buffer.from(await doc.save());
 }
