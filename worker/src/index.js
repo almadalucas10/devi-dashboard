@@ -452,6 +452,15 @@ export default {
         try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}"); } catch(e) {}
         if (!id) return json({ client_email: sa?.client_email || null, tabs: null, values: null });
         const tabs = await listSheets(env, token, id);
+        // apagar uma linha específica (1-based) — usado p/ limpar registros de teste
+        const delRow = parseInt(url.searchParams.get("deleteRow") || "", 10);
+        const tabDel = url.searchParams.get("tab") || "";
+        if (delRow && tabDel) {
+          const sh = tabs.find((t) => t.title === tabDel);
+          if (!sh) return json({ erro: "aba não encontrada: " + tabDel }, 400);
+          await deleteRows(env, token, id, sh.sheetId, delRow - 1, delRow);
+          return json({ ok: true, apagouLinha: delRow, tab: tabDel });
+        }
         // limpeza: apaga linhas de teste (qualquer célula contendo "TESTE") sem anexar
         const limpar = url.searchParams.get("limpar") === "1";
         const tab = url.searchParams.get("tab") || "";
