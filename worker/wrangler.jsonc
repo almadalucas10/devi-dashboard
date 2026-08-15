@@ -18,6 +18,7 @@
   "vars": {
     "OMIE_BASE_URL": "https://app.omie.com.br/api/v1",
     "SPREADSHEET_ID": "1ZMvgDkPCU3CMpeS4R0A26xFJQGHJhBAXOTBi73NKs4o",
+    "INDICADORES_SPREADSHEET_ID": "1i3pAfBVle5Lj4pjvPikagdKhXeAwZAlalxPTcyDHuYI",
     "SKIP_SHEETS_MIRROR": "false"
   },
 

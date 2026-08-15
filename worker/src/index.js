@@ -444,7 +444,7 @@ export default {
     // GET /api/qualidade/debug/sheet?spreadsheetId=ID[&range=A1:Z3]
     if (url.pathname === "/api/qualidade/debug/sheet") {
       try {
-        const { getAccessToken, getValues, listSheets } = await import("./sheets.js");
+        const { getAccessToken, getValues, listSheets, appendValues, deleteRows } = await import("./sheets.js");
         const id = url.searchParams.get("spreadsheetId") || "";
         const range = url.searchParams.get("range") || "A1:Z3";
         const token = await getAccessToken(env);
@@ -452,8 +452,47 @@ export default {
         try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}"); } catch(e) {}
         if (!id) return json({ client_email: sa?.client_email || null, tabs: null, values: null });
         const tabs = await listSheets(env, token, id);
+        // teste reversível: append + delete da linha (verifica escrita sem poluir)
+        const teste = url.searchParams.get("teste") === "1";
+        const tab = url.searchParams.get("tab") || "";
+        if (teste && tab) {
+          // 0) limpa resíduos de testes anteriores (varre A:B, apaga de baixo p/ cima)
+          const existentes = await getValues(env, token, `${tab}!A1:B2000`, id);
+          for (let i = existentes.length - 1; i >= 0; i--) {
+            if (String(existentes[i] && existentes[i][0] || "").trim() === "TESTE") {
+              const sh = tabs.find((t) => t.title === tab);
+              await deleteRows(env, token, id, sh.sheetId, i, i + 1);
+            }
+          }
+          // 1) append de uma linha de teste
+          const r = await appendValues(env, token, id, tab, [["TESTE", "linha temporária de verificação — pode apagar"]]);
+          const raw = r && r.updates;
+          const rng = (raw && raw.updatedRange) || "";
+          // updatedRange ex.: "Indicadores Refri e Chá!A1006:B1006" → linha 1006
+          const cells = rng.split("!").pop().split(":");
+          const row = parseInt((cells[0] || "").replace(/\D/g, ""), 10);
+          const sheet = tabs.find((t) => t.title === tab);
+          if (row && sheet && row <= 2000) {
+            await deleteRows(env, token, id, sheet.sheetId, row - 1, row);
+            return json({ ok: true, teste: "append+delete OK", linha: row, tab, raw });
+          }
+          return json({ ok: true, teste: "append OK (linha não apagada)", linha: row, tab, raw });
+        }
         const values = await getValues(env, token, range, id);
         return json({ client_email: sa?.client_email || null, spreadsheetId: id, tabs, values });
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+    // Debug — mostra a linha que seria gravada na planilha de indicadores (sem escrever)
+    // GET /api/qualidade/debug/sheets-mapping?op=<op ou nCodOP>
+    if (url.pathname === "/api/qualidade/debug/sheets-mapping") {
+      try {
+        const { lerFichaSalva } = await import("./qualidade.js");
+        const { montarLinhaIndicadores } = await import("./qualidade-sheets.js");
+        const op = url.searchParams.get("op") || "";
+        if (!op) return json({ erro: "passe ?op=" }, 400);
+        const ficha = await lerFichaSalva(env, op);
+        if (!ficha) return json({ erro: "ficha não encontrada no R2 para " + op }, 404);
+        return json({ op, ...montarLinhaIndicadores(ficha) });
       } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
     }
     if (url.pathname === "/api/qualidade/debug/anexos") {
@@ -476,7 +515,15 @@ export default {
         if (!nCodOP || !Object.keys(ficha.blocos || {}).length) {
           return json({ erro: "envie { nCodOP, ficha } com blocos preenchidos" }, 400);
         }
-        return json(await anexarFichaNaOp(env, nCodOP, { ...ficha, op: ficha.op || op }, debug));
+        const res = await anexarFichaNaOp(env, nCodOP, { ...ficha, op: ficha.op || op }, debug);
+        // Fechamento: além do anexo no Omie, registra a ficha na planilha de indicadores
+        if (!debug && res && res.ok) {
+          try {
+            const { registrarFichaNosIndicadores } = await import("./qualidade-sheets.js");
+            res.sheets = await registrarFichaNosIndicadores(env, { ...ficha, op: ficha.op || op, nCodOP });
+          } catch (e) { res.sheets = { ok: false, erro: e.message.slice(0, 200) }; }
+        }
+        return json(res);
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
     // Gravação da ficha (R2 + D1)

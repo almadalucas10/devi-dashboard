@@ -146,6 +146,27 @@ export async function appendValues(env, token, spreadsheetId, sheetName, values)
 }
 
 /**
+ * Apaga linhas de uma aba (batchUpdate deleteDimension) — usado no teste reversível.
+ */
+export async function deleteRows(env, token, spreadsheetId, sheetId, startIndex, endIndex) {
+  const url = `${SHEETS_API}/${spreadsheetId}:batchUpdate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: { range: { sheetId, dimension: "ROWS", startIndex, endIndex } },
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets deleteRow: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
  * Escreve um valor em uma única célula (ex: A1).
  */
 export async function setValue(env, token, range, value, spreadsheetId = env.SPREADSHEET_ID) {
