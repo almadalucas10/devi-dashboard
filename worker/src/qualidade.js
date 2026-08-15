@@ -208,6 +208,17 @@ export async function lerFichaSalva(env, op) {
   return readJson(env, `qualidade/fichas/${ano}/${num || op}.json`);
 }
 
+/** Acha a OP string pelo nCodOP (D1) e lê a ficha salva — o form usa nCodOP na URL */
+export async function lerFichaSalvaPorNcod(env, nCodOP) {
+  try {
+    const r = await env.QUALIDADE_DB.prepare(
+      "SELECT op FROM fichas WHERE n_cod_op = ?1 LIMIT 1"
+    ).bind(Number(nCodOP)).first();
+    if (r && r.op) return lerFichaSalva(env, r.op);
+  } catch (e) { console.error(`[qualidade] lerFichaPorNcod: ${e.message}`); }
+  return null;
+}
+
 /** Fichas salvas no mês (D1) — alimenta o painel/lista */
 export async function fichasDoMes(env, aaaamm) {
   const r = await env.QUALIDADE_DB.prepare(

@@ -689,6 +689,7 @@ function fecharArquivo(){ const m = document.getElementById('modalArquivo'); if(
 let _resetando = false; // evita o auto-salvar durante o reset (não sobrescreve rascunho)
 function resetarFicha(){
   _resetando = true;
+  try{
   conferidos.clear();
   nc = 0; nEs = 0; nf = 0; nr = 0; // reinicia os contadores de linha
   document.querySelectorAll('.sec input, .sec select, .sec textarea').forEach(e => {
@@ -709,7 +710,7 @@ function resetarFicha(){
   const anexoStatus = document.getElementById('anexoStatus');
   if(anexoStatus) anexoStatus.style.display = 'none';
   try { window.scrollTo(0, 0); } catch(e) {}
-  _resetando = false;
+  } finally { _resetando = false; }
 }
 
 function abrirOp(op){
@@ -739,6 +740,7 @@ function abrirOp(op){
   aplicarSku();
   resetarFicha();
   mostrarFicha();
+  carregarLocal(op); // restaura o rascunho local imediatamente (não espera o fetch)
   carregarInsumosReais(op, o.nCodOP);
 }
 
@@ -804,10 +806,9 @@ async function carregarInsumosReais(op, nCodOP){
       montarInsumos();
       atualizarInsumosChk();
     }
-    // reabre a ficha salva (rascunho/completa) — popula os campos e a barra de progresso
-    if(j.ficha && j.ficha.blocos) aplicarFichaSalva(j.ficha);
-    // rascunho local (mais recente que o servidor) tem precedência
-    carregarLocal(op);
+    // reabre a ficha salva (rascunho/completa) — popula os campos e a barra de progresso;
+    // rascunho local (mais recente) tem precedência e já foi aplicado em abrirOp
+    if(j.ficha && j.ficha.blocos && !carregarLocal(op)) aplicarFichaSalva(j.ficha);
   }catch(e){}
 }
 
@@ -1568,14 +1569,28 @@ function montarPayload(){
 let _timerRascunho = null;
 let _assinaturaRascunho = '';
 // Persistência local (localStorage) — salva a cada mudança, sobrevive a navegação/offline
+function temBloco(f){
+  const b = (f && f.blocos) || {};
+  return Object.keys(b).some(n => {
+    const v = b[n];
+    if(Array.isArray(v)) return v.length > 0;
+    if(v && typeof v === 'object')
+      return Object.values(v).some(x => x !== null && x !== undefined && x !== '');
+    return String(v || '') !== '';
+  });
+}
 function salvarLocal(){
   if(!opAtual || location.protocol === 'file:') return;
-  try{ localStorage.setItem('ficha_rascunho_' + opAtual, JSON.stringify(montarPayload())); }catch(e){}
+  try{
+    const d = montarPayload();
+    if(!temBloco(d)) return; // não grava rascunho vazio (troca de OP/reset)
+    localStorage.setItem('ficha_rascunho_' + opAtual, JSON.stringify(d));
+  }catch(e){}
 }
 function carregarLocal(op){
   try{
     const local = localStorage.getItem('ficha_rascunho_' + (op || opAtual));
-    if(local){ const d = JSON.parse(local); if(d && d.blocos) aplicarFichaSalva(d); return true; }
+    if(local){ const d = JSON.parse(local); if(d && temBloco(d)){ aplicarFichaSalva(d); return true; } }
   }catch(e){}
   return false;
 }
