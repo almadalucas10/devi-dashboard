@@ -587,6 +587,26 @@ export default {
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
     // Ficha salva (R2) + fichas do mês (D1)
+    // Arquivo das fichas — lista das salvas (D1) e abertura do PDF anexado na OP
+    if (url.pathname === "/api/qualidade/arquivo") {
+      try {
+        const { fichasArquivadas } = await import("./qualidade.js");
+        const limite = Number(url.searchParams.get("limite")) || 100;
+        return json({ fichas: await fichasArquivadas(env, limite) });
+      } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
+    }
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && url.pathname.endsWith("/arquivo")) {
+      try {
+        const { linkPdfDaOp, lerFichaSalva } = await import("./qualidade.js");
+        const op = decodeURIComponent(url.pathname.split("/").slice(-2)[0]);
+        const n = Number(op);
+        const link = await linkPdfDaOp(env, Number.isInteger(n) && String(n) === String(op) ? n : op);
+        if (link) return Response.redirect(link, 302);
+        const ficha = await lerFichaSalva(env, op);
+        if (ficha) return json(ficha);
+        return json({ erro: "sem PDF anexado e sem documento salvo no R2 para " + op }, 404);
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
     if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "GET") {
       try {
         const { lerFichaSalva, fichaDaOp } = await import("./qualidade.js");
