@@ -174,11 +174,15 @@
     .folha{padding:10px 8px; font-size:12px}
     /* linhas dinâmicas compactas — em linha, só fonte e espaço reduzidos */
     .cb, .es, .fb, .rc{gap:5px}
-    .cb input, .es input, .es select, .fb input, .rc input{font-size:13px; padding:7px 4px; min-height:38px}
-    .cb, .cb-cab{grid-template-columns:1fr 1fr 1fr 1fr 26px}
-    .fb, .fb-cab{grid-template-columns:1fr 1fr 1fr 1fr 1fr 26px}
+    .cb input, .es input, .es select, .fb input, .rc input{font-size:13px; padding:7px 4px; min-height:38px; min-width:0}
+    /* date/time nativos têm largura mínima do navegador (~130px) que acavalava na grade —
+       appearance:none + min-width:0 permite encolher para a coluna */
+    .cb input[type="time"], .es input[type="time"], .fb input[type="date"]{
+      -webkit-appearance:none; appearance:none; min-width:0}
+    .cb, .cb-cab{grid-template-columns:1.25fr 1fr 1fr 1fr 26px}
+    .fb, .fb-cab{grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 26px}
     .rc, .rc-cab{grid-template-columns:1fr 1fr 1fr 26px}
-    .es, .es-cab{grid-template-columns:50px 1fr 1fr 1fr 26px}
+    .es, .es-cab{grid-template-columns:1.25fr 1fr 1fr 1fr 26px}
     .fl-op{font-size:14px; margin:6px 0 4px}
     .fl-linha{font-size:11px}
     .folha table{table-layout:fixed; font-size:11px}
