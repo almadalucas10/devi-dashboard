@@ -381,9 +381,11 @@
           <input type="text" inputmode="decimal" data-c="phSt" data-req><div class="msg"></div></div>
         <div class="campo"><label>°Brix</label>
           <input type="text" inputmode="decimal" data-c="brixSt" data-req><div class="msg"></div></div>
-        <div class="campo"><label>Volume (L)</label>
+        <div class="campo"><label>Volume starter (L)</label>
           <input type="text" inputmode="decimal" data-c="volSt" data-req><div class="msg"></div></div>
       </div>
+      <div class="campo" style="margin-top:10px"><label>Volume do tanque (L)</label>
+        <input type="text" inputmode="decimal" data-c="volTanque" data-req><div class="msg"></div></div>
     </div>
   </div>
 
@@ -1260,6 +1262,8 @@ async function salvar(){
     d.situacao = folhaInfo.situacao || '';
     d.tipoProduto = folhaInfo.tipoProduto || '';
   }
+  // nome curto do produto (coluna Sabor/Produto da planilha de indicadores)
+  d.produto = (PRODUTOS[sku] && PRODUTOS[sku].nome) || SIGLA[sku] || sku;
 
   // um bloco por vez — na versão real cada um grava ao sair (PATCH /bloco/:nome)
   secVisiveis().forEach(sec=>{
@@ -1284,7 +1288,8 @@ async function salvar(){
       }).filter(x=>x.quantidade!==null);
     } else if(nome==='starter'){
       d.blocos.starter = { tanque:g('tanqueSt'), fonte:g('fonteSt'),
-                           pH:n(g('phSt')), brix:n(g('brixSt')), volume:n(g('volSt')) };
+                           pH:n(g('phSt')), brix:n(g('brixSt')),
+                           volume:n(g('volSt')), volumeTanque:n(g('volTanque')) };
     } else if(nome==='fermentacao'){
       d.blocos.fermentacao = [...document.querySelectorAll('.fb')].map(l=>{
         const v=[...l.querySelectorAll('input')].map(i=>i.value.trim());

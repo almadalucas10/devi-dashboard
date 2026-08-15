@@ -52,17 +52,20 @@ export function montarLinhaFermentacao(f) {
   const st = b.starter || {};
   const pa = b.produtoAcabado || {};
   const fil = b.filtracao || {};
+  const volTanque = st.volumeTanque == null || st.volumeTanque === "" ? null : Number(st.volumeTanque);
+  const volStarter = st.volume == null || st.volume === "" ? null : Number(st.volume);
+  const volTotal = volTanque != null && volStarter != null ? volTanque + volStarter : "";
   return [
     dataUS(dIni),                         // 1  Data de Início
     dataUS(dFim),                         // 2  Data Final
     diasEntre(dIni, dFim),                // 3  Tempo de Fermentação
     mesNome(dIni),                        // 4  Mês
     num(st.tanque),                       // 5  Tanque
-    "",                                   // 6  Volume (tanque) — sem campo no formulário
+    num(volTanque),                       // 6  Volume (tanque)
     num(st.pH),                           // 7  pH Starter
     num(st.brix),                         // 8  Brix Starter
-    num(st.volume),                       // 9  Volume Starter
-    num(fil.volume),                      // 10 Volume Total ← volume filtrado (interpretado)
+    num(volStarter),                      // 9  Volume Starter
+    num(volTotal),                        // 10 Volume Total (tanque + starter)
     num(ini && ini.pH),                   // 11 pH Inicial Kombucha
     num(ini && ini.brix),                 // 12 Brix Inicial Kombucha
     num(ini && ini.temperatura),          // 13 Temperatura Inicial
@@ -70,7 +73,7 @@ export function montarLinhaFermentacao(f) {
     num(fim && fim.brix),                 // 15 Brix Final
     num(fim && fim.temperatura),          // 16 Temperatura Final
     num(fil.tempo),                       // 17 Tempo de Filtração
-    num(pa.produto || f.sigla || f.sku),  // 18 Produto
+    num(pa.produto || f.produto || f.sigla || f.sku), // 18 Produto
     num(pa.abv ?? (fim && fim.abv) ?? ""),// 19 ABV
   ];
 }
@@ -89,7 +92,7 @@ export function montarLinhaRefriCha(f) {
     mesNome(f.dataProducao),                    // 2  Mês
     ano2(f.dataProducao),                       // 3  Ano
     tipo,                                       // 4  Produto (Chá/Refri/Kombucha)
-    num(f.sigla || f.sku),                      // 5  Sabor (v1: sigla — nome curto virá do payload)
+    num(f.produto || f.sigla || f.sku),      // 5  Sabor (nome curto do produto)
     String(parseInt(String(f.op || "").split("/").pop().replace(/\D/g, ""), 10) || ""), // 6 Lote (número da OP)
     num(pre.pH),                                // 7  pH Produto
     num(pre.brix),                              // 8  Brix Produto
