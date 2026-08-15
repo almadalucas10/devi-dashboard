@@ -495,6 +495,31 @@ export default {
         return json({ op, ...montarLinhaIndicadores(ficha) });
       } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
     }
+    // Simulação — grava a ficha na planilha de indicadores e destaca a linha em verde
+    // POST /api/qualidade/debug/sheets-simulacao  body: { ficha: {...} }
+    if (url.pathname === "/api/qualidade/debug/sheets-simulacao" && request.method === "POST") {
+      try {
+        const { getAccessToken, appendValues, listSheets, formatRange } = await import("./sheets.js");
+        const { montarLinhaIndicadores } = await import("./qualidade-sheets.js");
+        const body = await request.json();
+        const ficha = body.ficha || body;
+        if (!Object.keys(ficha.blocos || {}).length) return json({ erro: "envie { ficha } com blocos" }, 400);
+        const id = env.INDICADORES_SPREADSHEET_ID;
+        if (!id) return json({ erro: "INDICADORES_SPREADSHEET_ID não configurado" }, 500);
+        const { tab, linha } = montarLinhaIndicadores(ficha);
+        const token = await getAccessToken(env);
+        const r = await appendValues(env, token, id, tab, [linha]);
+        const rng = (r && r.updates && r.updates.updatedRange) || "";
+        const row = parseInt(rng.split("!").pop().split(":")[0].replace(/\D/g, ""), 10);
+        const sheets = await listSheets(env, token, id);
+        const sheet = sheets.find((s) => s.title === tab);
+        if (row && sheet) {
+          // verde claro #C6EFCE — destaca o que foi preenchido automaticamente
+          await formatRange(env, token, id, sheet.sheetId, row - 1, row, 0, linha.length, { r: 0.776, g: 0.937, b: 0.808 });
+        }
+        return json({ ok: true, tab, linhaNum: row, atualizadas: r.updates ? r.updates.updatedRows : null, linha });
+      } catch(e) { return json({ erro: e.message.slice(0, 400) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/debug/anexos") {
       try {
         const { listarAnexos } = await import("./qualidade.js");

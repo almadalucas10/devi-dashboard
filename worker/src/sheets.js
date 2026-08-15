@@ -146,6 +146,35 @@ export async function appendValues(env, token, spreadsheetId, sheetName, values)
 }
 
 /**
+ * Aplica cor de fundo a um range (repeatCell) — usado para destacar linhas de teste.
+ */
+export async function formatRange(env, token, spreadsheetId, sheetId, startRow, endRow, startCol, endCol, color) {
+  const url = `${SHEETS_API}/${spreadsheetId}:batchUpdate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requests: [{
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: startRow, endRowIndex: endRow,
+            startColumnIndex: startCol, endColumnIndex: endCol,
+          },
+          cell: { userEnteredFormat: { backgroundColor: { red: color.r, green: color.g, blue: color.b } } },
+          fields: "userEnteredFormat.backgroundColor",
+        },
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets format: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
  * Apaga linhas de uma aba (batchUpdate deleteDimension) — usado no teste reversível.
  */
 export async function deleteRows(env, token, spreadsheetId, sheetId, startIndex, endIndex) {

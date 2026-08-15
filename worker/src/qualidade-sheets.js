@@ -11,7 +11,7 @@
 import { getAccessToken, appendValues } from "./sheets.js";
 
 export const TAB_FERMENTACAO = "Indicadores fermentação";
-export const TAB_REFRI_CHA = "Indicadores Refi e Chá";
+export const TAB_REFRI_CHA = "Indicadores Refri e Chá";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
