@@ -250,7 +250,7 @@
     font-size:11px; color:var(--txt2); overflow-x:auto; white-space:pre-wrap; word-break:break-word}
 
   /* ---------- navegação / lista de OPs abertas ---------- */
-  .nav{display:flex; gap:8px; margin-bottom:10px}
+  .nav{display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap}
   .btnNav{display:inline-flex; width:auto; padding:8px 13px; font-size:13px; text-decoration:none}
   #btnVoltar{display:none}
   body:not(.lista) #btnVoltar{display:inline-flex}
@@ -316,6 +316,8 @@
 <div class="topo">
   <div class="nav">
     <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
+    <button class="btn btnNav" onclick="abrirArquivo()">📄 Fichas</button>
+    <button class="btn btnNav" onclick="abrirPOPs()">📋 POPs</button>
     <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
   </div>
   <div class="t1">
