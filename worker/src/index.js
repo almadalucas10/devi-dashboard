@@ -540,6 +540,13 @@ export default {
         if (!nCodOP || !Object.keys(ficha.blocos || {}).length) {
           return json({ erro: "envie { nCodOP, ficha } com blocos preenchidos" }, 400);
         }
+        // Data autoritativa: relê a data corrente da OP no Omie — se a OP mudou de dia,
+        // a conclusão usa o dia novo (não o que o form fotografou ao abrir). Não-fatal.
+        try {
+          const { fichaDaOp } = await import("./qualidade.js");
+          const atual = await fichaDaOp(env, nCodOP, false, false);
+          if (atual && atual.data) ficha.dataProducao = atual.data;
+        } catch (e) { console.error(`[qualidade] dataDaOp: ${e.message}`); }
         const res = await anexarFichaNaOp(env, nCodOP, { ...ficha, op: ficha.op || op }, debug);
         // Fechamento: além do anexo no Omie, registra a ficha na planilha de indicadores
         if (!debug && res && res.ok) {
@@ -567,10 +574,35 @@ export default {
     // Ficha salva (R2) + fichas do mês (D1)
     if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "GET") {
       try {
-        const { lerFichaSalva } = await import("./qualidade.js");
+        const { lerFichaSalva, fichaDaOp } = await import("./qualidade.js");
         const op = decodeURIComponent(url.pathname.split("/").pop());
+        const comSaldo = url.searchParams.get("saldo") !== "0";
+        const raw = url.searchParams.get("raw") === "1";
+        if (raw) return json(await fichaDaOp(env, op, false, true));
+        // Dados frescos da OP (itens, previsao, data...) com cache por ficha;
+        // salva/ficha = documento da ficha já gravada (R2), se existir.
+        const KEY = "qualidade-ficha-" + String(op).replace(/[^A-Za-z0-9_-]/g, "_") + ".json";
+        const FRESCO_MS = 20 * 60 * 1000;
+        const cached = await readJson(env, KEY);
+        if (cached && cached._ts && Date.now() - cached._ts < FRESCO_MS) {
+          const saved = await lerFichaSalva(env, op);
+          return json({ ...cached.dados, salva: !!saved, ficha: saved || null });
+        }
+        if (cached && cached._ts) {
+          // stale: responde com o cache e refresca em background
+          ctx.waitUntil((async () => {
+            try {
+              const dados = await fichaDaOp(env, op, comSaldo);
+              await writeJson(env, KEY, { _ts: Date.now(), dados });
+            } catch (e) { console.error(`[qualidade] refresh ficha ${op}: ${e.message}`); }
+          })());
+          const saved = await lerFichaSalva(env, op);
+          return json({ ...cached.dados, salva: !!saved, ficha: saved || null });
+        }
+        const dados = await fichaDaOp(env, op, comSaldo);
+        await writeJson(env, KEY, { _ts: Date.now(), dados });
         const saved = await lerFichaSalva(env, op);
-        return json({ op, salva: !!saved, ficha: saved || null });
+        return json({ ...dados, salva: !!saved, ficha: saved || null });
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
     if (url.pathname.startsWith("/api/qualidade/mes/")) {

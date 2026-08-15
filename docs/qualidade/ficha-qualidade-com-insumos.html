@@ -628,6 +628,7 @@ async function carregarInsumosReais(op, nCodOP){
     if(j.itens && j.itens.length){
       folhaInfo = { previsao: j.previsao || '', situacao: j.situacao || '',
                     tipoProduto: j.tipoProduto || '' };
+      if (j.data) opData = j.data; // data corrente da OP (se mudou de dia, atualiza)
       receitaReal = j.itens.map(i => ({
         cod: String(i.codigo || i.cod), nome: i.nome || i.codigo, un: i.un || '',
         quantidade: i.quantidade ?? null, saldo: i.saldo ?? null,

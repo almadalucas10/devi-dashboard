@@ -576,6 +576,7 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   const r = await chamarOmie(env, "/produtos/op/", "ConsultarOrdemProducao", consulta);
   if (raw) return { op, nCodOP: n, raw: r };
   const ident = r.identificacao || {};
+  const inf = r.infAdicionais || {};
   const nCodProduto = get(ident, "nCodProduto");
   const qtdOP = get(ident, "nQtde") ?? 0;
   let sku = null, produtoDesc = "", un = "";
@@ -677,6 +678,8 @@ export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
     produto: get(ident, "cDescricaoProduto", "cDescricao") ?? produtoDesc,
     nCodProduto, qtd: qtdOP, un, origem, itens,
     // campos da folha (clone do modelo impresso pelo Omie)
+    // data = data corrente da OP (mesma prioridade do calendário); previsao = dDtPrevisao
+    data: get(inf, "dDtInicio", "dDtPrevisao") ?? get(ident, "dDtPrevisao") ?? "",
     previsao: get(ident, "dDtPrevisao") ?? "",
     situacao: "Em andamento",            // lista só traz OPs abertas
     tipoProduto: "04 - Produto Acabado",
