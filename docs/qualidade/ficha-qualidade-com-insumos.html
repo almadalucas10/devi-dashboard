@@ -196,6 +196,19 @@
     .fl-q{font-size:11px}
     .fl-est{font-size:10.5px}
     .folha .fl-chk{width:26px}
+    /* modal de controle de envase (PC3) — empilha no mobile, sem sobreposição */
+    .modalBox{padding:10px}
+    .ctl-cab{flex-wrap:wrap; row-gap:6px}
+    .ctl-meta{text-align:left}
+    .ctl-grid{grid-template-columns:1fr}
+    .ctl-grid .campo:nth-child(8){grid-column:auto}
+    .ctl-grid input, .ctl-grid select{font-size:16px; min-height:44px}
+    .ctl-grid input[type="date"], .ctl-grid input[type="time"]{
+      -webkit-appearance:none; appearance:none; min-width:0}
+    .ctlRec{grid-template-columns:1fr auto; gap:3px 8px; padding:7px 9px; font-size:11px}
+    .ctlRec b{grid-column:1/-1; font-size:12px}
+    .ctlRec span{overflow-wrap:anywhere}
+    .ctlRec .r{text-align:right; white-space:normal}
   }
 
   /* ---------- carbonatacao ---------- */
