@@ -76,19 +76,33 @@ setTimeout(() => {
     window.gerarRegistro();
     ok($('#ctlAviso').textContent.includes('Horário Inicial'), 'valida obrigatórios');
 
-    // ---- preencher e gerar ----
+    // ---- preencher (draft) e fechar sem salvar ----
     $('#pc3Hi').value = '07:30';
+    $('#pc3Qtd').value = '4464';
     $('#pc3Hf').value = '16:10';
     $('#pc3Resp').value = 'MB';
     $('#pc3Cip').value = '1';
-    window.gerarRegistro();
+    $('#pc3Obs').value = 'turno da manhã';
+    $('#pc3Hi').dispatchEvent(new window.Event('input')); // dispara auto-salvar do draft
+    window.fecharControles();
+    ok($('#modalControle').style.display === 'none', 'modal fechado sem salvar');
+    ok(!!window.localStorage.getItem('pc3Draft-528'), 'draft salvo por OP (pc3Draft-528)');
+
+    // ---- reabrir: valores restaurados ----
+    window.abrirControles();
     setTimeout(() => {
-      ok(postado && postado.op === '528' && postado.sku === 'CH003' && postado.cip === '1', 'POST com OP/SKU/CIP: ' + JSON.stringify(postado));
-      ok($('#ctlAviso').className.includes('ok'), 'aviso de sucesso');
-      ok($('#pc3Op').value === '528', 'OP permanece após gravar');
-      ok($('#pc3Hi').value === '' && $('#pc3Resp').value === '', 'form limpo após gravar');
-      console.log(`\n${pass} passaram, ${fail} falharam`);
-      process.exit(fail ? 1 : 0);
+      ok($('#pc3Hi').value === '07:30' && $('#pc3Resp').value === 'MB' && $('#pc3Obs').value === 'turno da manhã', 'draft restaurado ao reabrir');
+      ok($('#pc3Data').value !== '', 'data mantida do draft');
+      window.gerarRegistro();
+      setTimeout(() => {
+        ok(postado && postado.op === '528' && postado.sku === 'CH003' && postado.cip === '1' && postado.observacoes === 'turno da manhã', 'POST com dados do draft: ' + JSON.stringify(postado));
+        ok($('#ctlAviso').className.includes('ok'), 'aviso de sucesso');
+        ok($('#pc3Op').value === '528', 'OP permanece após gravar');
+        ok(!window.localStorage.getItem('pc3Draft-528'), 'draft limpo após gravar');
+        ok($('#pc3Hi').value === '' && $('#pc3Resp').value === '', 'form limpo após gravar');
+        console.log(`\n${pass} passaram, ${fail} falharam`);
+        process.exit(fail ? 1 : 0);
+      }, 60);
     }, 60);
   }, 60);
 }, 60);

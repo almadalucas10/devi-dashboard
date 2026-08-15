@@ -856,6 +856,18 @@ async function carregarRegistros(){
 function numeroOp(s){
   return String(parseInt(String(s || '').split('/').pop().replace(/\D/g, ''), 10) || '');
 }
+function salvarDraftControle(){
+  const num = (document.getElementById('pc3Op') || {}).value || '';
+  if(!num) return;
+  const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  const draft = { data: v('pc3Data'), horarioInicial: v('pc3Hi'), quantidade: v('pc3Qtd'),
+    horarioFinal: v('pc3Hf'), responsavel: v('pc3Resp'), cip: v('pc3Cip'), observacoes: v('pc3Obs') };
+  try { localStorage.setItem('pc3Draft-' + num, JSON.stringify(draft)); } catch(e) {}
+}
+function carregarDraftControle(num){
+  try { const raw = localStorage.getItem('pc3Draft-' + num); return raw ? JSON.parse(raw) : null; } catch(e) { return null; }
+}
+function limparDraftControle(num){ try { localStorage.removeItem('pc3Draft-' + num); } catch(e) {} }
 function abrirControles(){
   const m = document.getElementById('modalControle');
   if(!m) return;
@@ -864,14 +876,25 @@ function abrirControles(){
   const num = numeroOp(opAtual);
   const ctx = document.getElementById('pc3Ctx');
   if(ctx && opAtual) ctx.innerHTML = `OP #${num} · ${skuAtual || ''}<br>registro unificado das OPs`;
-  const hoje = new Date();
-  const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-  const d = document.getElementById('pc3Data'); if(d) d.value = iso;
   const o = document.getElementById('pc3Op'); if(o) o.value = num;
-  const q = document.getElementById('pc3Qtd'); if(q) q.value = opQtd || '';
+  const draft = num ? carregarDraftControle(num) : null;
+  if(draft && Object.keys(draft).length){
+    const set = (id, v) => { const e = document.getElementById(id); if(e && v !== undefined && v !== null && v !== '') e.value = v; };
+    set('pc3Data', draft.data); set('pc3Hi', draft.horarioInicial); set('pc3Qtd', draft.quantidade);
+    set('pc3Hf', draft.horarioFinal); set('pc3Resp', draft.responsavel); set('pc3Cip', draft.cip); set('pc3Obs', draft.observacoes);
+  } else {
+    const hoje = new Date();
+    const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+    const d = document.getElementById('pc3Data'); if(d) d.value = iso;
+    const q = document.getElementById('pc3Qtd'); if(q) q.value = opQtd || '';
+  }
   carregarRegistros();
 }
 function fecharControles(){ const m = document.getElementById('modalControle'); if(m) m.style.display = 'none'; }
+// auto-salva o draft por OP a cada digitação
+document.querySelectorAll('#modalControle input, #modalControle select').forEach(i => {
+  i.addEventListener('input', salvarDraftControle);
+});
 function gerarRegistro(){
   const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
   const rec = {
@@ -895,6 +918,7 @@ function gerarRegistro(){
   }).then(r => r.json()).then(j => {
     btn.disabled = false; btn.textContent = '＋ Gerar registro';
     if(j.ok){ avisoCtl(`Registro gravado na linha ${j.linha} do PC3.`, true);
+      limparDraftControle(rec.op);
       ['pc3Hi','pc3Qtd','pc3Hf','pc3Resp','pc3Cip','pc3Obs'].forEach(i => {
         const e = document.getElementById(i); if(e) e.value = '';
       });
