@@ -517,6 +517,7 @@ let opAtual = null;
 let nCodOPAtual = null; // nCodOP da OP aberta — usado no anexo automático na OP
 let opQtd = 4464; // quantidade da OP aberta — escala a lista de insumos
 let opUn = 'UND';  // unidade da OP aberta (ex.: L para Base Kombucha)
+let opData = '';   // data da OP (DD/MM/AAAA) — vira Data de Produção na conclusão
 let receitaReal = null;          // insumos reais da OP (endpoint) — substitui o mock
 let folhaInfo = null;            // campos do cabeçalho da folha (previsao/situacao/tipoProduto)
 const receitasCache = {};        // op → insumos reais já carregados
@@ -579,10 +580,11 @@ function abrirOp(op){
   nCodOPAtual = o.nCodOP || null;
   opQtd = o.qtd || 4464;
   opUn = o.un || (o.sku === 'FX000' ? 'L' : 'UND');
+  opData = o.data || (folhaInfo && folhaInfo.previsao) || '';
   receitaReal = receitasCache[op] || null;
   document.getElementById('opNum').textContent = '#' + op;
   document.getElementById('opMeta').innerHTML =
-    `12/08/2026<br>${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)} previstas`;
+    `${opData || '12/08/2026'}<br>${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)} previstas`;
   skuAtual = o.sku || skuAtual; // SKU vem do worker (autoritativo) — sem herdar o da OP anterior
   aplicarSku();
   resetarFicha();
@@ -604,7 +606,8 @@ async function carregarOPS(){
       OPS.length = 0;
       j.fichas.forEach(f => OPS.push({
         op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
-        nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || ''
+        nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
+        data: f.data || ''
       }));
       OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
       renderLista();
@@ -908,6 +911,9 @@ const RECEITAS = {
 const insumosAtuais = () => RECEITAS[skuAtual] || RECEITAS.default;
 
 const n = v => { const x = parseFloat(String(v).replace(',','.')); return isNaN(x)?null:x; };
+// DD/MM/AAAA → YYYY-MM-DD (formato do payload da ficha)
+const iso = s => { const m = String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; };
 const fmt = v => v.toLocaleString('pt-BR',{maximumFractionDigits:1});
 // formata quantidade de insumo: grandes sem casa decimal, pequenas com até 4
 const fmtQ = v => v >= 10 ? Math.round(v).toLocaleString('pt-BR')
@@ -1256,7 +1262,7 @@ async function salvar(){
   }
 
   const d = { op: opAtual || '2026/00527', nCodOP: nCodOPAtual || 0, sku:sku, sigla:SIGLA[sku]||'',
-              familia:fam, dataProducao:'2026-08-12', blocos:{} };
+              familia:fam, dataProducao: iso(opData) || '2026-08-12', blocos:{} };
   if(folhaInfo){
     d.previsao = folhaInfo.previsao || '';
     d.situacao = folhaInfo.situacao || '';

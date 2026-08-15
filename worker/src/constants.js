@@ -83,5 +83,5 @@ export const R2_KEYS = {
   omie: "omie.json",
   syncMeta: "sync-meta.json",
   token: "google-token.json",
-  qualidadeFichas: "qualidade-fichas.json",
+  qualidadeFichas: "qualidade-fichas-v2.json",
 };

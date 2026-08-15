@@ -75,6 +75,7 @@ export async function listarFichasDoDia(env, dataIso) {
   const fichas = [];
   for (const op of abertas || []) {
     const ident = op.identificacao || {};
+    const inf = op.infAdicionais || {};
     const nCodProduto = get(ident, "nCodProduto");
     const info = mapa.get(String(nCodProduto));
     let sku = info?.sku ?? null;
@@ -91,6 +92,8 @@ export async function listarFichasDoDia(env, dataIso) {
       op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? ""),
       nCodOP: get(ident, "nCodOP") ?? null,
       sku,
+      // data da OP (mesma prioridade do calendário) — usada como Data de Produção na ficha
+      data: get(inf, "dDtInicio", "dDtPrevisao") ?? get(ident, "dDtPrevisao") ?? "",
       produto,
       nCodProduto,
       qtd: get(ident, "nQtde") ?? 0,
