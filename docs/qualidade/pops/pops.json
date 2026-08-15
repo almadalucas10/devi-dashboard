@@ -1,0 +1,1957 @@
+{
+  "_meta": {
+    "descricao": "Conteúdo estruturado dos POPs de processo da Dêvi. Fonte única para as telas do tablet.",
+    "gerado": "2026-08-15",
+    "origem": "pasta NOVOS POPS no Drive"
+  },
+  "familias": {
+    "kombucha": [
+      "POP17",
+      "POP11",
+      "POP10",
+      "POP13",
+      "POP15"
+    ],
+    "cha": [
+      "POP12",
+      "POP10",
+      "POP13",
+      "POP15"
+    ],
+    "refri": [
+      "POP12",
+      "POP10",
+      "POP13",
+      "POP15"
+    ],
+    "rtm": [
+      "POP12",
+      "POP10",
+      "POP13",
+      "POP15"
+    ],
+    "base": [
+      "POP09",
+      "POP17"
+    ],
+    "insumo": [
+      "POP14",
+      "POP16"
+    ]
+  },
+  "blocoFicha": {
+    "insumos": [
+      "POP14"
+    ],
+    "starter": [
+      "POP09"
+    ],
+    "fermentacao": [
+      "POP17"
+    ],
+    "filtracao": [
+      "POP17"
+    ],
+    "formulacao": [
+      "POP11",
+      "POP12"
+    ],
+    "carbonatacao": [
+      "POP10"
+    ],
+    "preEnvase": [
+      "POP11",
+      "POP12"
+    ],
+    "recravacao": [
+      "POP13"
+    ],
+    "estoque": [
+      "POP15"
+    ]
+  },
+  "pops": [
+    {
+      "codigo": "POP09",
+      "numero": 9,
+      "titulo": "Preparo do SCOBY (Inóculo)",
+      "revisao": "02",
+      "data": "15/08/2026",
+      "tipo": "sequencial",
+      "familias": [
+        "base"
+      ],
+      "parametros": [
+        {
+          "nome": "Volume de água",
+          "valor": "200",
+          "un": "L"
+        },
+        {
+          "nome": "Temp. de infusão",
+          "valor": "70",
+          "un": "°C"
+        },
+        {
+          "nome": "Tempo de infusão",
+          "valor": "30",
+          "un": "min"
+        },
+        {
+          "nome": "Proporção de SCOBY",
+          "valor": "10",
+          "un": "%"
+        },
+        {
+          "nome": "pH final",
+          "valor": "2,70–2,85",
+          "un": ""
+        },
+        {
+          "nome": "Brix final",
+          "valor": "1–2",
+          "un": ""
+        }
+      ],
+      "fases": [
+        {
+          "nome": "INFUSÃO",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Produzir o chá seguindo a ordem de produção fornecida pelo gestor."
+            },
+            {
+              "n": "2",
+              "txt": "Pesar os insumos da receita."
+            },
+            {
+              "n": "3",
+              "txt": "Aquecer 200 L de água na tina até 70 °C.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "70 °C",
+                  "tipo": "temp"
+                },
+                {
+                  "icone": "💧",
+                  "valor": "200 L",
+                  "tipo": "vol"
+                }
+              ]
+            },
+            {
+              "n": "4",
+              "txt": "Infusionar e diluir as matérias-primas por 30 minutos a 70 °C.",
+              "params": [
+                {
+                  "icone": "⏱",
+                  "valor": "30 min",
+                  "tipo": "tempo"
+                }
+              ],
+              "timer": 1800
+            }
+          ]
+        },
+        {
+          "nome": "INOCULAÇÃO",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "5",
+              "txt": "Transferir o líquido para os tanques fermentadores indicados pelo Supervisor ou Gerente de Produção, com adição de oxigênio e controle de temperatura.",
+              "aviso": "Confirmar com o gestor qual tanque utilizar."
+            },
+            {
+              "n": "6",
+              "txt": "Misturar 10 % de SCOBY ao chá produzido.",
+              "params": [
+                {
+                  "icone": "🧫",
+                  "valor": "10 %",
+                  "tipo": "prop"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "FERMENTAÇÃO",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "7",
+              "txt": "Acompanhar a fermentação diariamente, monitorando concentração de álcool, pH e Brix.",
+              "link": {
+                "bloco": "fermentacao",
+                "txt": "Registrar em Fermentação da ficha"
+              }
+            },
+            {
+              "n": "8",
+              "txt": "A fermentação está concluída quando o pH ficar entre 2,70 e 2,85 e o Brix entre 1 e 2.",
+              "params": [
+                {
+                  "icone": "🧪",
+                  "valor": "pH 2,70–2,85",
+                  "tipo": "meta"
+                },
+                {
+                  "icone": "🍬",
+                  "valor": "Brix 1–2",
+                  "tipo": "meta"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "COLHEITA",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "9",
+              "txt": "Retirar a celulose formada durante a fermentação, que se deposita na parte superior do líquido."
+            },
+            {
+              "n": "10",
+              "txt": "Utilizar o SCOBY (inóculo) na fermentação de novos lotes de kombucha."
+            }
+          ]
+        }
+      ],
+      "driveId": "10_KoECfIv5_8QimYZ941IFz54bUK5ywj"
+    },
+    {
+      "codigo": "POP10",
+      "numero": 10,
+      "titulo": "Processo de Carbonatação",
+      "revisao": "02",
+      "data": "15/08/2026",
+      "tipo": "ciclo",
+      "familias": [
+        "kombucha",
+        "cha",
+        "refri",
+        "rtm"
+      ],
+      "ciclo": {
+        "intervaloMin": 10,
+        "alvo": 1.5,
+        "unidade": "kgf/cm²",
+        "campo": "Pressão do tanque",
+        "campos": [
+          "Horário",
+          "Temperatura (°C)",
+          "Pressão cilindro (kgf)",
+          "Pressão tanque (kgf)"
+        ]
+      },
+      "parametros": [
+        {
+          "nome": "Temp. do tanque para iniciar",
+          "valor": "2–6",
+          "un": "°C"
+        },
+        {
+          "nome": "Pressão na reguladora",
+          "valor": "2,5",
+          "un": "kgf/cm²"
+        },
+        {
+          "nome": "Intervalo de leitura",
+          "valor": "10",
+          "un": "min"
+        },
+        {
+          "nome": "Pressão ao concluir",
+          "valor": "1,5",
+          "un": "kgf/cm²"
+        }
+      ],
+      "fases": [
+        {
+          "nome": "VERIFICAÇÃO INICIAL",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Verificar a temperatura do tanque onde está o líquido a ser carbonatado.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "2–6 °C",
+                  "tipo": "temp"
+                }
+              ],
+              "aviso": "Fora dessa faixa, aguardar o resfriamento — a solubilidade do CO₂ cai conforme a temperatura sobe."
+            },
+            {
+              "n": "2",
+              "txt": "Regular a injeção de gás carbônico alimentício na reguladora do cilindro.",
+              "params": [
+                {
+                  "icone": "🎚",
+                  "valor": "2,5 kgf/cm²",
+                  "tipo": "pressao"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "MONTAGEM DO SISTEMA",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "3",
+              "txt": "Conectar as mangueiras 1 e 2 nas entradas do tanque de envase."
+            },
+            {
+              "n": "4",
+              "txt": "Conectar as mangueiras 1 e 2 nas entradas da bomba de carbonatação."
+            },
+            {
+              "n": "5",
+              "txt": "Conectar a mangueira que sai da reguladora do cilindro de CO₂ na parte superior da entrada 1 da bomba de carbonatação."
+            }
+          ]
+        },
+        {
+          "nome": "CARBONATAÇÃO",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "6",
+              "txt": "Abrir as válvulas do tanque de envase e ligar a bomba para recirculação e homogeneização do líquido."
+            },
+            {
+              "n": "7",
+              "txt": "Abrir a válvula do cilindro de CO₂ e a válvula na parte superior da bomba de carbonatação."
+            }
+          ]
+        },
+        {
+          "nome": "MONITORAMENTO",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "8",
+              "txt": "Monitorar a pressão do tanque a cada 10 minutos, registrando a curva na ficha.",
+              "link": {
+                "bloco": "carbonatacao",
+                "txt": "Registrar em Carbonatação da ficha"
+              },
+              "cicloAqui": true
+            },
+            {
+              "n": "9",
+              "txt": "A carbonatação está concluída quando a pressão do tanque atingir 1,5 kgf/cm².",
+              "params": [
+                {
+                  "icone": "🎯",
+                  "valor": "1,5 kgf/cm²",
+                  "tipo": "meta"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP11",
+          "POP12"
+        ],
+        "depois": [
+          "POP13"
+        ]
+      },
+      "driveId": "1755BcAGNbpTayPjNKqSwOSeAitHY2tgA"
+    },
+    {
+      "codigo": "POP11",
+      "numero": 11,
+      "titulo": "Saborização da Kombucha",
+      "revisao": "02",
+      "data": "15/08/2026",
+      "tipo": "sequencial",
+      "familias": [
+        "kombucha"
+      ],
+      "parametros": [
+        {
+          "nome": "Temp. da pasteurizadora",
+          "valor": "60",
+          "un": "°C"
+        },
+        {
+          "nome": "Tempo de ação da enzima",
+          "valor": "1",
+          "un": "hora"
+        },
+        {
+          "nome": "Filtração",
+          "valor": "bag de voal",
+          "un": ""
+        },
+        {
+          "nome": "Análises obrigatórias",
+          "valor": "pH e Brix",
+          "un": ""
+        }
+      ],
+      "fases": [
+        {
+          "nome": "PREPARO DOS INSUMOS",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Separar os insumos indicados na ordem de produção, nas quantidades informadas.",
+              "link": {
+                "bloco": "insumos",
+                "txt": "Lista de insumos da OP"
+              }
+            },
+            {
+              "n": "2",
+              "txt": "Colocar as quantidades pesadas dentro da pasteurizadora para o descongelamento."
+            }
+          ]
+        },
+        {
+          "nome": "TRATAMENTO ENZIMÁTICO",
+          "cor": "vermelho",
+          "passos": [
+            {
+              "n": "3",
+              "txt": "Setar a pasteurizadora e monitorar até atingir a temperatura.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "60 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "4",
+              "txt": "Adicionar a enzima e deixar agindo até o líquido ficar homogêneo.",
+              "params": [
+                {
+                  "icone": "⏱",
+                  "valor": "1 hora",
+                  "tipo": "tempo"
+                }
+              ],
+              "timer": 3600
+            },
+            {
+              "n": "5",
+              "txt": "Resfriar o líquido até a temperatura ambiente."
+            }
+          ]
+        },
+        {
+          "nome": "FILTRAÇÃO E ANÁLISE",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "6",
+              "txt": "Transferir o líquido para os recipientes de filtragem usando bag de voal. Filtrar por gravidade até restar apenas os sólidos na bag."
+            },
+            {
+              "n": "7",
+              "txt": "Descartar o resíduo sólido nas bombonas de descarte.",
+              "aviso": "As bombonas não podem ficar sujas ou com o descarte à vista."
+            },
+            {
+              "n": "8",
+              "txt": "Analisar pH e Brix do líquido filtrado e registrar.",
+              "link": {
+                "bloco": "preEnvase",
+                "txt": "Registrar em Pré-envase da ficha"
+              }
+            }
+          ]
+        },
+        {
+          "nome": "ENVASE",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "9",
+              "txt": "Transferir o volume total para baldes."
+            },
+            {
+              "n": "10",
+              "txt": "Adicionar o conteúdo dos baldes no tanque de envase.",
+              "aviso": "Confirmar com o gestor qual tanque usar antes de transferir."
+            },
+            {
+              "n": "11",
+              "txt": "Completar o volume restante com a base de kombucha fermentada.",
+              "link": {
+                "bloco": "bases",
+                "txt": "Bases disponíveis nas OPs abertas"
+              }
+            }
+          ]
+        },
+        {
+          "nome": "LIMPEZA",
+          "cor": "cinza",
+          "passos": [
+            {
+              "n": "12",
+              "txt": "Realizar a limpeza do local e dos utensílios utilizados."
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP14",
+          "POP16",
+          "POP17"
+        ],
+        "depois": [
+          "POP10",
+          "POP13",
+          "POP15"
+        ]
+      },
+      "pendencia": "Divergência de temperatura: este POP indica 60 °C para ação enzimática; o POP 14 indica 50 °C para a pectinase.",
+      "driveId": "1965gbRwWVtoXkkDhSMg_dAbquG9NcOqT"
+    },
+    {
+      "codigo": "POP12",
+      "numero": 12,
+      "titulo": "Preparo de Refrigerantes e Chás Gaseificados",
+      "revisao": "02",
+      "data": "15/08/2026",
+      "tipo": "sequencial",
+      "familias": [
+        "cha",
+        "refri",
+        "rtm"
+      ],
+      "parametros": [
+        {
+          "nome": "Infusão do chá",
+          "valor": "10",
+          "un": "% do volume final"
+        },
+        {
+          "nome": "Diluição da goma",
+          "valor": "5",
+          "un": "% do volume final"
+        },
+        {
+          "nome": "Diluição da stévia",
+          "valor": "10",
+          "un": "L de água"
+        },
+        {
+          "nome": "Diluição dos acidulantes",
+          "valor": "10",
+          "un": "L de água"
+        },
+        {
+          "nome": "Homogeneização",
+          "valor": "30–60",
+          "un": "min"
+        },
+        {
+          "nome": "Análises obrigatórias",
+          "valor": "pH, Brix e cor",
+          "un": ""
+        }
+      ],
+      "fases": [
+        {
+          "nome": "SEPARAÇÃO E PESAGEM",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Emitir a ordem de produção do produto a ser produzido."
+            },
+            {
+              "n": "2",
+              "txt": "Separar os insumos indicados pela ordem de produção.",
+              "link": {
+                "bloco": "insumos",
+                "txt": "Lista de insumos da OP"
+              }
+            },
+            {
+              "n": "3",
+              "txt": "Pesar cada item conforme a quantidade indicada na ordem de produção, em kg."
+            }
+          ]
+        },
+        {
+          "nome": "PREPARO DOS COMPONENTES",
+          "cor": "roxo",
+          "tabela": {
+            "cab": [
+              "Componente",
+              "Preparo"
+            ],
+            "linhas": [
+              [
+                "Chá (quando necessário)",
+                "Infusionar em 10 % do volume final"
+              ],
+              [
+                "Conservantes",
+                "Diluir individualmente"
+              ],
+              [
+                "Goma",
+                "Diluir em 5 % do volume final — água quente auxilia"
+              ],
+              [
+                "Stévia",
+                "Diluir em 10 L de água filtrada — água quente auxilia"
+              ],
+              [
+                "Acidulantes",
+                "Diluir em 10 L de água filtrada, temperatura ambiente"
+              ],
+              [
+                "Extratos, aromas e bases",
+                "Apenas pesar"
+              ]
+            ]
+          },
+          "passos": []
+        },
+        {
+          "nome": "MONTAGEM NO TANQUE",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "4",
+              "txt": "Colocar todos os insumos dentro do tanque de envase.",
+              "aviso": "Confirmar com o gestor qual tanque utilizar."
+            },
+            {
+              "n": "5",
+              "txt": "Completar o volume restante com água filtrada, acompanhando o enchimento do início ao fim para assegurar que o volume esteja correto."
+            },
+            {
+              "n": "6",
+              "txt": "Conectar as mangueiras à bomba e ao tanque de envase, montando o sistema."
+            },
+            {
+              "n": "7",
+              "txt": "Homogeneizar o líquido com a refrigeração do tanque ligada.",
+              "params": [
+                {
+                  "icone": "⏱",
+                  "valor": "30–60 min",
+                  "tipo": "tempo"
+                }
+              ],
+              "timer": 1800
+            }
+          ]
+        },
+        {
+          "nome": "ANÁLISES",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "8",
+              "txt": "Retirar uma amostra do líquido para as análises de pH, Brix e cor.",
+              "link": {
+                "bloco": "preEnvase",
+                "txt": "Registrar em Pré-envase da ficha"
+              }
+            },
+            {
+              "n": "9",
+              "txt": "Registrar os resultados de cada análise na ficha."
+            },
+            {
+              "n": "10",
+              "txt": "Coletar uma amostra para análise sensorial."
+            },
+            {
+              "n": "11",
+              "txt": "Após o tanque atingir 2 a 6 °C, proceder conforme o POP 10 — Carbonatação.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "2–6 °C",
+                  "tipo": "temp"
+                }
+              ],
+              "link": {
+                "pop": "POP10",
+                "txt": "Abrir POP 10 — Carbonatação"
+              }
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP14",
+          "POP16"
+        ],
+        "depois": [
+          "POP10",
+          "POP13",
+          "POP15"
+        ]
+      },
+      "driveId": "19O2iVgmu4OPGZJP6mDzWrCDmpWALB7I_"
+    },
+    {
+      "codigo": "POP13",
+      "numero": 13,
+      "titulo": "Procedimento de Envase",
+      "revisao": "03",
+      "data": "15/08/2026",
+      "tipo": "sequencial",
+      "familias": [
+        "kombucha",
+        "cha",
+        "refri",
+        "rtm"
+      ],
+      "parametros": [
+        {
+          "nome": "Ar comprimido — rinsagem",
+          "valor": "4–5",
+          "un": "kgf"
+        },
+        {
+          "nome": "Pressostato superior",
+          "valor": "6",
+          "un": "kgf"
+        },
+        {
+          "nome": "Pressostato inferior",
+          "valor": "6",
+          "un": "kgf"
+        },
+        {
+          "nome": "Pressão mínima do tanque",
+          "valor": "2,0",
+          "un": "kgf/m²"
+        },
+        {
+          "nome": "Carbonatação — padrão",
+          "valor": "1,5",
+          "un": "kgf/m²"
+        },
+        {
+          "nome": "Carbonatação — faixa",
+          "valor": "1,3–1,7",
+          "un": "kgf/m²"
+        },
+        {
+          "nome": "Nível para iniciar",
+          "valor": "45 % e 2 kgf/m²",
+          "un": ""
+        }
+      ],
+      "decisaoCIP": {
+        "pergunta": "Qual CIP foi aplicado por último, e o que será envasado agora?",
+        "opcoes": [
+          {
+            "titulo": "CIP 1 — completa",
+            "quando": "Mudança de tipo ou sabor de produto",
+            "etapas": [
+              [
+                "1",
+                "Enxágue com água",
+                "—"
+              ],
+              [
+                "2",
+                "Detergente alcalino clorado 3 % via spray-ball com recirculação",
+                "15 min"
+              ],
+              [
+                "3",
+                "Enxágue com água",
+                "—"
+              ],
+              [
+                "4",
+                "Ácido peracético 0,2 %",
+                "15 min"
+              ]
+            ]
+          },
+          {
+            "titulo": "CIP 2 — simplificada",
+            "quando": "Mesmo sabor e tipo em dias seguidos",
+            "etapas": [
+              [
+                "1",
+                "Enxágue com água",
+                "—"
+              ],
+              [
+                "2",
+                "Ácido peracético 0,2 % via spray-ball",
+                "15 min"
+              ]
+            ]
+          }
+        ]
+      },
+      "fases": [
+        {
+          "nome": "VERIFICAÇÃO DE SANITIZAÇÃO",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Verificar no Registro de CIP da envasadora a data e o tipo de procedimento aplicado pela última vez.",
+              "cipAqui": true
+            }
+          ]
+        },
+        {
+          "nome": "CHECAGEM DE INSUMOS BÁSICOS",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "2",
+              "txt": "Checar a pressão de ar comprimido no pressostato da câmara de rinsagem.",
+              "params": [
+                {
+                  "icone": "🎚",
+                  "valor": "4–5 kgf",
+                  "tipo": "pressao"
+                }
+              ]
+            },
+            {
+              "n": "3",
+              "txt": "Checar a pressão nos dois pressostatos da máquina de envase.",
+              "params": [
+                {
+                  "icone": "🎚",
+                  "valor": "6 kgf sup.",
+                  "tipo": "pressao"
+                },
+                {
+                  "icone": "🎚",
+                  "valor": "6 kgf inf.",
+                  "tipo": "pressao"
+                }
+              ]
+            },
+            {
+              "n": "4",
+              "txt": "Abrir a entrada de gás CO₂ no cilindro regulador conectado à máquina de envase."
+            },
+            {
+              "n": "5",
+              "txt": "No painel da máquina, selecionar \"ENVASE 269 mL\" e ativar o CO₂."
+            },
+            {
+              "n": "6",
+              "txt": "Aguardar o tanque de envase atingir a pressão mínima.",
+              "params": [
+                {
+                  "icone": "🎯",
+                  "valor": "2,0 kgf/m²",
+                  "tipo": "meta"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "SELEÇÃO DO TANQUE",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "7",
+              "txt": "Consultar a Ordem de Produção do lote definido para envase."
+            },
+            {
+              "n": "8",
+              "txt": "Selecionar o tanque com base na pressão registrada na folha da OP."
+            },
+            {
+              "n": "9",
+              "txt": "Checar a carbonatação do tanque selecionado com manômetro.",
+              "params": [
+                {
+                  "icone": "🎯",
+                  "valor": "padrão 1,5",
+                  "tipo": "meta"
+                },
+                {
+                  "icone": "📏",
+                  "valor": "1,3 a 1,7 kgf/m²",
+                  "tipo": "faixa"
+                }
+              ],
+              "aviso": "Fora dessa faixa, não iniciar o envase. Retornar ao POP 10 — Carbonatação."
+            }
+          ]
+        },
+        {
+          "nome": "ENVASE",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "10",
+              "txt": "Conectar a mangueira de envase na máquina e no tanque com o produto."
+            },
+            {
+              "n": "11",
+              "txt": "Abrir a entrada de gás CO₂ do cilindro conectado ao tanque a ser envasado."
+            },
+            {
+              "n": "12",
+              "txt": "No painel, clicar em \"ENVASE 269 mL\" e ativar a \"ENTRADA DE LÍQUIDO AUTOMÁTICA\"."
+            },
+            {
+              "n": "13",
+              "txt": "Aguardar o enchimento do tanque até atingir 45 % do volume e 2 kgf/m².",
+              "params": [
+                {
+                  "icone": "🎯",
+                  "valor": "45 % e 2 kgf/m²",
+                  "tipo": "meta"
+                }
+              ]
+            },
+            {
+              "n": "14",
+              "txt": "Iniciar o envase, atentando para os pontos críticos: alimentação de latas, de tampas e de líquido.",
+              "link": {
+                "bloco": "recravacao",
+                "txt": "Registrar recravação na ficha"
+              }
+            },
+            {
+              "n": "15",
+              "txt": "Ao final da operação, desligar o compressor da linha de envase e rotulagem."
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP10"
+        ],
+        "depois": [
+          "POP15"
+        ]
+      },
+      "driveId": "138T-y0etk0Int5JBttQ97vxXJX0D8qx8"
+    },
+    {
+      "codigo": "POP14",
+      "numero": 14,
+      "titulo": "Processamento de Insumos",
+      "revisao": "03",
+      "data": "15/08/2026",
+      "tipo": "decisao",
+      "familias": [
+        "insumo"
+      ],
+      "decisao": {
+        "pergunta": "Qual insumo você vai processar?",
+        "opcoes": [
+          {
+            "id": "m1",
+            "titulo": "Metodologia 1 — enzimática",
+            "insumos": [
+              "Framboesa",
+              "Amora",
+              "Morango",
+              "Mirtilo"
+            ],
+            "cor": "vermelho",
+            "passos": [
+              {
+                "n": "2",
+                "txt": "Colocar os insumos descongelados dentro da pasteurizadora.",
+                "params": [
+                  {
+                    "icone": "🌡",
+                    "valor": "50 °C",
+                    "tipo": "temp"
+                  }
+                ]
+              },
+              {
+                "n": "3",
+                "txt": "Adicionar 10 mL de enzima pectinase e deixar agindo.",
+                "params": [
+                  {
+                    "icone": "🧪",
+                    "valor": "10 mL pectinase",
+                    "tipo": "dose"
+                  },
+                  {
+                    "icone": "⏱",
+                    "valor": "60 min",
+                    "tipo": "tempo"
+                  }
+                ],
+                "timer": 3600
+              },
+              {
+                "n": "4",
+                "txt": "Resfriar o conteúdo processado até a temperatura ambiente."
+              },
+              {
+                "n": "5",
+                "txt": "Transferir para o sistema de filtragem."
+              }
+            ],
+            "filtra": true
+          },
+          {
+            "id": "m2",
+            "titulo": "Metodologia 2 — purê",
+            "insumos": [
+              "Abacaxi",
+              "Gengibre"
+            ],
+            "cor": "ambar",
+            "passos": [
+              {
+                "n": "2",
+                "txt": "Processar os insumos no liquidificador, transformando em purê ou pasta."
+              },
+              {
+                "n": "3",
+                "txt": "Colocar na pasteurizadora.",
+                "params": [
+                  {
+                    "icone": "🌡",
+                    "valor": "50 °C",
+                    "tipo": "temp"
+                  },
+                  {
+                    "icone": "⏱",
+                    "valor": "60 min",
+                    "tipo": "tempo"
+                  }
+                ],
+                "timer": 3600
+              },
+              {
+                "n": "4",
+                "txt": "Resfriar o conteúdo processado até a temperatura ambiente."
+              },
+              {
+                "n": "5",
+                "txt": "Transferir para o sistema de filtragem."
+              }
+            ],
+            "filtra": true
+          },
+          {
+            "id": "m3",
+            "titulo": "Metodologia 3 — extração de suco",
+            "insumos": [
+              "Limão siciliano"
+            ],
+            "cor": "verde",
+            "passos": [
+              {
+                "n": "2",
+                "txt": "Processar o insumo no processador, extraindo o suco."
+              },
+              {
+                "n": "3",
+                "txt": "Colocar na pasteurizadora.",
+                "params": [
+                  {
+                    "icone": "🌡",
+                    "valor": "50 °C",
+                    "tipo": "temp"
+                  },
+                  {
+                    "icone": "⏱",
+                    "valor": "60 min",
+                    "tipo": "tempo"
+                  }
+                ],
+                "timer": 3600
+              },
+              {
+                "n": "4",
+                "txt": "Resfriar o conteúdo processado até a temperatura ambiente."
+              },
+              {
+                "n": "5",
+                "txt": "Armazenar diretamente.",
+                "aviso": "Esta metodologia NÃO passa pelo sistema de filtragem."
+              }
+            ],
+            "filtra": false
+          }
+        ]
+      },
+      "parametros": [
+        {
+          "nome": "Temp. da pasteurizadora",
+          "valor": "50",
+          "un": "°C"
+        },
+        {
+          "nome": "Tempo na pasteurizadora",
+          "valor": "60",
+          "un": "min"
+        },
+        {
+          "nome": "Pectinase (Metodologia 1)",
+          "valor": "10",
+          "un": "mL"
+        },
+        {
+          "nome": "Bombonas de filtragem",
+          "valor": "80",
+          "un": "L"
+        }
+      ],
+      "fasesComuns": {
+        "antes": {
+          "nome": "DESCONGELAMENTO",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Separar os insumos que serão processados segundo a receita da ordem de produção.",
+              "link": {
+                "bloco": "insumos",
+                "txt": "Lista de insumos da OP"
+              },
+              "tabela": {
+                "cab": [
+                  "Estado",
+                  "Procedimento"
+                ],
+                "linhas": [
+                  [
+                    "Congelado",
+                    "Colocar em bags de filtragem dentro das bombonas de 80 L e aguardar o descongelamento completo"
+                  ],
+                  [
+                    "In natura",
+                    "Pode ser processado no mesmo dia"
+                  ]
+                ]
+              }
+            }
+          ]
+        },
+        "filtragem": {
+          "nome": "FILTRAGEM",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "6",
+              "txt": "Colocar as bags de filtragem no bocal da bombona de 80 L."
+            },
+            {
+              "n": "7",
+              "txt": "Guardar a bombona em ambiente refrigerado e limpo até que a filtragem se complete e reste apenas o resíduo sólido no saco."
+            },
+            {
+              "n": "8",
+              "txt": "Descartar os resíduos sólidos nas bombonas de descarte."
+            }
+          ]
+        },
+        "depois": {
+          "nome": "ARMAZENAMENTO",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "9",
+              "txt": "Guardar o líquido obtido em barril."
+            },
+            {
+              "n": "10",
+              "txt": "Retirar o oxigênio do barril com injeção de gás carbônico alimentício."
+            },
+            {
+              "n": "11",
+              "txt": "Colar a etiqueta de identificação no barril."
+            }
+          ]
+        }
+      },
+      "encadeamento": {
+        "antes": [],
+        "depois": [
+          "POP16",
+          "POP11",
+          "POP12"
+        ]
+      },
+      "pendencia": "Divergência de temperatura: este POP indica 50 °C para a pectinase; o POP 11 indica 60 °C para ação enzimática.",
+      "driveId": "1cqB8WUEDkfJMc_Zmw7u69v2KwoAKqkob"
+    },
+    {
+      "codigo": "POP15",
+      "numero": 15,
+      "titulo": "Secagem, Rotulagem e Empacotamento",
+      "revisao": "03",
+      "data": "15/08/2026",
+      "tipo": "sequencial",
+      "familias": [
+        "kombucha",
+        "cha",
+        "refri",
+        "rtm"
+      ],
+      "parametros": [
+        {
+          "nome": "Secagem (orvalho)",
+          "valor": "24",
+          "un": "horas"
+        },
+        {
+          "nome": "Temp. do datador",
+          "valor": "127",
+          "un": "°C"
+        },
+        {
+          "nome": "Rendimento do ribbon",
+          "valor": "10.000",
+          "un": "latas"
+        },
+        {
+          "nome": "Latas por caixa",
+          "valor": "100",
+          "un": "un"
+        },
+        {
+          "nome": "Temp. da faca",
+          "valor": "54",
+          "un": "°C"
+        },
+        {
+          "nome": "Temp. do forno",
+          "valor": "170",
+          "un": "°C"
+        },
+        {
+          "nome": "Altura do pallet",
+          "valor": "13",
+          "un": "camadas"
+        }
+      ],
+      "fases": [
+        {
+          "nome": "SECAGEM",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Separar as latas produzidas e deixar na área de secagem para o processo de orvalho.",
+              "params": [
+                {
+                  "icone": "⏱",
+                  "valor": "24 horas",
+                  "tipo": "tempo"
+                }
+              ],
+              "aviso": "O processo termina quando a lata atinge a mesma temperatura do ambiente."
+            },
+            {
+              "n": "2",
+              "txt": "Separar para rotulagem."
+            }
+          ]
+        },
+        {
+          "nome": "ROTULAGEM",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "3",
+              "txt": "Reunir as informações da ficha: data de fabricação, lote e validade.",
+              "link": {
+                "bloco": "ficha",
+                "txt": "Dados da OP"
+              }
+            },
+            {
+              "n": "4",
+              "txt": "Ligar a máquina, o datador e a turbina."
+            },
+            {
+              "n": "5",
+              "txt": "Colocar o rótulo seguindo a numeração."
+            },
+            {
+              "n": "6",
+              "txt": "Centralizar o rótulo."
+            },
+            {
+              "n": "7",
+              "txt": "Conferir se a temperatura do datador atingiu 127 °C e se a marcação está no local indicado.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "127 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "8",
+              "txt": "Verificar a quantidade de ribbon disponível.",
+              "params": [
+                {
+                  "icone": "🎞",
+                  "valor": "10.000 latas",
+                  "tipo": "prop"
+                }
+              ]
+            },
+            {
+              "n": "9",
+              "txt": "Liberar a rotulagem.",
+              "checklist": [
+                "Centralização do rótulo e da marcação",
+                "Intensidade da marcação",
+                "Ângulo do rótulo na lata",
+                "Condições do recrave — verificar vazamentos",
+                "Amassados, enrugados, furos e marcas"
+              ]
+            },
+            {
+              "n": "10",
+              "txt": "Alocar as latas nas caixas plásticas — 100 unidades por caixa.",
+              "params": [
+                {
+                  "icone": "📦",
+                  "valor": "100 un",
+                  "tipo": "prop"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "EMPACOTAMENTO",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "11",
+              "txt": "Aguardar o equipamento atingir as temperaturas de operação.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "faca 54 °C",
+                  "tipo": "temp"
+                },
+                {
+                  "icone": "🔥",
+                  "valor": "forno 170 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "12",
+              "txt": "Selecionar o filme conforme o tamanho do fardo.",
+              "tabela": {
+                "cab": [
+                  "Fardo",
+                  "Rolo plástico"
+                ],
+                "linhas": [
+                  [
+                    "12 latas",
+                    "35 cm · 70 micra"
+                  ],
+                  [
+                    "6 latas",
+                    "30 cm · 70 micra"
+                  ]
+                ]
+              }
+            },
+            {
+              "n": "13",
+              "txt": "Alocar o volume de latas na plataforma, verificando amassados ou vazamentos."
+            },
+            {
+              "n": "14",
+              "txt": "Acionar o botão e coletar o pack do outro lado do forno para a montagem do pallet."
+            }
+          ]
+        },
+        {
+          "nome": "PALETIZAÇÃO",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "15",
+              "txt": "Montar o pallet conforme o produto.",
+              "tabela": {
+                "cab": [
+                  "Produto",
+                  "Pallet"
+                ],
+                "linhas": [
+                  [
+                    "Kombuchas",
+                    "Plástico"
+                  ],
+                  [
+                    "Chás gaseificados e refrigerantes",
+                    "Madeira"
+                  ]
+                ]
+              }
+            },
+            {
+              "n": "16",
+              "txt": "Respeitar a altura padrão de 13 camadas.",
+              "params": [
+                {
+                  "icone": "📐",
+                  "valor": "13 camadas",
+                  "tipo": "prop"
+                }
+              ]
+            },
+            {
+              "n": "17",
+              "txt": "Montar cada camada conforme o tamanho do fardo.",
+              "tabela": {
+                "cab": [
+                  "Fardo",
+                  "Fardos por camada"
+                ],
+                "linhas": [
+                  [
+                    "12 unidades",
+                    "24 fardos"
+                  ],
+                  [
+                    "6 unidades",
+                    "48 fardos"
+                  ]
+                ]
+              }
+            },
+            {
+              "n": "18",
+              "txt": "Amarrar o pallet conforme o modelo de referência."
+            }
+          ]
+        },
+        {
+          "nome": "FECHAMENTO",
+          "cor": "cinza",
+          "passos": [
+            {
+              "n": "19",
+              "txt": "Realizar a contagem total dos produtos empacotados e anotar na ficha.",
+              "link": {
+                "bloco": "estoque",
+                "txt": "Registrar em Estoque da ficha"
+              }
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP13"
+        ],
+        "depois": []
+      },
+      "driveId": "1iH49c-gsJ9R1KqvJB_zyUB1lZrFzfsPh"
+    },
+    {
+      "codigo": "POP16",
+      "numero": 16,
+      "titulo": "Pasteurização de Matéria-Prima",
+      "revisao": "03",
+      "data": "15/08/2026",
+      "tipo": "up",
+      "familias": [
+        "insumo"
+      ],
+      "up": {
+        "formula": "UP = t × 1,393^(T − 60)",
+        "tempRef": 60,
+        "fator": 1.393,
+        "alvo": null,
+        "nota": "UP mínima a definir pela Qualidade. O sistema calcula e exibe sem emitir julgamento."
+      },
+      "parametros": [
+        {
+          "nome": "Temp. de pasteurização",
+          "valor": "60",
+          "un": "°C"
+        },
+        {
+          "nome": "Tempo no patamar",
+          "valor": "60",
+          "un": "min"
+        },
+        {
+          "nome": "Temp. de resfriamento",
+          "valor": "20–30",
+          "un": "°C"
+        },
+        {
+          "nome": "UP mínima exigida",
+          "valor": "a definir",
+          "un": ""
+        }
+      ],
+      "fases": [
+        {
+          "nome": "AQUECIMENTO",
+          "cor": "vermelho",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Colocar o líquido a ser pasteurizado na pasteurizadora."
+            },
+            {
+              "n": "2",
+              "txt": "Ligar a agitação e o aquecimento."
+            },
+            {
+              "n": "3",
+              "txt": "Acompanhar a subida da temperatura, registrando temperatura e tempo a cada intervalo.",
+              "upAqui": true
+            }
+          ]
+        },
+        {
+          "nome": "PATAMAR",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "4",
+              "txt": "Ao atingir 60 °C, manter por 60 minutos.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "60 °C",
+                  "tipo": "temp"
+                },
+                {
+                  "icone": "⏱",
+                  "valor": "60 min",
+                  "tipo": "tempo"
+                }
+              ],
+              "timer": 3600,
+              "aviso": "A 58 °C, uma hora entrega apenas metade da letalidade. A UP é o critério real de conclusão, não o relógio."
+            }
+          ]
+        },
+        {
+          "nome": "RESFRIAMENTO",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "5",
+              "txt": "Desligar o aquecimento."
+            },
+            {
+              "n": "6",
+              "txt": "Abrir a válvula de resfriamento com fluxo baixo, para não transbordar a pia."
+            },
+            {
+              "n": "7",
+              "txt": "Resfriar até 20 a 30 °C, continuando o registro de temperatura e tempo.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "20–30 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "8",
+              "txt": "Fechar a válvula de resfriamento."
+            }
+          ]
+        },
+        {
+          "nome": "ARMAZENAMENTO",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "9",
+              "txt": "Retirar o líquido pasteurizado e armazenar conforme o prazo de uso.",
+              "tabela": {
+                "cab": [
+                  "Prazo",
+                  "Recipiente"
+                ],
+                "linhas": [
+                  [
+                    "Mais de 2 dias",
+                    "Barril"
+                  ],
+                  [
+                    "Menos de 2 dias",
+                    "Balde"
+                  ]
+                ]
+              }
+            },
+            {
+              "n": "10",
+              "txt": "Enxaguar e limpar a pasteurizadora."
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP14"
+        ],
+        "depois": [
+          "POP11",
+          "POP12"
+        ]
+      },
+      "driveId": "1iRmeehtUe_dwW4gi4WB1Wcj1CpPopeEs"
+    },
+    {
+      "codigo": "POP17",
+      "numero": 17,
+      "titulo": "Preparo da Kombucha",
+      "revisao": "03",
+      "data": "15/08/2026",
+      "tipo": "sequencial",
+      "familias": [
+        "base"
+      ],
+      "parametros": [
+        {
+          "nome": "Volume de água",
+          "valor": "250",
+          "un": "L"
+        },
+        {
+          "nome": "Temp. de infusão",
+          "valor": "75",
+          "un": "°C"
+        },
+        {
+          "nome": "Tempo de infusão",
+          "valor": "30",
+          "un": "min"
+        },
+        {
+          "nome": "Temp. para inoculação",
+          "valor": "32–36",
+          "un": "°C"
+        },
+        {
+          "nome": "Injeção de oxigênio",
+          "valor": "5",
+          "un": "L/min"
+        },
+        {
+          "nome": "Volume de starter",
+          "valor": "50",
+          "un": "L, pH < 3"
+        },
+        {
+          "nome": "Fim da fermentação",
+          "valor": "pH < 3,20 e ABV < 0,5 %",
+          "un": ""
+        },
+        {
+          "nome": "Filtro",
+          "valor": "1",
+          "un": "micra"
+        },
+        {
+          "nome": "Bomba — filtragem",
+          "valor": "80–100",
+          "un": "rpm"
+        },
+        {
+          "nome": "Temp. transferência final",
+          "valor": "4–6",
+          "un": "°C"
+        }
+      ],
+      "fases": [
+        {
+          "nome": "INFUSÃO",
+          "cor": "vermelho",
+          "passos": [
+            {
+              "n": "1",
+              "txt": "Adicionar 250 litros de água filtrada na tina de aquecimento.",
+              "params": [
+                {
+                  "icone": "💧",
+                  "valor": "250 L",
+                  "tipo": "vol"
+                }
+              ]
+            },
+            {
+              "n": "2",
+              "txt": "Ligar o aquecimento da tina, setar para 75 °C e ativar a agitação.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "75 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "3",
+              "txt": "Com balança de chão, pesar o açúcar orgânico informado pela ordem de produção.",
+              "link": {
+                "bloco": "insumos",
+                "txt": "Lista de insumos da OP"
+              }
+            },
+            {
+              "n": "4",
+              "txt": "Com balança de chão, pesar o chá verde orgânico, usando uma bag suspensa no interior de um balde."
+            },
+            {
+              "n": "5",
+              "txt": "Colocar a bag contendo o chá no cesto de metal próprio."
+            },
+            {
+              "n": "6",
+              "txt": "Adicionar o açúcar pesado na água de infusão, dentro da tina."
+            },
+            {
+              "n": "7",
+              "txt": "Quando a água atingir 75 °C, adicionar o chá na tina de aquecimento.",
+              "epi": [
+                "óculos",
+                "luvas térmicas"
+              ]
+            },
+            {
+              "n": "8",
+              "txt": "Infusionar por 30 minutos, com agitação e aquecimento ligados.",
+              "params": [
+                {
+                  "icone": "⏱",
+                  "valor": "30 min",
+                  "tipo": "tempo"
+                }
+              ],
+              "timer": 1800
+            },
+            {
+              "n": "9",
+              "txt": "Retirar o cesto contendo o chá verde.",
+              "epi": [
+                "óculos",
+                "luvas térmicas"
+              ]
+            }
+          ]
+        },
+        {
+          "nome": "TRANSFERÊNCIA E DILUIÇÃO",
+          "cor": "roxo",
+          "passos": [
+            {
+              "n": "10",
+              "txt": "Transferir a infusão concentrada para o tanque solicitado, utilizando bomba, mangueiras e conexões."
+            },
+            {
+              "n": "11",
+              "txt": "Encher a tina com o volume necessário para atingir o volume solicitado na ordem de produção."
+            },
+            {
+              "n": "12",
+              "txt": "Transferir esse volume para o tanque que contém a infusão concentrada."
+            },
+            {
+              "n": "13",
+              "txt": "Ao finalizar a transferência, fechar as conexões."
+            }
+          ]
+        },
+        {
+          "nome": "INOCULAÇÃO",
+          "cor": "ambar",
+          "passos": [
+            {
+              "n": "14",
+              "txt": "Aguardar a temperatura atingir 32 a 36 °C.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "32–36 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "15",
+              "txt": "Transferir o chá homogeneizado injetando oxigênio, com a bomba na velocidade 50.",
+              "params": [
+                {
+                  "icone": "💨",
+                  "valor": "O₂ 5 L/min",
+                  "tipo": "dose"
+                }
+              ]
+            },
+            {
+              "n": "16",
+              "txt": "Medir pH e Brix e registrar na ficha.",
+              "link": {
+                "bloco": "starter",
+                "txt": "Registrar em Starter da ficha"
+              }
+            },
+            {
+              "n": "17",
+              "txt": "Com a temperatura atingida, adicionar 50 L de starter de kombucha com pH menor que 3.",
+              "params": [
+                {
+                  "icone": "🧫",
+                  "valor": "50 L · pH < 3",
+                  "tipo": "dose"
+                }
+              ]
+            },
+            {
+              "n": "18",
+              "txt": "Preencher e medir as informações exigidas na ficha de qualidade."
+            }
+          ]
+        },
+        {
+          "nome": "FERMENTAÇÃO",
+          "cor": "verde",
+          "passos": [
+            {
+              "n": "19",
+              "txt": "Acompanhar a fermentação diariamente, analisando pH, Brix e ABV %.",
+              "link": {
+                "bloco": "fermentacao",
+                "txt": "Registrar em Fermentação da ficha"
+              }
+            },
+            {
+              "n": "20",
+              "txt": "A fermentação está concluída quando o pH for menor que 3,20 e o ABV menor que 0,5 %.",
+              "params": [
+                {
+                  "icone": "🎯",
+                  "valor": "pH < 3,20",
+                  "tipo": "meta"
+                },
+                {
+                  "icone": "🎯",
+                  "valor": "ABV < 0,5 %",
+                  "tipo": "meta"
+                }
+              ],
+              "aviso": "O limite de ABV é regulatório. Acima de 0,5 % o produto deixa de se enquadrar como bebida não alcoólica. Registrar e comunicar."
+            }
+          ]
+        },
+        {
+          "nome": "FILTRAÇÃO",
+          "cor": "azul",
+          "passos": [
+            {
+              "n": "21",
+              "txt": "Montar o sistema de filtragem, conectando-o ao tanque refrigerado de 3.600 L."
+            },
+            {
+              "n": "22",
+              "txt": "Utilizar filtro de 1 micra.",
+              "params": [
+                {
+                  "icone": "🔬",
+                  "valor": "1 micra",
+                  "tipo": "prop"
+                }
+              ]
+            },
+            {
+              "n": "23",
+              "txt": "Setar a velocidade da bomba entre 80 e 100 rpm.",
+              "params": [
+                {
+                  "icone": "⚙",
+                  "valor": "80–100 rpm",
+                  "tipo": "prop"
+                }
+              ]
+            },
+            {
+              "n": "24",
+              "txt": "Ao final da filtragem, ligar o tanque de resfriamento.",
+              "link": {
+                "bloco": "filtracao",
+                "txt": "Registrar em Filtração da ficha"
+              }
+            }
+          ]
+        },
+        {
+          "nome": "TRANSFERÊNCIA FINAL",
+          "cor": "cinza",
+          "passos": [
+            {
+              "n": "25",
+              "txt": "Na temperatura de 4 a 6 °C, transferir para o tanque de envase informado, passando pelo sistema de filtros de 3 estágios.",
+              "params": [
+                {
+                  "icone": "🌡",
+                  "valor": "4–6 °C",
+                  "tipo": "temp"
+                }
+              ]
+            },
+            {
+              "n": "26",
+              "txt": "Ao final do volume, efetuar a lavagem com água no sentido contrário ao fluxo de filtragem."
+            }
+          ]
+        }
+      ],
+      "encadeamento": {
+        "antes": [
+          "POP09"
+        ],
+        "depois": [
+          "POP11"
+        ]
+      },
+      "pendencia": "O histórico registra lotes com ABV de até 1,82 % — mais de três vezes o limite de 0,5 % deste procedimento.",
+      "driveId": "13mSncuFD_ZFIsvD7_wX36VQp2zWt7phi"
+    }
+  ]
+}

@@ -441,7 +441,7 @@ export default {
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
     // Debug — ler abas/cabeçalhos de uma planilha com a service account
-    // GET /api/qualidade/debug/sheet?spreadsheetId=ID[&range=A1:Z3]
+    // GET /api/qualidade/debug/sheet?spreadsheetId=ID[&range=A1:Z3][&dims=1][&fixdims=1][&cols=100]
     if (url.pathname === "/api/qualidade/debug/sheet") {
       try {
         const { getAccessToken, getValues, listSheets, appendValues, deleteRows } = await import("./sheets.js");
@@ -452,6 +452,52 @@ export default {
         try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}"); } catch(e) {}
         if (!id) return json({ client_email: sa?.client_email || null, tabs: null, values: null });
         const tabs = await listSheets(env, token, id);
+
+        // ---- diagnóstico de dimensões (largura de colunas / altura de linhas) ----
+        if (url.searchParams.get("dims") === "1") {
+          const urlD = `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties(title,sheetId,gridProperties),sheets.columnMetadata,sheets.rowMetadata`;
+          const res = await fetch(urlD, { headers: { Authorization: `Bearer ${token}` } });
+          if (!res.ok) { const err = await res.text(); return json({ erro: `dims ${res.status}: ${err.slice(0,200)}` }, 500); }
+          const data = await res.json();
+          return json((data.sheets || []).map(s => ({
+            aba: s.properties.title,
+            grid: s.properties.gridProperties,
+            colunas: (s.columnMetadata || []).map(c => c.pixelSize),
+            linhas: (s.rowMetadata || []).map(r => r.pixelSize),
+          })));
+        }
+        // ---- corrige largura das colunas (ex.: fixdims=1&cols=110 aplica em A:H) ----
+        if (url.searchParams.get("fixdims") === "1") {
+          const tabFix = url.searchParams.get("tab") || "MODELO REGISTRO";
+          const sh = tabs.find(t => t.title === tabFix);
+          if (!sh) return json({ erro: "aba não encontrada: " + tabFix }, 400);
+          // larguras por coluna (px) — A:H: Data, H.Inicial, OP, Quantidade, H.Final, Resp, CIP, Obs
+          const custom = (url.searchParams.get("cols") || "").split(",").map(Number);
+          const padrao = [115, 115, 75, 100, 115, 115, 165, 260];
+          const urlF = `https://sheets.googleapis.com/v4/spreadsheets/${id}:batchUpdate`;
+          const requests = padrao.map((px, i) => ({
+            updateDimensionProperties: {
+              range: { sheetId: sh.sheetId, dimension: "COLUMNS", startIndex: i, endIndex: i + 1 },
+              properties: { pixelSize: custom[i] && custom[i] > 0 ? custom[i] : px },
+              fields: "pixelSize",
+            },
+          }));
+          const res = await fetch(urlF, {
+            method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ requests }),
+          });
+          if (!res.ok) { const err = await res.text(); return json({ erro: `fixdims ${res.status}: ${err.slice(0,200)}` }, 500); }
+          return json({ ok: true, aba: tabFix, larguraColunas: padrao.map((px, i) => `${["A","B","C","D","E","F","G","H"][i]}=${px}px`).join(" ") });
+        }
+        // apagar uma linha específica (1-based) — usado p/ limpar registros de teste
+        const delRow = parseInt(url.searchParams.get("deleteRow") || "", 10);
+        const tabDel = url.searchParams.get("tab") || "";
+        if (delRow && tabDel) {
+          const sh = tabs.find((t) => t.title === tabDel);
+          if (!sh) return json({ erro: "aba não encontrada: " + tabDel }, 400);
+          await deleteRows(env, token, id, sh.sheetId, delRow - 1, delRow);
+          return json({ ok: true, apagouLinha: delRow, tab: tabDel });
+        }
         // limpeza: apaga linhas de teste (qualquer célula contendo "TESTE") sem anexar
         const limpar = url.searchParams.get("limpar") === "1";
         const tab = url.searchParams.get("tab") || "";
@@ -588,9 +634,29 @@ export default {
     }
     // Ficha salva (R2) + fichas do mês (D1)
     // Arquivo das fichas — lista das salvas (D1) e abertura do PDF anexado na OP
-    // Arquivo de POPs — lista da pasta do Drive (com cache) e download do PDF
-    if (url.pathname === "/api/qualidade/pops") {
+    // ============ PLANILHAS DE CONTROLE — PC3 Envase (registro no MODELO REGISTRO) ============
+    if (url.pathname === "/api/qualidade/controle/pc3" && request.method === "GET") {
       try {
+        const { listarRegistros } = await import("./controle.js");
+        const n = parseInt(url.searchParams.get("n") || "10", 10);
+        const op = url.searchParams.get("op") || null;
+        return json(await listarRegistros(env, Math.min(Math.max(n, 1), 50), op));
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+    if (url.pathname === "/api/qualidade/controle/pc3" && request.method === "POST") {
+      try {
+        const { registrarControle } = await import("./controle.js");
+        const body = await request.json();
+        const rec = body.registro || body;
+        if (!rec || !rec.data || !rec.op) {
+          return json({ erro: "envie { registro: { data, horarioInicial, op, quantidade, horarioFinal, responsavel, cip, observacoes } }" }, 400);
+        }
+        return json(await registrarControle(env, rec));
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+
+    // Arquivo de POPs — lista da pasta do Drive (com cache) e download do PDF
+    if (url.pathname === "/api/qualidade/pops") {      try {
         const { listarPOPs } = await import("./pops.js");
         const folder = url.searchParams.get("folder") || "";
         const KEY = "qualidade-pops-v2.json";

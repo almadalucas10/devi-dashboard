@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>POPs · Dêvi</title>
+<style>
+  :root{
+    --bg:#0a0f16; --painel:#0d141c; --campo:#141d27; --linha:#1f2a36; --trilho:#1c2733;
+    --txt:#e8eef4; --txt2:#cfe0ee; --txt3:#8b98a5;
+    --ok:#22c55e; --al:#f59e0b; --er:#ef4444; --az:#3b82f6; --rox:#a855f7; --cinza:#64748b;
+    --ok2:#4ade80; --al2:#fbbf24; --er2:#f87171; --az2:#60a5fa; --rox2:#c4aef0;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; max-width:100%}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt); overflow-x:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-text-size-adjust:100%}
+
+  .topo{position:sticky; top:0; z-index:30; background:#0c1219;
+    border-bottom:1px solid var(--linha); padding:10px 14px}
+  .t1{display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+  .cod{font-size:11px; color:var(--az2); letter-spacing:1px; font-weight:600}
+  .tit{font-size:19px; font-weight:700; letter-spacing:-.4px; line-height:1.15; margin-top:1px}
+  .rev{font-size:11px; color:var(--txt3); text-align:right; white-space:nowrap; line-height:1.5}
+  .ctx{background:#0f1721; border:1px solid #1c2e42; border-radius:8px;
+    padding:7px 10px; margin-top:9px; font-size:12px; color:var(--txt2)}
+  .ctx b{color:var(--az2)}
+  .prog{height:4px; background:var(--linha); border-radius:2px; margin-top:9px; overflow:hidden}
+  .prog i{display:block; height:100%; background:var(--ok); width:0%; transition:width .3s}
+  .ptxt{font-size:11px; color:var(--txt3); margin-top:4px}
+  .voltar{background:none; border:none; color:var(--txt3); font-size:13px; padding:0 0 6px;
+    cursor:pointer; font-family:inherit}
+
+  .wrap{padding:14px; max-width:860px; margin:0 auto}
+
+  /* ---------- lista de POPs ---------- */
+  .grupo-t{font-size:11px; color:var(--txt3); letter-spacing:1px; margin:18px 0 8px}
+  .grupo-t:first-child{margin-top:0}
+  .cardpop{background:var(--painel); border:1px solid var(--linha); border-left-width:4px;
+    border-radius:10px; padding:12px 14px; margin-bottom:8px; cursor:pointer;
+    display:flex; align-items:center; gap:12px}
+  .cardpop:active{background:#111a24}
+  .cardpop .n{font-size:20px; font-weight:700; color:var(--txt3); min-width:34px}
+  .cardpop .c{flex:1; min-width:0}
+  .cardpop .h{font-size:15px; font-weight:600}
+  .cardpop .s{font-size:11px; color:var(--txt3); margin-top:2px}
+  .cardpop .baixar{background:var(--campo); border:1px solid var(--linha); color:var(--txt3);
+    border-radius:7px; padding:7px 11px; font-size:12px; cursor:pointer; font-family:inherit}
+
+  /* ---------- parâmetros ---------- */
+  .params-box{background:var(--painel); border:1px solid var(--linha); border-radius:10px;
+    padding:11px 13px; margin-bottom:16px}
+  .params-box h3{font-size:11px; color:var(--txt3); letter-spacing:.8px; margin:0 0 8px}
+  .prow{display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    padding:5px 0; border-bottom:1px solid #141c26; font-size:13px}
+  .prow:last-child{border-bottom:none}
+  .prow .k{color:var(--txt3)}
+  .prow .v{font-weight:700; white-space:nowrap}
+  .prow .v small{font-size:11px; color:var(--txt3); font-weight:400; margin-left:3px}
+
+  /* ---------- fase ---------- */
+  .fase{margin-bottom:20px}
+  .fase-cab{display:flex; align-items:center; gap:9px; margin-bottom:9px}
+  .fase-n{width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+    font-size:11px; font-weight:700; flex-shrink:0}
+  .fase-t{font-size:13px; font-weight:600; letter-spacing:.3px}
+  .fase-s{font-size:11px; color:var(--txt3); margin-left:auto}
+
+  /* ---------- passo ---------- */
+  .passo{background:var(--painel); border:1px solid var(--linha); border-left-width:4px;
+    border-radius:10px; padding:12px 14px; margin-bottom:8px; display:flex; gap:12px;
+    align-items:flex-start; cursor:pointer}
+  .passo:active{background:#111a24}
+  .passo.feito{opacity:.55}
+  .passo.feito .txt{text-decoration:line-through; text-decoration-color:#4a5764}
+  .chk{width:26px; height:26px; border-radius:7px; border:2px solid var(--linha);
+    flex-shrink:0; display:grid; place-items:center; font-size:15px; color:transparent; margin-top:1px}
+  .passo.feito .chk{background:var(--ok); border-color:var(--ok); color:#062012}
+  .corpo{flex:1; min-width:0}
+  .num{font-size:11px; color:var(--txt3); font-weight:600}
+  .txt{font-size:15px; line-height:1.45; margin-top:2px}
+
+  .params{display:flex; gap:7px; flex-wrap:wrap; margin-top:9px}
+  .par{background:#1a2430; border:1px solid #26313d; border-radius:7px;
+    padding:5px 10px; font-size:13px; display:flex; align-items:center; gap:6px}
+  .par b{font-size:15px; font-weight:700}
+  .par.temp b{color:var(--er2)} .par.tempo b{color:var(--az2)}
+  .par.meta b{color:var(--ok2)} .par.pressao b{color:var(--al2)}
+  .par.dose b{color:var(--rox2)} .par.vol b{color:var(--az2)}
+  .par.prop b{color:var(--txt2)} .par.faixa b{color:var(--al2)}
+
+  .timer{margin-top:9px; display:flex; align-items:center; gap:10px;
+    background:#0f1721; border:1px solid #1c2e42; border-radius:8px; padding:8px 11px}
+  .timer .v{font-size:22px; font-weight:700; font-variant-numeric:tabular-nums;
+    color:var(--az2); min-width:78px}
+  .btn-t{background:var(--az); border:none; color:#fff; border-radius:7px;
+    padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit}
+  .btn-t.parar{background:#334155}
+
+  .link{margin-top:9px; display:flex; align-items:center; gap:8px;
+    background:#12241a; border:1px solid #1d3a28; border-radius:8px;
+    padding:8px 11px; font-size:12px; color:var(--ok2)}
+
+  .aviso{margin-top:9px; background:#1a1410; border-left:3px solid var(--al);
+    border-radius:0 7px 7px 0; padding:8px 11px; font-size:12px; color:var(--txt2); line-height:1.5}
+  .epi{margin-top:9px; background:#2a1214; border-left:3px solid var(--er);
+    border-radius:0 7px 7px 0; padding:8px 11px; font-size:12px; color:var(--er2); line-height:1.5}
+  .epi b{color:#ffc9cc}
+
+  table.mini{width:100%; border-collapse:collapse; margin-top:9px; font-size:12px}
+  table.mini th{text-align:left; color:var(--txt3); font-weight:600; padding:4px 8px 4px 0;
+    border-bottom:1px solid var(--linha); font-size:11px}
+  table.mini td{padding:5px 8px 5px 0; color:var(--txt2); border-bottom:1px solid #141c26;
+    vertical-align:top}
+  table.mini tr:last-child td{border-bottom:none}
+
+  .checklist{margin-top:9px}
+  .cl-item{display:flex; gap:8px; align-items:flex-start; padding:5px 0; font-size:13px;
+    color:var(--txt2); cursor:pointer}
+  .cl-box{width:18px; height:18px; border-radius:5px; border:2px solid var(--linha);
+    flex-shrink:0; display:grid; place-items:center; font-size:11px; color:transparent; margin-top:1px}
+  .cl-item.ok .cl-box{background:var(--ok); border-color:var(--ok); color:#062012}
+
+  /* ---------- decisão ---------- */
+  .dec{background:var(--painel); border:1px solid var(--linha); border-radius:11px;
+    padding:14px; margin-bottom:16px}
+  .dec h3{font-size:15px; margin:0 0 11px; font-weight:600}
+  .opc{border:1.5px solid var(--linha); border-radius:9px; padding:11px 13px;
+    margin-bottom:8px; cursor:pointer}
+  .opc:active{background:#111a24}
+  .opc.sel{border-color:var(--az); background:#0f1721}
+  .opc .ot{font-size:14px; font-weight:600}
+  .opc .oi{font-size:12px; color:var(--txt3); margin-top:3px}
+
+  /* ---------- ciclo / UP ---------- */
+  .reg{background:var(--painel); border:1px solid var(--linha); border-radius:10px;
+    padding:12px 14px; margin-top:9px}
+  .reg h4{font-size:12px; color:var(--txt3); margin:0 0 9px; letter-spacing:.5px}
+  .reg-lin{display:grid; gap:7px; margin-bottom:7px}
+  .reg-lin input{background:var(--campo); border:1.5px solid var(--linha); border-radius:7px;
+    color:var(--txt); font-size:15px; padding:9px 10px; width:100%; min-height:42px;
+    font-family:inherit; outline:none}
+  .reg-lin input:focus{border-color:var(--az)}
+  .reg-cab{display:grid; gap:7px; font-size:10px; color:var(--txt3); margin-bottom:5px}
+  .btn{background:var(--campo); border:1.5px solid var(--linha); color:var(--txt2);
+    border-radius:8px; padding:10px 14px; font-size:13px; cursor:pointer;
+    font-family:inherit; min-height:44px; width:100%}
+  .alvo{display:flex; justify-content:space-between; align-items:baseline; margin-top:11px;
+    font-size:12px; color:var(--txt3)}
+  .alvo b{font-size:22px; font-weight:700; color:var(--ok2)}
+  .barra{height:8px; background:var(--trilho); border-radius:4px; overflow:hidden; margin-top:6px}
+  .barra i{display:block; height:100%; background:var(--ok); transition:width .3s}
+
+  .rod{padding:0 14px 40px; max-width:860px; margin:0 auto}
+  .btn-fim{width:100%; background:var(--az); border:none; color:#fff; border-radius:9px;
+    padding:14px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit}
+  .btn-fim:disabled{background:#243040; color:#5f6d7c}
+
+  .doc{background:var(--painel); border:1px solid var(--linha); border-radius:11px;
+    overflow:hidden; margin-top:22px}
+  .doc-cab{display:flex; align-items:center; gap:10px; padding:13px 14px; cursor:pointer}
+  .doc-cab h2{font-size:14px; font-weight:600; margin:0; flex:1}
+  .chev{color:var(--txt3); font-size:13px; transition:transform .2s}
+  .doc.ab .chev{transform:rotate(90deg)}
+  .doc-corpo{display:none; padding:0 14px 14px; font-size:13px; color:var(--txt2); line-height:1.6}
+  .doc.ab .doc-corpo{display:block}
+  .pend{background:#1a1410; border-left:3px solid var(--al); border-radius:0 7px 7px 0;
+    padding:9px 12px; font-size:12px; color:var(--txt2); line-height:1.5; margin-top:14px}
+</style>
+</head>
+<body>
+
+<div class="topo" id="topo"></div>
+<div class="wrap" id="wrap"></div>
+<div class="rod" id="rod"></div>
+
+<script>
+// ===========================================================================
+// Em produção, POPS vem de /api/pops (gerado a partir de pops.json)
+// Aqui embutido para o protótipo funcionar isolado.
+// ===========================================================================
+const CORES = { azul:'--az', vermelho:'--er', roxo:'--rox', ambar:'--al',
+                verde:'--ok', cinza:'--cinza' };
+const CORES_BG = { azul:'#1e3a5f', vermelho:'#3a1f14', roxo:'#2a1f3d',
+                   ambar:'#3a2a12', verde:'#12241a', cinza:'#1c2733' };
+const CORES_FG = { azul:'#60a5fa', vermelho:'#f87171', roxo:'#c4aef0',
+                   ambar:'#fbbf24', verde:'#4ade80', cinza:'#8b98a5' };
+
+let POPS = null, atual = null, contexto = null;
+
+// contexto da OP — em produção vem da ficha
+const CTX_DEMO = { op:'2026/00517', sigla:'RFV', familia:'refri',
+                   produto:'Refri Frutas Vermelhas' };
+
+// ---------------------------------------------------------------------------
+async function carregar(){
+  try {
+    const r = await fetch('pops.json');
+    POPS = await r.json();
+  } catch(e) {
+    document.getElementById('wrap').innerHTML =
+      '<p style="color:#f87171">Não foi possível carregar pops.json. '
+      + 'Sirva os dois arquivos pelo mesmo servidor.</p>';
+    return;
+  }
+  const p = new URLSearchParams(location.search);
+  contexto = p.get('op') ? { op:p.get('op'), sigla:p.get('sku')||'', familia:p.get('familia')||'' }
+                         : null;
+  const cod = p.get('pop');
+  if (cod) abrir(cod); else lista();
+}
+
+// ---------------------------------------------------------------------------
+function lista(){
+  atual = null;
+  document.getElementById('rod').innerHTML = '';
+  document.getElementById('topo').innerHTML = `
+    <div class="t1">
+      <div><div class="cod">PROCEDIMENTOS</div>
+        <div class="tit">POPs de Processo</div></div>
+      <div class="rev">${POPS.pops.length} documentos</div>
+    </div>
+    ${contexto ? `<div class="ctx">Filtrado pela <b>OP #${contexto.op}</b> — ${contexto.sigla}</div>` : ''}`;
+
+  const relevantes = contexto && contexto.familia
+    ? (POPS.familias[contexto.familia] || [])
+    : null;
+
+  const render = (lst, titulo) => lst.length ? `
+    <div class="grupo-t">${titulo}</div>
+    ${lst.map(p => `
+      <div class="cardpop" style="border-left-color:var(--az)" onclick="abrir('${p.codigo}')">
+        <span class="n">${p.numero}</span>
+        <span class="c">
+          <span class="h">${p.titulo}</span>
+          <span class="s">rev. ${p.revisao} · ${p.data} · ${contaPassos(p)} passos</span>
+        </span>
+        <button class="baixar" onclick="event.stopPropagation(); baixar('${p.codigo}')">↓ Baixar</button>
+      </div>`).join('')}` : '';
+
+  let html = '';
+  if (relevantes) {
+    const dentro = POPS.pops.filter(p => relevantes.includes(p.codigo));
+    const fora   = POPS.pops.filter(p => !relevantes.includes(p.codigo));
+    html = render(dentro, 'APLICÁVEIS A ESTA OP') + render(fora, 'DEMAIS PROCEDIMENTOS');
+  } else {
+    html = render(POPS.pops, 'TODOS OS PROCEDIMENTOS');
+  }
+  document.getElementById('wrap').innerHTML = html;
+}
+
+const contaPassos = p => {
+  if (p.tipo === 'decisao') {
+    const c = (p.fasesComuns?.antes?.passos?.length || 0)
+            + (p.fasesComuns?.filtragem?.passos?.length || 0)
+            + (p.fasesComuns?.depois?.passos?.length || 0);
+    return c + Math.max(...p.decisao.opcoes.map(o => o.passos.length));
+  }
+  return (p.fases||[]).reduce((a,f) => a + (f.passos||[]).length, 0);
+};
+
+function baixar(cod){
+  const p = POPS.pops.find(x => x.codigo === cod);
+  const id = p && p.driveId;
+  if (id) {
+    window.open('https://devi-dashboard-worker.almadalucas.workers.dev/api/qualidade/pops/' + encodeURIComponent(id) + '/pdf', '_blank');
+    return;
+  }
+  alert(`Download do PDF do ${cod}.\n\nSem driveId configurado no pops.json.`);
+}
+
+// ---------------------------------------------------------------------------
+function abrir(cod){
+  atual = POPS.pops.find(p => p.codigo === cod);
+  if (!atual) return;
+
+  document.getElementById('topo').innerHTML = `
+    <button class="voltar" onclick="lista()">‹ todos os POPs</button>
+    <div class="t1">
+      <div><div class="cod">POP ${atual.numero}</div>
+        <div class="tit">${atual.titulo}</div></div>
+      <div class="rev">Revisão ${atual.revisao}<br>${atual.data}</div>
+    </div>
+    ${contexto ? `<div class="ctx">Aberto a partir da <b>OP #${contexto.op}</b> — ${contexto.sigla}</div>` : ''}
+    <div class="prog"><i id="pb"></i></div>
+    <div class="ptxt" id="pt"></div>`;
+
+  let html = paramsBox(atual);
+
+  if (atual.tipo === 'decisao') {
+    html += blocoDecisao(atual);
+    html += '<div id="ramo"></div>';
+  } else {
+    html += (atual.fases||[]).map((f,i) => renderFase(f, i+1, atual)).join('');
+  }
+
+  if (atual.encadeamento) html += blocoEncadeamento(atual);
+  if (atual.pendencia) html += `<div class="pend"><b style="color:var(--al2)">Pendência:</b> ${atual.pendencia}</div>`;
+
+  document.getElementById('wrap').innerHTML = html;
+  document.getElementById('rod').innerHTML =
+    `<button class="btn-fim" id="btnFim" onclick="concluir()">Concluir procedimento</button>`;
+
+  if (atual.tipo === 'decisao') selecionar(atual.decisao.opcoes[0].id);
+  atualizar();
+}
+
+function paramsBox(p){
+  if (!p.parametros?.length) return '';
+  return `<div class="params-box"><h3>PARÂMETROS DO PROCESSO</h3>
+    ${p.parametros.map(x => `<div class="prow"><span class="k">${x.nome}</span>
+      <span class="v">${x.valor}${x.un ? `<small>${x.un}</small>` : ''}</span></div>`).join('')}
+  </div>`;
+}
+
+function renderFase(f, idx, pop){
+  const bg = CORES_BG[f.cor] || CORES_BG.cinza;
+  const fg = CORES_FG[f.cor] || CORES_FG.cinza;
+  const cor = `var(${CORES[f.cor] || '--cinza'})`;
+  let corpo = (f.passos||[]).map(s => renderPasso(s, cor, pop)).join('');
+  if (f.tabela) corpo = tabela(f.tabela) + corpo;
+  return `<div class="fase">
+    <div class="fase-cab">
+      <span class="fase-n" style="background:${bg};color:${fg}">${idx}</span>
+      <span class="fase-t">${f.nome}</span>
+      <span class="fase-s">${(f.passos||[]).length} ${(f.passos||[]).length===1?'passo':'passos'}</span>
+    </div>${corpo}</div>`;
+}
+
+function renderPasso(s, cor, pop){
+  let extra = '';
+  if (s.params) extra += `<div class="params">${s.params.map(p =>
+    `<span class="par ${p.tipo}">${p.icone} <b>${p.valor}</b></span>`).join('')}</div>`;
+  if (s.timer) extra += timerHTML(s.timer, s.n);
+  if (s.epi) extra += `<div class="epi"><b>EPI obrigatório:</b> ${s.epi.join(' e ')}.</div>`;
+  if (s.aviso) extra += `<div class="aviso">${s.aviso}</div>`;
+  if (s.tabela) extra += tabela(s.tabela);
+  if (s.checklist) extra += `<div class="checklist">${s.checklist.map(c =>
+    `<div class="cl-item" onclick="event.stopPropagation(); this.classList.toggle('ok')">
+      <span class="cl-box">✓</span><span>${c}</span></div>`).join('')}</div>`;
+  if (s.link) extra += `<div class="link">→ <span>${s.link.txt}</span></div>`;
+  if (s.cicloAqui && pop.ciclo) extra += cicloHTML(pop.ciclo);
+  if (s.upAqui && pop.up) extra += upHTML(pop.up);
+  if (s.cipAqui && pop.decisaoCIP) extra += cipHTML(pop.decisaoCIP);
+
+  return `<div class="passo" style="border-left-color:${cor}" onclick="marcar(this)">
+    <div class="chk">✓</div>
+    <div class="corpo"><div class="num">${s.n}</div>
+      <div class="txt">${s.txt}</div>${extra}</div>
+  </div>`;
+}
+
+const tabela = t => `<table class="mini"><tr>${t.cab.map(c=>`<th>${c}</th>`).join('')}</tr>
+  ${t.linhas.map(l=>`<tr>${l.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
+
+// ---------------------------------------------------------------------------
+let timers = {};
+function timerHTML(seg, id){
+  timers['t'+id] = { total: seg, restante: seg, int: null };
+  const m = String(Math.floor(seg/60)).padStart(2,'0');
+  return `<div class="timer">
+    <span class="v" id="tv${id}">${m}:00</span>
+    <button class="btn-t" id="tb${id}" onclick="event.stopPropagation(); timer('${id}')">Iniciar</button>
+    <span style="font-size:11px;color:var(--txt3)">avisa ao terminar</span></div>`;
+}
+function timer(id){
+  const t = timers['t'+id], b = document.getElementById('tb'+id);
+  if (t.int){ clearInterval(t.int); t.int=null; b.textContent='Retomar'; b.classList.remove('parar'); return; }
+  b.textContent='Pausar'; b.classList.add('parar');
+  t.int = setInterval(()=>{
+    t.restante--;
+    const m = String(Math.floor(t.restante/60)).padStart(2,'0');
+    const s = String(t.restante%60).padStart(2,'0');
+    document.getElementById('tv'+id).textContent = `${m}:${s}`;
+    if (t.restante<=0){ clearInterval(t.int); t.int=null; b.textContent='Concluído';
+      document.getElementById('tv'+id).style.color='var(--ok2)'; }
+  },1000);
+}
+
+// ---------------------------------------------------------------------------
+function cicloHTML(c){
+  return `<div class="reg" onclick="event.stopPropagation()">
+    <h4>LEITURAS — a cada ${c.intervaloMin} min</h4>
+    <div class="reg-cab" style="grid-template-columns:repeat(4,1fr)">
+      ${c.campos.map(x=>`<span>${x}</span>`).join('')}</div>
+    <div id="cicloLin"></div>
+    <button class="btn" onclick="addCiclo()">+ Registrar leitura</button>
+    <div class="alvo"><span>Pressão atual · alvo ${c.alvo} ${c.unidade}</span>
+      <b id="cicloAtual">—</b></div>
+    <div class="barra"><i id="cicloBarra" style="width:0%"></i></div>
+  </div>`;
+}
+function addCiclo(){
+  const alvo = atual.ciclo.alvo;
+  const d = document.createElement('div');
+  d.className='reg-lin'; d.style.gridTemplateColumns='repeat(4,1fr)';
+  d.innerHTML = `<input type="time"><input type="text" inputmode="decimal" placeholder="°C">
+    <input type="text" inputmode="decimal" placeholder="cil"><input type="text" inputmode="decimal" placeholder="tanque">`;
+  document.getElementById('cicloLin').appendChild(d);
+  d.querySelectorAll('input')[3].addEventListener('input', e=>{
+    const v = parseFloat(String(e.target.value).replace(',','.'));
+    if (isNaN(v)) return;
+    document.getElementById('cicloAtual').textContent = v.toFixed(2);
+    const pct = Math.min(100, v/alvo*100);
+    const b = document.getElementById('cicloBarra');
+    b.style.width = pct+'%';
+    b.style.background = v>=alvo ? 'var(--ok)' : 'var(--al)';
+  });
+}
+
+// ---------------------------------------------------------------------------
+function upHTML(u){
+  return `<div class="reg" onclick="event.stopPropagation()">
+    <h4>REGISTRO DE TEMPERATURA — ${u.formula}</h4>
+    <div class="reg-cab" style="grid-template-columns:1fr 1fr 90px">
+      <span>Temperatura (°C)</span><span>Tempo (min)</span><span>UP do trecho</span></div>
+    <div id="upLin"></div>
+    <button class="btn" onclick="addUP()">+ Registrar intervalo</button>
+    <div class="alvo"><span>UP acumulada${u.alvo ? ' · alvo '+u.alvo : ''}</span>
+      <b id="upTotal">0,00</b></div>
+    ${!u.alvo ? `<div class="aviso" style="margin-top:9px">${u.nota}</div>` : ''}
+  </div>`;
+}
+function addUP(){
+  const d = document.createElement('div');
+  d.className='reg-lin'; d.style.gridTemplateColumns='1fr 1fr 90px';
+  d.innerHTML = `<input type="text" inputmode="decimal" placeholder="T °C">
+    <input type="text" inputmode="decimal" placeholder="min">
+    <input type="text" readonly style="background:#0c1219;color:var(--ok2);font-weight:700">`;
+  document.getElementById('upLin').appendChild(d);
+  const ins = d.querySelectorAll('input');
+  const calc = () => {
+    const T = parseFloat(String(ins[0].value).replace(',','.'));
+    const t = parseFloat(String(ins[1].value).replace(',','.'));
+    if (isNaN(T)||isNaN(t)) { ins[2].value=''; }
+    else ins[2].value = (t * Math.pow(1.393, T-60)).toFixed(2);
+    somaUP();
+  };
+  ins[0].addEventListener('input', calc);
+  ins[1].addEventListener('input', calc);
+}
+function somaUP(){
+  let s = 0;
+  document.querySelectorAll('#upLin .reg-lin').forEach(l=>{
+    const v = parseFloat(l.querySelectorAll('input')[2].value);
+    if (!isNaN(v)) s += v;
+  });
+  document.getElementById('upTotal').textContent = s.toFixed(2).replace('.',',');
+}
+
+// ---------------------------------------------------------------------------
+function cipHTML(d){
+  return `<div class="reg" onclick="event.stopPropagation()">
+    <h4>${d.pergunta}</h4>
+    ${d.opcoes.map((o,i)=>`
+      <div class="opc" onclick="selCIP(${i}, this)">
+        <div class="ot">${o.titulo}</div>
+        <div class="oi">${o.quando}</div>
+      </div>`).join('')}
+    <div id="cipDet"></div></div>`;
+}
+function selCIP(i, el){
+  document.querySelectorAll('#cipDet').forEach(x=>x.innerHTML='');
+  el.parentElement.querySelectorAll('.opc').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+  const o = atual.decisaoCIP.opcoes[i];
+  document.getElementById('cipDet').innerHTML = tabela({
+    cab:['#','Produto','Tempo'], linhas:o.etapas });
+}
+
+// ---------------------------------------------------------------------------
+function blocoDecisao(p){
+  return `<div class="dec"><h3>${p.decisao.pergunta}</h3>
+    ${p.decisao.opcoes.map(o=>`
+      <div class="opc" id="op-${o.id}" onclick="selecionar('${o.id}')">
+        <div class="ot">${o.titulo}</div>
+        <div class="oi">${o.insumos.join(' · ')}</div>
+      </div>`).join('')}</div>`;
+}
+function selecionar(id){
+  document.querySelectorAll('.dec .opc').forEach(x=>x.classList.remove('sel'));
+  document.getElementById('op-'+id).classList.add('sel');
+  const o = atual.decisao.opcoes.find(x=>x.id===id);
+  const fc = atual.fasesComuns;
+  const cor = `var(${CORES[o.cor]||'--cinza'})`;
+  let n = 1, html = '';
+  if (fc.antes) html += renderFase(fc.antes, n++, atual);
+  html += renderFase({ nome:o.titulo.toUpperCase(), cor:o.cor, passos:o.passos }, n++, atual);
+  if (o.filtra && fc.filtragem) html += renderFase(fc.filtragem, n++, atual);
+  if (fc.depois) html += renderFase(fc.depois, n++, atual);
+  document.getElementById('ramo').innerHTML = html;
+  atualizar();
+}
+
+function blocoEncadeamento(p){
+  const nome = c => { const x = POPS.pops.find(y=>y.codigo===c); return x ? `POP ${x.numero} — ${x.titulo}` : c; };
+  const l = [];
+  if (p.encadeamento.antes?.length)  l.push(['Antes',  p.encadeamento.antes]);
+  if (p.encadeamento.depois?.length) l.push(['Depois', p.encadeamento.depois]);
+  if (!l.length) return '';
+  return `<div class="doc ab"><div class="doc-cab" onclick="this.parentElement.classList.toggle('ab')">
+      <span class="chev">▸</span><h2>Encadeamento</h2></div>
+    <div class="doc-corpo">${l.map(([k,v])=>`<p><b>${k}:</b> ${v.map(c=>
+      `<a href="#" onclick="abrir('${c}');return false" style="color:var(--az2)">${nome(c)}</a>`
+      ).join(' · ')}</p>`).join('')}</div></div>`;
+}
+
+// ---------------------------------------------------------------------------
+function marcar(el){ el.classList.toggle('feito'); atualizar(); }
+
+function atualizar(){
+  const tot = document.querySelectorAll('.passo').length;
+  const f = document.querySelectorAll('.passo.feito').length;
+  const pb = document.getElementById('pb');
+  if (!pb) return;
+  pb.style.width = tot ? (f/tot*100)+'%' : '0%';
+  document.getElementById('pt').textContent = `${f} de ${tot} passos`;
+  const b = document.getElementById('btnFim');
+  if (b) { b.disabled = f < tot;
+    b.textContent = f<tot ? `Concluir (${tot-f} restantes)` : 'Concluir procedimento'; }
+}
+
+function concluir(){
+  const msg = contexto
+    ? `Registrado na ficha da OP #${contexto.op}.\n\n${atual.codigo} rev. ${atual.revisao}`
+    : `${atual.codigo} rev. ${atual.revisao} concluído.`;
+  alert(msg);
+}
+
+carregar();
+</script>
+</body>
+</html>
