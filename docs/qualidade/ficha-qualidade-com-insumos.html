@@ -878,15 +878,17 @@ function abrirControles(){
   if(ctx && opAtual) ctx.innerHTML = `OP #${num} · ${skuAtual || ''}<br>registro unificado das OPs`;
   const o = document.getElementById('pc3Op'); if(o) o.value = num;
   const draft = num ? carregarDraftControle(num) : null;
+  const set = (id, v) => { const e = document.getElementById(id); if(e) e.value = (v === undefined || v === null) ? '' : v; };
+  // sempre limpa primeiro — nunca herda o que foi digitado na OP anterior
+  ['pc3Data','pc3Hi','pc3Qtd','pc3Hf','pc3Resp','pc3Cip','pc3Obs'].forEach(id => set(id, ''));
   if(draft && Object.keys(draft).length){
-    const set = (id, v) => { const e = document.getElementById(id); if(e && v !== undefined && v !== null && v !== '') e.value = v; };
     set('pc3Data', draft.data); set('pc3Hi', draft.horarioInicial); set('pc3Qtd', draft.quantidade);
     set('pc3Hf', draft.horarioFinal); set('pc3Resp', draft.responsavel); set('pc3Cip', draft.cip); set('pc3Obs', draft.observacoes);
   } else {
     const hoje = new Date();
     const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-    const d = document.getElementById('pc3Data'); if(d) d.value = iso;
-    const q = document.getElementById('pc3Qtd'); if(q) q.value = opQtd || '';
+    set('pc3Data', iso);
+    set('pc3Qtd', opQtd || '');
   }
   carregarRegistros();
 }

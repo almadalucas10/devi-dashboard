@@ -15,7 +15,10 @@ let gets = [];
 function mockFetch(url, opts) {
   const u = String(url), m = (opts && opts.method) || 'GET';
   if (u.includes('/api/qualidade/fichas')) {
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [{ op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 }] }) });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [
+      { op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 },
+      { op: '2026/00517', sku: 'RF002', qtd: 7435, nCodOP: 9226163665 },
+    ] }) });
   }
   if (u.includes('/api/qualidade/controle/pc3') && m === 'GET') {
     gets.push(u.includes('op=') ? 'GET?op' : 'GET');
@@ -56,7 +59,10 @@ ok(cipOpts.includes('1 — água + soda + peracético') && cipOpts.includes('2 �
 ok($('select#pc3Cip option[value="1"]') && $('select#pc3Cip option[value="2"]'), 'valores CIP permanecem 1/2');
 
 // ---- abrir a OP e depois o modal ----
-window.preencherOPS([{ op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 }]);
+window.preencherOPS([
+  { op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 },
+  { op: '2026/00517', sku: 'RF002', qtd: 7435, nCodOP: 9226163665 },
+]);
 window.abrirOp('2026/00528');
 setTimeout(() => {
   window.abrirControles();
@@ -88,7 +94,15 @@ setTimeout(() => {
     ok($('#modalControle').style.display === 'none', 'modal fechado sem salvar');
     ok(!!window.localStorage.getItem('pc3Draft-528'), 'draft salvo por OP (pc3Draft-528)');
 
-    // ---- reabrir: valores restaurados ----
+    // ---- trocar para OUTRA OP sem draft: deve abrir EM BRANCO (bug reportado) ----
+    window.abrirOp('2026/00517');
+    window.abrirControles();
+    ok($('#pc3Resp').value === '' && $('#pc3Hi').value === '' && $('#pc3Obs').value === '', 'OP 517 abre em branco (sem herdar dados da 528)');
+    ok($('#pc3Op').value === '517', 'OP 517 preenchida no campo');
+    window.fecharControles();
+
+    // ---- voltar p/ 528: rascunho restaurado ----
+    window.abrirOp('2026/00528');
     window.abrirControles();
     setTimeout(() => {
       ok($('#pc3Hi').value === '07:30' && $('#pc3Resp').value === 'MB' && $('#pc3Obs').value === 'turno da manhã', 'draft restaurado ao reabrir');
