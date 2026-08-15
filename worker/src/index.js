@@ -588,9 +588,28 @@ export default {
     }
     // Ficha salva (R2) + fichas do mês (D1)
     // Arquivo das fichas — lista das salvas (D1) e abertura do PDF anexado na OP
-    // Arquivo de POPs — lista da pasta do Drive (com cache) e download do PDF
-    if (url.pathname === "/api/qualidade/pops") {
+    // ============ PLANILHAS DE CONTROLE — PC3 Envase (registro no MODELO REGISTRO) ============
+    if (url.pathname === "/api/qualidade/controle/pc3" && request.method === "GET") {
       try {
+        const { listarRegistros } = await import("./controle.js");
+        const n = parseInt(url.searchParams.get("n") || "10", 10);
+        return json(await listarRegistros(env, Math.min(Math.max(n, 1), 50)));
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+    if (url.pathname === "/api/qualidade/controle/pc3" && request.method === "POST") {
+      try {
+        const { registrarControle } = await import("./controle.js");
+        const body = await request.json();
+        const rec = body.registro || body;
+        if (!rec || !rec.data || !rec.op) {
+          return json({ erro: "envie { registro: { data, horarioInicial, op, quantidade, horarioFinal, responsavel, cip, observacoes } }" }, 400);
+        }
+        return json(await registrarControle(env, rec));
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
+
+    // Arquivo de POPs — lista da pasta do Drive (com cache) e download do PDF
+    if (url.pathname === "/api/qualidade/pops") {      try {
         const { listarPOPs } = await import("./pops.js");
         const folder = url.searchParams.get("folder") || "";
         const KEY = "qualidade-pops-v2.json";

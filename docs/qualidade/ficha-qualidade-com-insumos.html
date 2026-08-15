@@ -237,6 +237,26 @@
   .avi.az{border-left-color:var(--az); background:#0f1721}
   .avi.az b{color:#7dd3fc}
 
+  /* ---------- planilhas de controle (PC3) ---------- */
+  .ctl-cab{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    background:#0f1721; border:1px solid #1c2e42; border-radius:10px; padding:10px 12px; margin-bottom:12px}
+  .ctl-cod{font-size:11px; color:var(--az2); letter-spacing:1px; font-weight:600}
+  .ctl-tit{font-size:16px; font-weight:700; margin-top:1px}
+  .ctl-meta{font-size:11px; color:var(--txt3); text-align:right; line-height:1.5}
+  .ctl-meta b{color:var(--txt2)}
+  .ctl-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+  .ctl-grid .campo:nth-child(8){grid-column:1/-1}
+  .ctl-nota{font-size:11px; color:var(--txt3); margin:8px 2px 12px; line-height:1.4}
+  .ctl-aviso{border-left:3px solid var(--er); background:#1a1214; border-radius:0 6px 6px 0;
+    padding:8px 11px; font-size:12px; color:var(--er2); margin-top:10px}
+  .ctl-aviso.ok{border-left-color:var(--ok); background:#12241a; color:var(--ok2)}
+  .ctl-rec-tit{font-size:12px; letter-spacing:.5px; color:var(--txt3); margin:16px 0 8px}
+  .ctlRec{display:grid; grid-template-columns:90px 60px 60px 1fr 70px; gap:6px;
+    background:var(--campo); border:1px solid var(--linha); border-radius:9px; padding:8px 11px;
+    font-size:12px; align-items:center}
+  .ctlRec b{color:var(--txt); font-size:13px}
+  .ctlRec .r{color:var(--txt3); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
   .rod{padding:0 14px 30px; max-width:820px; margin:0 auto}
   .resumo{display:none; background:var(--painel); border:1px solid var(--linha);
     border-radius:12px; padding:12px 14px; margin-bottom:12px}
@@ -318,6 +338,7 @@
     <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
     <button class="btn btnNav" onclick="abrirArquivo()">📄 Fichas</button>
     <button class="btn btnNav" onclick="abrirPOPs()">📋 POPs</button>
+    <button class="btn btnNav" onclick="abrirControles()">📑 Controle</button>
     <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
   </div>
   <div class="t1">
@@ -351,6 +372,7 @@
     <div class="topoAcoes">
       <button class="btn btnNav" onclick="abrirArquivo()">📄 Arquivo das fichas</button>
       <button class="btn btnNav" onclick="abrirPOPs()">📋 Arquivo de POPs</button>
+      <button class="btn btnNav" onclick="abrirControles()">📑 Controle</button>
       <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
     </div>
   </div>
@@ -542,6 +564,50 @@
       <button class="bx" style="font-size:24px" onclick="fecharPOPs()">×</button>
     </div>
     <div id="popLista" class="modalLista"></div>
+  </div>
+</div>
+
+<!-- ============ PLANILHAS DE CONTROLE — PC3 ENVASE (modal) ============ -->
+<div class="modal" id="modalControle" onclick="if(event.target===this)fecharControles()">
+  <div class="modalBox" style="max-width:680px">
+    <div class="modalCab">
+      <h2>📑 Planilhas de Controle</h2>
+      <button class="bx" style="font-size:24px" onclick="fecharControles()">×</button>
+    </div>
+    <div class="ctl">
+      <div class="ctl-cab">
+        <div>
+          <div class="ctl-cod">PC3</div>
+          <div class="ctl-tit">Controle de Envase</div>
+        </div>
+        <div class="ctl-meta">registro na aba <b>MODELO REGISTRO</b></div>
+      </div>
+      <div class="ctl-grid">
+        <div class="campo"><label>Data</label>
+          <input type="date" id="pc3Data"><div class="msg"></div></div>
+        <div class="campo"><label>Horário Inicial</label>
+          <input type="time" id="pc3Hi"><div class="msg"></div></div>
+        <div class="campo"><label>OP</label>
+          <input type="text" inputmode="numeric" id="pc3Op" placeholder="ex.: 528"><div class="msg"></div></div>
+        <div class="campo"><label>Quantidade</label>
+          <input type="text" inputmode="numeric" id="pc3Qtd" placeholder="un"><div class="msg"></div></div>
+        <div class="campo"><label>Horário Final</label>
+          <input type="time" id="pc3Hf"><div class="msg"></div></div>
+        <div class="campo"><label>Responsável</label>
+          <input type="text" id="pc3Resp"><div class="msg"></div></div>
+        <div class="campo"><label>CIP*</label>
+          <select id="pc3Cip">
+            <option value="">—</option><option value="1">1</option><option value="2">2</option>
+          </select><div class="msg"></div></div>
+        <div class="campo"><label>Observações</label>
+          <input type="text" id="pc3Obs"><div class="msg"></div></div>
+      </div>
+      <div class="ctl-nota">*CIP: 1 (água + soda + peracético); 2 (peracético)</div>
+      <button class="btn pri" id="btnGerar" onclick="gerarRegistro()">＋ Gerar registro</button>
+      <div class="ctl-aviso" id="ctlAviso" style="display:none"></div>
+      <h3 class="ctl-rec-tit">Últimos registros</h3>
+      <div id="ctlRecentes" class="modalLista"></div>
+    </div>
   </div>
 </div>
 
@@ -751,6 +817,79 @@ async function abrirPOPs(){
 }
 
 function fecharPOPs(){ const m = document.getElementById('modalPOPs'); if(m) m.style.display = 'none'; }
+
+// ---------------------------------------------------------------------------
+// Planilhas de Controle — PC3 Envase: registro na aba MODELO REGISTRO
+// ---------------------------------------------------------------------------
+function avisoCtl(txt, ok){
+  const a = document.getElementById('ctlAviso');
+  a.style.display = txt ? 'block' : 'none';
+  a.className = 'ctl-aviso' + (ok ? ' ok' : '');
+  a.textContent = txt || '';
+}
+function renderRegistros(j){
+  const el = document.getElementById('ctlRecentes');
+  const regs = (j && j.registros) || [];
+  if(!regs.length){ el.innerHTML = '<div class="sub" style="padding:10px;color:var(--txt3)">Nenhum registro ainda (ou planilha não compartilhada).</div>'; return; }
+  el.innerHTML = regs.slice().reverse().map(r => `
+    <div class="ctlRec">
+      <b>${r['Data'] || '—'}</b>
+      <span>${r['Horário Inicial'] || '—'}</span>
+      <span>${r['Horário Final'] || '—'}</span>
+      <span>OP ${r['OP'] || '—'} · ${r['Quantidade'] || ''} un${r['CIP*'] ? ' · CIP ' + r['CIP*'] : ''}</span>
+      <span class="r">${r['Responsável'] || ''}</span>
+    </div>`).join('');
+}
+async function carregarRegistros(){
+  const el = document.getElementById('ctlRecentes');
+  el.innerHTML = '<div class="sub" style="padding:10px;color:var(--txt3)">Carregando registros…</div>';
+  try{
+    const r = await fetch(WORKER_URL + '/api/qualidade/controle/pc3?n=6', { cache: 'no-store' });
+    const j = await r.json();
+    if(!r.ok || j.erro) throw new Error(j.erro || ('HTTP ' + r.status));
+    renderRegistros(j);
+  }catch(e){
+    el.innerHTML = `<div class="sub" style="padding:10px;color:var(--er2)">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+function abrirControles(){
+  const m = document.getElementById('modalControle');
+  if(!m) return;
+  m.style.display = 'flex';
+  avisoCtl('');
+  carregarRegistros();
+}
+function fecharControles(){ const m = document.getElementById('modalControle'); if(m) m.style.display = 'none'; }
+function gerarRegistro(){
+  const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  const rec = {
+    data: v('pc3Data'), horarioInicial: v('pc3Hi'), op: v('pc3Op'),
+    quantidade: v('pc3Qtd'), horarioFinal: v('pc3Hf'), responsavel: v('pc3Resp'),
+    cip: v('pc3Cip'), observacoes: v('pc3Obs'),
+  };
+  const faltam = [];
+  if(!rec.data) faltam.push('Data');
+  if(!rec.horarioInicial) faltam.push('Horário Inicial');
+  if(!rec.op) faltam.push('OP');
+  if(!rec.quantidade) faltam.push('Quantidade');
+  if(!rec.horarioFinal) faltam.push('Horário Final');
+  if(!rec.responsavel) faltam.push('Responsável');
+  if(faltam.length){ avisoCtl('Preencha: ' + faltam.join(', ') + '.'); return; }
+  const btn = document.getElementById('btnGerar');
+  btn.disabled = true; btn.textContent = 'Gravando…';
+  fetch(WORKER_URL + '/api/qualidade/controle/pc3', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ registro: rec }),
+  }).then(r => r.json()).then(j => {
+    btn.disabled = false; btn.textContent = '＋ Gerar registro';
+    if(j.ok){ avisoCtl(`Registro gravado na linha ${j.linha} do PC3.`, true);
+      ['pc3Data','pc3Hi','pc3Op','pc3Qtd','pc3Hf','pc3Resp','pc3Cip','pc3Obs'].forEach(i => {
+        const e = document.getElementById(i); if(e) e.value = '';
+      });
+      carregarRegistros();
+    } else { avisoCtl('Erro: ' + (j.erro || 'falha ao gravar')); }
+  }).catch(e => { btn.disabled = false; btn.textContent = '＋ Gerar registro'; avisoCtl('Erro: ' + e.message); });
+}
 
 let _resetando = false; // evita o auto-salvar durante o reset (não sobrescreve rascunho)
 function resetarFicha(){

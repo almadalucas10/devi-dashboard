@@ -196,6 +196,23 @@ export async function deleteRows(env, token, spreadsheetId, sheetId, startIndex,
 }
 
 /**
+ * Escreve uma linha inteira (values.update com um array) — ex.: A3:H3.
+ */
+export async function setRange(env, token, spreadsheetId, range, values) {
+  const url = `${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ values: [values] }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets setRange ${range}: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
  * Escreve um valor em uma única célula (ex: A1).
  */
 export async function setValue(env, token, range, value, spreadsheetId = env.SPREADSHEET_ID) {
