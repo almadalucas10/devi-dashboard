@@ -41,17 +41,21 @@ export async function primeiraLinhaVazia(env, token, spreadsheetId, tab) {
   return 3 + colA.length;
 }
 
-/** Últimos registros (do fim da tabela para cima) + cabeçalho. */
-export async function listarRegistros(env, n = 10) {
+/** Últimos registros (do fim da tabela para cima) + cabeçalho. Opcional: filtra por OP. */
+export async function listarRegistros(env, n = 10, opFiltro = null) {
   const id = sheetId(env);
   if (!id) return { erro: "CONTROLE_PC3_ID não configurado" };
   const token = await getAccessToken(env);
   const valores = await getValues(env, token, `${PC3_TAB}!A2:H2000`, id);
   if (!valores.length) return { cabecalho: PC3_HEADERS, registros: [] };
   const cabecalho = valores[0];
-  const linhas = valores.slice(1).filter((l) =>
+  let linhas = valores.slice(1).filter((l) =>
     l.some((c) => String(c).trim() !== "") &&
     !String(l[0] || "").trim().startsWith("*CIP")); // nota de rodapé do template
+  if (opFiltro) {
+    const alvo = String(opFiltro).replace(/\D/g, "");
+    linhas = linhas.filter((l) => String(l[2] || "").replace(/\D/g, "") === alvo); // coluna OP
+  }
   const ultimas = linhas.slice(-n).map((l) => {
     const rec = {};
     cabecalho.forEach((h, i) => { rec[h] = l[i] ?? ""; });

@@ -602,7 +602,8 @@ export default {
       try {
         const { listarRegistros } = await import("./controle.js");
         const n = parseInt(url.searchParams.get("n") || "10", 10);
-        return json(await listarRegistros(env, Math.min(Math.max(n, 1), 50)));
+        const op = url.searchParams.get("op") || null;
+        return json(await listarRegistros(env, Math.min(Math.max(n, 1), 50), op));
       } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
     }
     if (url.pathname === "/api/qualidade/controle/pc3" && request.method === "POST") {
