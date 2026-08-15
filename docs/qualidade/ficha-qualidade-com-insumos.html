@@ -272,6 +272,21 @@
   .opc .l3.fer{color:var(--al2)}
   .opc .l3.fer.ok{color:var(--ok2)}
   .opc .l3.fer.er{color:var(--er2); font-weight:800}
+
+  /* ---------- arquivo das fichas (modal) ---------- */
+  .modal{display:none; position:fixed; inset:0; z-index:50; background:rgba(4,8,12,.74);
+    align-items:flex-start; justify-content:center; padding:36px 14px; overflow-y:auto}
+  .modalBox{background:var(--painel); border:1px solid var(--linha); border-radius:14px;
+    width:100%; max-width:640px; padding:14px}
+  .modalCab{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+  .modalCab h2{font-size:16px; margin:0; color:var(--txt)}
+  .modalLista{display:flex; flex-direction:column; gap:8px}
+  .arqItem{display:flex; justify-content:space-between; align-items:center; gap:10px;
+    background:var(--campo); border:1px solid var(--linha); border-radius:10px; padding:9px 12px}
+  .arqItem .l1{font-size:14px; font-weight:700}
+  .arqItem .l1 span{color:var(--az)}
+  .arqItem .l2{font-size:12px; color:var(--txt3); margin-top:1px}
+  .arqItem .r{display:flex; align-items:center; gap:8px}
   .opc .l3.fer-alta{color:var(--er2); font-weight:800}
   .opc .r{text-align:right}
   .opc .q{font-size:13px; color:var(--txt2)}
@@ -318,7 +333,7 @@
       <div class="sub">12/08/2026 · toque na OP para abrir a ficha · em produção a lista vem de <b>ListarOrdemProducao</b> (lExibirItens)</div>
     </div>
     <div class="topoAcoes">
-      <button class="btn btnNav" onclick="baixarArquivoOPs()">📄 Arquivo das OPs</button>
+      <button class="btn btnNav" onclick="abrirArquivo()">📄 Arquivo das fichas</button>
       <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
     </div>
   </div>
@@ -491,6 +506,17 @@
   <pre id="saida" style="display:none"></pre>
 </div>
 
+<!-- ============ ARQUIVO DAS FICHAS (modal) ============ -->
+<div class="modal" id="modalArquivo" onclick="if(event.target===this)fecharArquivo()">
+  <div class="modalBox">
+    <div class="modalCab">
+      <h2>📄 Arquivo das fichas</h2>
+      <button class="bx" style="font-size:24px" onclick="fecharArquivo()">×</button>
+    </div>
+    <div id="arquivoLista" class="modalLista"></div>
+  </div>
+</div>
+
 <script>
 // ---------------------------------------------------------------------------
 // Especificações — em produção vêm de qualidade/spec/*.json no R2
@@ -597,44 +623,44 @@ function mostrarLista(){ document.body.classList.add('lista'); renderLista(); }
 function mostrarFicha(){ document.body.classList.remove('lista'); }
 function voltarLista(){ mostrarLista(); }
 
-// ---- Arquivo das OPs (download .txt) — separado em acabados (17 SKUs) e bases ----
-function textoArquivoOPs(){
-  const l = [];
-  const agora = new Date();
-  l.push('DÊVI — FICHAS DO DIA (OPs abertas)');
-  l.push('Gerado em: ' + agora.toLocaleDateString('pt-BR') + ' ' +
-    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
-  l.push('');
-  const base = OPS.filter(o => o.sku === 'FX000');
-  const outros = OPS.filter(o => o.sku !== 'FX000');
-  l.push(`=== PRODUTOS ACABADOS (${outros.length} SKUs) ===`);
-  outros.forEach(o => {
-    const p = (o.sku && PRODUTOS[o.sku]) || {};
-    const qtdTxt = (o.un === 'L')
-      ? `${o.qtd.toLocaleString('pt-BR')} L`
-      : `${o.qtd.toLocaleString('pt-BR')} latas${sufixoL(o.qtd, o.un)}`;
-    l.push(`  OP ${o.op} · ${o.sigla} · ${p.nome || o.sku} · Fab: ${o.data || '—'} · ${qtdTxt}`);
-  });
-  l.push('');
-  l.push(`=== BASE KOMBUCHA (${base.length}) ===`);
-  base.forEach(o => {
-    const d = diasFermentacao(o.data);
-    l.push(`  OP ${o.op} · ${o.sigla} · Base Kombucha · Início: ${o.data || '—'} · ` +
-      `${d != null ? d + ' dias de fermentação' : 'sem data'} · ${o.qtd.toLocaleString('pt-BR')} L`);
-  });
-  return l.join('\n');
+// ---- Arquivo das fichas: lista das salvas (D1) + abrir o PDF anexado na OP ----
+const fmtDataBR = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (s || ''); };
+
+async function abrirArquivo(){
+  const m = document.getElementById('modalArquivo');
+  if(!m) return;
+  m.style.display = 'flex';
+  const el = document.getElementById('arquivoLista');
+  el.innerHTML = '<div class="sub" style="padding:12px">Carregando arquivo…</div>';
+  try{
+    const r = await fetch(WORKER_URL + '/api/qualidade/arquivo');
+    const j = await r.json();
+    const fs = j.fichas || [];
+    if(!fs.length){
+      el.innerHTML = '<div class="sub" style="padding:12px">Nenhuma ficha salva ainda.</div>';
+      return;
+    }
+    el.innerHTML = fs.map(f => {
+      const st = f.status === 'completa' ? 'completa' : (f.status || 'salva');
+      const stCls = st === 'completa' ? 'st completa' : (st === 'nc' ? 'st nc' : 'st parcial');
+      const link = `${WORKER_URL}/api/qualidade/ficha/${f.n_cod_op || f.op}/arquivo`;
+      return `<div class="arqItem">
+        <div>
+          <div class="l1">OP <span>#${abreviaOp(f.op)}</span>${f.sigla ? ' · ' + f.sigla : ''}</div>
+          <div class="l2">${f.produto || f.sku || ''}${f.data_producao ? ' · Fab: ' + fmtDataBR(f.data_producao) : ''}</div>
+        </div>
+        <div class="r">
+          <span class="st ${stCls}">${st}</span>
+          <a class="btn btnNav" target="_blank" rel="noopener" href="${link}">📄 abrir</a>
+        </div></div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML = `<div class="sub" style="padding:12px;color:var(--er2)">Erro ao carregar o arquivo: ${e.message}</div>`;
+  }
 }
 
-function baixarArquivoOPs(){
-  const blob = new Blob([textoArquivoOPs()], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `OPs-${new Date().toISOString().slice(0, 10)}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-}
+function fecharArquivo(){ const m = document.getElementById('modalArquivo'); if(m) m.style.display = 'none'; }
 
 function resetarFicha(){
   conferidos.clear();

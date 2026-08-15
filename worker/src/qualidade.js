@@ -195,6 +195,24 @@ export async function fichasDoMes(env, aaaamm) {
   return r.results || [];
 }
 
+/** Fichas salvas (arquivo) — todas, mais recentes primeiro */
+export async function fichasArquivadas(env, limite = 100) {
+  const r = await env.QUALIDADE_DB.prepare(
+    "SELECT op, n_cod_op, sku, sigla, produto, data_producao, status, nc_count, registrado_em FROM fichas ORDER BY data_producao DESC, op DESC LIMIT ?1"
+  ).bind(limite).all();
+  return r.results || [];
+}
+
+/** Link de download do PDF anexado na OP (ObterAnexo → cLinkDownload); null se não houver */
+export async function linkPdfDaOp(env, nCodOP) {
+  const r = await listarAnexos(env, nCodOP, CTABELA_OP);
+  const anexos = (r && r.listaAnexos) || [];
+  const fichaAnexo = anexos.find((a) => String(a.cNomeArquivo || "").startsWith(PREFIXO_ANEXO));
+  if (!fichaAnexo) return null;
+  const det = await obterAnexo(env, fichaAnexo.nIdAnexo, nCodOP);
+  return (det && det.cLinkDownload) || null;
+}
+
 /** Debug — ListarAnexo: descobre o cTabela da OP (anexar arquivo pela interface, ler aqui) */
 export async function listarAnexos(env, nId, cTabela = "") {
   return chamarOmie(env, "/geral/anexo/", "ListarAnexo", {
