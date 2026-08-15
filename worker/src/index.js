@@ -593,7 +593,7 @@ export default {
       try {
         const { listarPOPs } = await import("./pops.js");
         const folder = url.searchParams.get("folder") || "";
-        const KEY = "qualidade-pops.json";
+        const KEY = "qualidade-pops-v2.json";
         const cached = await readJson(env, KEY);
         if (cached && cached._ts && Date.now() - cached._ts < 30 * 60 * 1000 && !folder) {
           return json(cached.dados);

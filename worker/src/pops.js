@@ -7,9 +7,8 @@
 import { getAccessToken } from "./sheets.js";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
-const SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets";
 
-/** Lista os POPs da pasta do Drive (número extraído do nome, ex.: "POP-001 …") */
+/** Lista os POPs da pasta do Drive (número extraído do nome, ex.: "POP01") */
 export async function listarPOPs(env, folderId) {
   const id = folderId || env.POP_FOLDER_ID;
   if (!id) return { erro: "POP_FOLDER_ID não configurado" };
@@ -23,19 +22,36 @@ export async function listarPOPs(env, folderId) {
   }
   const data = await res.json();
   const pops = (data.files || []).map((f) => {
-    const m = String(f.name || "").match(/(\d{2,})/);
+    const nome = String(f.name || "").replace(/\.[a-z]+$/i, "");
+    // número do POP (POP01, POP010 → 1, 10); senão, código inicial (PC1, PRP…)
+    const mPop = nome.match(/POP\s*0*(\d+)/i);
+    const numero = mPop ? parseInt(mPop[1], 10) : null;
+    const rotulo = numero != null ? "POP" + String(numero).padStart(2, "0")
+      : ((nome.match(/^([A-Za-z]{2,8}[\d]*)/) || [])[1] || "DOC");
+    // nome para exibição — sem prefixos MBPF, sem o número e sem o ano
+    const nomeLimpo = nome
+      .replace(/^MBPF\s*-\s*/i, "").replace(/^MBFP\s*-\s*/i, "")
+      .replace(/POP\s*0*\d+\s*-\s*/i, "")
+      .replace(/\s*(19|20)\d{2}\s*$/i, "")
+      .trim() || nome;
     return {
       id: f.id,
-      nome: f.name || "",
-      numero: m ? m[1] : "",
+      nome: nomeLimpo,
+      rotulo,
+      numero,
       mime: f.mimeType || "",
       tamanho: f.size ? Number(f.size) : null,
     };
-  }).sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true }));
+  }).sort((a, b) => {
+    if (a.numero != null && b.numero != null) return a.numero - b.numero;
+    if (a.numero != null) return -1;
+    if (b.numero != null) return 1;
+    return String(a.rotulo).localeCompare(String(b.rotulo));
+  });
   return { pops };
 }
 
-/** Conteúdo (bytes) do POP: PDF direto, ou export da planilha como PDF */
+/** Conteúdo (bytes) do POP: PDF direto, Google Doc/Sheets exportados como PDF */
 export async function baixarPOP(env, fileId) {
   const token = await getAccessToken(env);
   // metadados (nome e tipo) para o Content-Disposition e a estratégia de download
@@ -52,16 +68,17 @@ export async function baixarPOP(env, fileId) {
   const mime = meta.mimeType || "";
 
   let dados, contentType;
-  if (mime === "application/vnd.google-apps.spreadsheet") {
-    // planilha → exporta como PDF
-    const r = await fetch(`${SHEETS_API}/${encodeURIComponent(fileId)}/export?format=pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!r.ok) throw new Error(`Sheets export: ${r.status}`);
+  if (mime === "application/vnd.google-apps.spreadsheet" || mime === "application/vnd.google-apps.document") {
+    // Google Doc/Sheets → exporta como PDF via Drive API (só drive.readonly)
+    const r = await fetch(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}/export?mimeType=application%2Fpdf&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!r.ok) throw new Error(`Drive export: ${r.status}`);
     dados = await r.arrayBuffer();
     contentType = "application/pdf";
   } else {
-    // arquivo comum (PDF, DOCX...) — baixa os bytes e devolve
+    // arquivo comum (PDF, imagem, DOCX...) — baixa os bytes e devolve
     const r = await fetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`, {
       headers: { Authorization: `Bearer ${token}` },
     });

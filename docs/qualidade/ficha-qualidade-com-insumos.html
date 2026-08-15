@@ -734,10 +734,10 @@ async function abrirPOPs(){
     el.innerHTML = pops.map(p => `
       <div class="arqItem">
         <div>
-          <div class="l1"><span>POP ${p.numero}</span>${p.nome ? ' · ' + p.nome.replace(/\.[a-z]+$/i,'') : ''}</div>
+          <div class="l1"><span>${p.rotulo || 'DOC'}</span>${p.nome ? ' · ' + p.nome : ''}</div>
         </div>
         <div class="r">
-          <a class="btn btnNav" target="_blank" rel="noopener" href="${WORKER_URL}/api/qualidade/pops/${encodeURIComponent(p.id)}/pdf">📄 abrir PDF</a>
+          <a class="btn btnNav" target="_blank" rel="noopener" href="${WORKER_URL}/api/qualidade/pops/${encodeURIComponent(p.id)}/pdf">📄 abrir</a>
         </div>
       </div>`).join('');
   }catch(e){
