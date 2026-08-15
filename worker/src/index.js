@@ -452,9 +452,24 @@ export default {
         try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}"); } catch(e) {}
         if (!id) return json({ client_email: sa?.client_email || null, tabs: null, values: null });
         const tabs = await listSheets(env, token, id);
+        // limpeza: apaga linhas de teste (qualquer célula contendo "TESTE") sem anexar
+        const limpar = url.searchParams.get("limpar") === "1";
+        const tab = url.searchParams.get("tab") || "";
+        if (limpar && tab) {
+          const existentes = await getValues(env, token, `${tab}!A1:N2000`, id);
+          let removidas = 0;
+          for (let i = existentes.length - 1; i >= 0; i--) {
+            const celulas = (existentes[i] || []).join(" ");
+            if (celulas.includes("TESTE")) {
+              const sh = tabs.find((t) => t.title === tab);
+              await deleteRows(env, token, id, sh.sheetId, i, i + 1);
+              removidas++;
+            }
+          }
+          return json({ ok: true, limpar: true, removidas, tab });
+        }
         // teste reversível: append + delete da linha (verifica escrita sem poluir)
         const teste = url.searchParams.get("teste") === "1";
-        const tab = url.searchParams.get("tab") || "";
         if (teste && tab) {
           // 0) limpa resíduos de testes anteriores (varre A:B, apaga de baixo p/ cima)
           const existentes = await getValues(env, token, `${tab}!A1:B2000`, id);

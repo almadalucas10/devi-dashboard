@@ -19,25 +19,36 @@ const num = (v) => (v === null || v === undefined || v === "") ? "" : v;
 const primeiro = (a) => (Array.isArray(a) && a.length) ? a[0] : null;
 const ultimo = (a) => (Array.isArray(a) && a.length) ? a[a.length - 1] : null;
 
-// data ISO (YYYY-MM-DD) → "M/D/YYYY" (formato histórico das células da planilha)
-function dataUS(iso) {
+// Aceita ISO (YYYY-MM-DD) ou BR (DD/MM/AAAA) → sempre ISO. Usado no override da
+// data autoritativa (o Omie devolve DD/MM/AAAA) e no payload do formulário (ISO).
+function normISO(v) {
+  if (!v) return "";
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : s;
+}
+
+// data ISO ou BR → "M/D/YYYY" (formato histórico das células da planilha)
+function dataUS(v) {
+  const iso = normISO(v);
   if (!iso) return "";
-  const [y, m, d] = String(iso).split("-").map(Number);
-  if (!y || !m || !d) return String(iso);
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return String(v);
   return `${m}/${d}/${y}`;
 }
-function mesNome(iso) {
-  const m = Number(String(iso).split("-")[1]);
+function mesNome(v) {
+  const m = Number(normISO(v).split("-")[1]);
   return MESES[m - 1] || "";
 }
-function ano2(iso) {
-  const y = Number(String(iso).split("-")[0]);
+function ano2(v) {
+  const y = Number(normISO(v).split("-")[0]);
   return y ? String(y % 100) : "";
 }
 function diasEntre(a, b) {
   if (!a || !b) return "";
-  const A = new Date(String(a) + "T12:00:00Z");
-  const B = new Date(String(b) + "T12:00:00Z");
+  const A = new Date(normISO(a) + "T12:00:00Z");
+  const B = new Date(normISO(b) + "T12:00:00Z");
   if (isNaN(A) || isNaN(B)) return "";
   return Math.round((B - A) / 864e5);
 }
