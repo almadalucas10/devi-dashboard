@@ -350,7 +350,7 @@
   <div class="nav">
     <button class="btn btnNav" id="btnVoltar" onclick="voltarLista()">← OPs abertas</button>
     <button class="btn btnNav" onclick="abrirArquivo()">📄 Fichas</button>
-    <button class="btn btnNav" onclick="abrirPOPs()">📋 POPs</button>
+    <button class="btn btnNav" onclick="abrirPOPsViewer()">📋 POPs</button>
     <button class="btn btnNav" onclick="abrirControles()">📑 Envase</button>
     <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
   </div>
@@ -384,7 +384,7 @@
     </div>
     <div class="topoAcoes">
       <button class="btn btnNav" onclick="abrirArquivo()">📄 Arquivo das fichas</button>
-      <button class="btn btnNav" onclick="abrirPOPs()">📋 Arquivo de POPs</button>
+      <button class="btn btnNav" onclick="abrirPOPsViewer()">📋 Arquivo de POPs</button>
         <a class="btn btnNav" href="painel-qualidade.html">📊 Painel qualidade</a>
     </div>
   </div>
@@ -830,6 +830,45 @@ async function abrirPOPs(){
 }
 
 function fecharPOPs(){ const m = document.getElementById('modalPOPs'); if(m) m.style.display = 'none'; }
+
+// ---------------------------------------------------------------------------
+// POPs de processo — viewer orientado a dados (docs/qualidade/pops/)
+// ---------------------------------------------------------------------------
+const BLOCO_POP = {
+  insumos:['POP14'], starter:['POP09'], fermentacao:['POP17'], filtracao:['POP17'],
+  formulacao:['POP11','POP12'], carbonatacao:['POP10'], preenvase:['POP11','POP12'],
+  recravacao:['POP13'], estoque:['POP15']
+};
+function urlPOPs(pop, extra){
+  const q = [];
+  if (pop) q.push('pop=' + encodeURIComponent(pop));
+  if (opAtual) q.push('op=' + encodeURIComponent(opAtual));
+  if (skuAtual) q.push('sku=' + encodeURIComponent(skuAtual));
+  const fam = (PRODUTOS[skuAtual] || {}).familia || '';
+  if (fam) q.push('familia=' + encodeURIComponent(fam));
+  return '/docs/qualidade/pops/' + (q.length ? '?' + q.join('&') : '');
+}
+function abrirPOPsViewer(){ window.open(urlPOPs(), '_blank'); }
+function injetarLinksPOP(){
+  document.querySelectorAll('.sec[data-sec]').forEach(sec => {
+    if (sec.classList.contains('hid')) return;
+    if (sec.hasAttribute('data-consulta') || sec.hasAttribute('data-registro')) return;
+    const pops = BLOCO_POP[sec.dataset.sec];
+    if (!pops || sec.querySelector('.linkPOP')) return;
+    const cab = sec.querySelector('.cab');
+    if (!cab) return;
+    const link = document.createElement('a');
+    link.className = 'linkPOP';
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.href = urlPOPs(pops[0]);
+    link.textContent = '📖 ver POP ' + pops[0].replace('POP','');
+    if (pops.length > 1) link.textContent += '/' + pops[1].replace('POP','');
+    link.style.cssText = 'font-size:11px;color:var(--az2);text-decoration:none;' +
+      'background:#0f1a24;border:1px solid #1c3a4f;border-radius:20px;padding:2px 9px;white-space:nowrap';
+    cab.appendChild(link);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Controle de Envase (PC3) — modal unificado, aberto do cabeçalho da ficha
@@ -1669,6 +1708,7 @@ function aplicarFamilia(fam){
     if(!blocos.includes(nome)) sec.classList.remove('ab');
   });
   atualizar();
+  injetarLinksPOP();
 }
 
 // SKU atual → nome/sigla/sku no topo (spans do cabeçalho) e família (derivada do SKU)

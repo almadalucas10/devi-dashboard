@@ -51,11 +51,13 @@ const { window } = dom;
 const { document } = window;
 window.HTMLElement.prototype.scrollIntoView = function () {};
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 let pass = 0, fail = 0;
 const ok = (c, n) => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL') + ' · ' + n); };
 
 ok(jsErrors.length === 0, `sem erros de runtime no parse (${jsErrors.join('; ') || 'nenhum'})`);
 ok(!$('.sec[data-sec="controleEnvase"]'), 'card da coluna removido');
+ok(typeof window.injetarLinksPOP === 'function', 'função injetarLinksPOP existe');
 const btnNav = [...document.querySelectorAll('.nav .btnNav')].find(b => b.textContent.includes('Envase'));
 ok(!!btnNav, 'botão 📑 Envase no cabeçalho da ficha');
 
@@ -80,6 +82,13 @@ setTimeout(() => {
     const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
     ok($('#pc3Data').value === iso, 'data = hoje');
     ok($('#pc3Ctx').textContent.includes('#528') && $('#pc3Ctx').textContent.includes('CH003'), 'contexto OP+SKU: ' + $('#pc3Ctx').textContent);
+
+    // ---- links "ver POP" nos blocos visíveis da ficha (blocoFicha) ----
+    const linkPOPs = $$('.linkPOP').map(a => a.textContent.trim());
+    ok(linkPOPs.some(t => t.includes('POP 10')), 'bloco Carbonatação com ver POP 10 (' + linkPOPs.join(', ') + ')');
+    ok(linkPOPs.some(t => t.includes('POP 13')), 'bloco Recravação com ver POP 13');
+    ok(linkPOPs.some(t => t.includes('POP 15')), 'bloco Estoque com ver POP 15');
+    ok(linkPOPs.some(t => t.includes('POP 11')), 'bloco Pré-envase com ver POP 11/12');
     ok($('#ctlRecentes').querySelectorAll('.ctlRec').length === 2, 'lista unificada (2 registros, todas as OPs)');
     ok(!gets.includes('GET?op'), 'carregamento unificado, sem filtro por OP');
 
