@@ -234,7 +234,7 @@ function lista(){
           <span class="h">${p.titulo}</span>
           <span class="s">rev. ${p.revisao} · ${p.data} · ${contaPassos(p)} passos</span>
         </span>
-        <button class="baixar" onclick="event.stopPropagation(); baixar('${p.codigo}')">↓ PDF</button>
+        <button class="baixar" onclick="event.stopPropagation(); baixar('${p.codigo}')">↓ Baixar</button>
       </div>`).join('')}` : '';
 
   let html = '';
