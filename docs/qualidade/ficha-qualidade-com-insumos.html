@@ -272,6 +272,11 @@
   .opc .l3.fer{color:var(--al2)}
   .opc .l3.fer.ok{color:var(--ok2)}
   .opc .l3.fer.er{color:var(--er2); font-weight:800}
+  .opc .blocos{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; align-items:center}
+  .opc .bq{font-size:10.5px; padding:2px 8px; border-radius:20px; background:var(--linha);
+    color:var(--txt3); font-weight:600}
+  .opc .bq.on{background:#12241a; color:var(--ok2)}
+  .opc .bqcount{font-size:10.5px; color:var(--txt3); margin-left:auto; font-weight:700}
 
   /* ---------- arquivo das fichas (modal) ---------- */
   .modal{display:none; position:fixed; inset:0; z-index:50; background:rgba(4,8,12,.74);
@@ -593,8 +598,12 @@ function renderLista(){
   const ST = { nova: ['nova', 'sem ficha'], parcial: ['parcial', 'parcial'],
                completa: ['completa', 'completa'], nc: ['nc', 'não conforme'] };
   const card = o => {
-    const f = FICHAS[o.op];
-    const [cls, label] = f ? (f.nc ? ST.nc : (f.completa ? ST.completa : ST.parcial)) : ST.nova;
+    const demo = FICHAS[o.op];                       // mock (file://)
+    const real = o.status ? { status: o.status, nc: o.nc, blocos_status: o.blocos_status } : null;
+    const f = real || demo;
+    const [cls, label] = f
+      ? ((f.nc ? ST.nc : (f.status === 'completa' || f.completa ? ST.completa : ST.parcial)))
+      : ST.nova;
     const p = (o.sku && PRODUTOS[o.sku]) || {};
     const ehBase = o.sku === 'FX000';
     const dFer = (ehBase && o.data) ? diasFermentacao(o.data) : null;
@@ -603,10 +612,25 @@ function renderLista(){
       ? (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '') +
         (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
       : (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '');
+    // blocos preenchidos (rodapé do card) — estado real da ficha salva
+    let blocosTxt = '';
+    if (o.blocos_status && Object.keys(o.blocos_status).length) {
+      const fam = ehBase ? 'base' : (p.familia || 'kombucha');
+      const nomes = BLOCO_FAMILIA[fam] || [];
+      // chaves do D1 vêm do form (ex.: preEnvase) — normaliza p/ minúsculas
+      const bs = {};
+      for (const [k, v] of Object.entries(o.blocos_status)) bs[k.toLowerCase()] = v;
+      const preenchido = v => v != null && v !== '' && v !== 0 && v !== '0' && v !== false;
+      const feitos = nomes.filter(n => preenchido(bs[n.toLowerCase()]));
+      const chips = feitos.map(n => `<span class="bq on">${BLOCO_NOME[n] || n}</span>`).join('');
+      if (chips) blocosTxt = `<div class="blocos">${chips}<span class="bqcount">${feitos.length}/${nomes.length}</span></div>`;
+    } else if (demo) {
+      blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
+    }
     return `<div class="opc" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
-        <div class="l2">${p.nome || o.sku}${f ? ` · ${f.blocos} de ${f.total} blocos` : ''}</div>
-        ${info}</div>
+        <div class="l2">${p.nome || o.sku}</div>
+        ${info}${blocosTxt}</div>
       <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
         <span class="st ${cls}">${label}</span></div></div>`;
   };
@@ -730,7 +754,8 @@ async function carregarOPS(){
       j.fichas.forEach(f => OPS.push({
         op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
         nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
-        data: f.data || ''
+        data: f.data || '', status: f.status || '', nc: f.nc || 0,
+        blocos_status: f.blocos_status || null
       }));
       OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
       renderLista();
@@ -775,6 +800,9 @@ const BLOCO_FAMILIA = {
   cha:      ['carbonatacao','preenvase','recravacao','estoque'],
   barril:   ['preenvase','estoque']
 };
+const BLOCO_NOME = { starter:'Starter', fermentacao:'Fermentação', filtracao:'Filtração',
+  produtoAcabado:'P. Acabado', observacoes:'Obs', carbonatacao:'Carbonatação',
+  preenvase:'Pré-envase', recravacao:'Recravação', estoque:'Estoque' };
 
 // ---------------------------------------------------------------------------
 // Insumos por SKU (receita do produto) — em produção vêm de
