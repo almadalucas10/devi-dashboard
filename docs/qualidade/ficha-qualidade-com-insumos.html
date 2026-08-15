@@ -857,12 +857,16 @@ const POP_FAMILIAS = {
   'POP14':['insumo'], 'POP15':['kombucha','cha','refri','rtm'], 'POP16':['insumo'],
   'POP17':['base']
 };
+// família consistente com aplicarSku: FX000 é base (PRODUTOS marca kombucha — bug histórico)
+function familiaAtual(){
+  return skuAtual === 'FX000' ? 'base' : ((PRODUTOS[skuAtual] || {}).familia || 'kombucha');
+}
 function urlPOPs(pop, extra){
   const q = [];
   if (pop) q.push('pop=' + encodeURIComponent(pop));
   if (opAtual) q.push('op=' + encodeURIComponent(opAtual));
   if (skuAtual) q.push('sku=' + encodeURIComponent(skuAtual));
-  const fam = (PRODUTOS[skuAtual] || {}).familia || '';
+  const fam = familiaAtual();
   if (fam) q.push('familia=' + encodeURIComponent(fam));
   return '/docs/qualidade/pops/' + (q.length ? '?' + q.join('&') : '');
 }
@@ -882,8 +886,10 @@ function fecharPOPViewer(){
 }
 function abrirPOPsViewer(){ abrirPOPFrame(urlPOPs()); }
 function popDaFolhaAtual(){
-  const fam = (PRODUTOS[skuAtual] || {}).familia || '';
-  return fam === 'kombucha' ? 'POP11' : (['cha','refri','rtm'].includes(fam) ? 'POP12' : null);
+  if (skuAtual === 'FX000') return ['POP17', 'POP09']; // base kombucha: Preparo da Kombucha + SCOBY
+  const fam = familiaAtual();
+  return fam === 'kombucha' ? ['POP11']
+    : (['cha','refri','rtm'].includes(fam) ? ['POP12'] : []);
 }
 function injetarLinksPOP(){
   document.querySelectorAll('.sec[data-sec]').forEach(sec => {
@@ -894,13 +900,12 @@ function injetarLinksPOP(){
     cab.querySelectorAll('.linkPOP').forEach(l => l.remove());
     let pops;
     if (sec.hasAttribute('data-consulta')) {
-      // Folha da OP (insumos): processo de preparo do líquido — POP 11 (kombucha) / 12 (chá/refri/rtm),
-      // visível mesmo com o card recolhido, ao lado do "X de X conferidos"
-      const f = popDaFolhaAtual();
-      pops = f ? [f] : [];
+      // Folha da OP (insumos): processo de preparo do líquido — POP 11 (kombucha) / 12 (chá/refri/rtm) /
+      // 17+09 (base kombucha), visível mesmo com o card recolhido, ao lado do "X de X conferidos"
+      pops = popDaFolhaAtual();
     } else {
       if (sec.classList.contains('hid')) return;
-      const fam = (PRODUTOS[skuAtual] || {}).familia || 'kombucha';
+      const fam = familiaAtual();
       pops = (BLOCO_POP[sec.dataset.sec] || []).filter(c => (POP_FAMILIAS[c] || []).includes(fam));
     }
     if (!pops.length) return;

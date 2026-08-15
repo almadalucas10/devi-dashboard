@@ -19,6 +19,7 @@ function mockFetch(url, opts) {
       { op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 },
       { op: '2026/00517', sku: 'RF002', qtd: 7435, nCodOP: 9226163665 },
       { op: '2026/00518', sku: 'FX001', qtd: 4464, nCodOP: 9226000001 },
+      { op: '2026/00500', sku: 'FX000', qtd: 450, nCodOP: 9226000002 },
     ] }) });
   }
   if (u.includes('/api/qualidade/controle/pc3') && m === 'GET') {
@@ -161,6 +162,16 @@ setTimeout(() => {
           ok(!!folhaK && folhaK.textContent.includes('POP 11'), 'Cabeçalho da Folha da OP kombucha com ver POP 11: ' + (folhaK ? folhaK.textContent : 'sem botão'));
           const linkK = $$('.sec[data-sec]:not([data-consulta]) .linkPOP').map(a => a.textContent.trim());
           ok(!linkK.some(t => t.includes('POP 11')) && !linkK.some(t => t.includes('POP 12')), 'blocos kombucha sem POP 11/12 (foram para a folha): ' + linkK.join(', '));
+
+          // ---- BASE KOMBUCHA (FX000): folha com POP 17 + POP 09 ----
+          window.abrirOp('2026/00500');
+          const folhaB = document.querySelector('.sec[data-sec="insumos"] .cab .linkPOP');
+          ok(!!folhaB && folhaB.textContent.includes('POP 17/09'),
+            'Folha base: ver POP 17 + POP 09 (' + (folhaB ? folhaB.textContent : 'sem botão') + ')');
+          ok(!folhaB || !folhaB.textContent.includes('POP 11'), 'Folha base SEM POP 11 (saborização não se aplica)');
+          const linkDe2 = sec => { const el = document.querySelector('.sec[data-sec="' + sec + '"] .linkPOP'); return el ? el.textContent : ''; };
+          ok(linkDe2('starter').includes('POP 09'), 'bloco Starter com ver POP 09 (base): ' + linkDe2('starter'));
+          ok(linkDe2('fermentacao').includes('POP 17'), 'bloco Fermentação com ver POP 17 (base): ' + linkDe2('fermentacao'));
           console.log(`\n${pass} passaram, ${fail} falharam`);
           process.exit(fail ? 1 : 0);
         }, 160);
