@@ -29,15 +29,24 @@ export async function chamarOmie(env, caminho, metodo, params = {}) {
     param: [params],
   };
 
+  const TIMEOUT_MS = 15000; // chamada Omie normal < 1s; travada não pode pendurar o sync
   for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
     let res;
     try {
-      res = await fetch(BASE_URL + caminho, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+      try {
+        res = await fetch(BASE_URL + caminho, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: ctrl.signal,
+        });
+      } finally { clearTimeout(timer); }
     } catch (e) {
+      // timeout/travada: não fica tentando 8× — falha já (o chamador trata por item)
+      if (e.name === "AbortError" || /abort/i.test(String(e.message)))
+        throw new Error(`Omie timeout: ${caminho} ${metodo}`);
       if (tentativa === MAX_TENTATIVAS) throw new Error(`Rede Omie falhou: ${e.message}`);
       await sleep(2000 + Math.random() * 1000);
       continue;
