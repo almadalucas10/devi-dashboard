@@ -238,7 +238,7 @@ function renderKpis(){
 }
 
 function renderColeta(){
-  const nomes = { pH: 'pH', brix: 'Brix', carbonatacao: 'Carbonatação', recravacao: 'Recravação', estoque: 'Estoque', abv: 'ABV' };
+  const nomes = { pH: 'pH', brix: 'Brix', abv: 'ABV', carbonatacao: 'Carbonatação', recravacao: 'Recravação', estoque: 'Estoque' };
   el('coletaSub').textContent = `${DADOS.lotes.total} lotes no mês`;
   el('coleta').innerHTML = Object.entries(nomes).map(([k, nome]) => {
     const p = DADOS.indiceColeta[k];
