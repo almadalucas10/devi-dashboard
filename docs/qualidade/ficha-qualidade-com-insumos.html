@@ -1039,6 +1039,9 @@ function gerarRegistro(){
 }
 
 let _resetando = false; // evita o auto-salvar durante o reset (não sobrescreve rascunho)
+let _digitou = false;   // digitação real do usuário — rascunho restaurado não conta
+document.addEventListener('input', () => { if(!_resetando) _digitou = true; }, true);
+document.addEventListener('change', () => { if(!_resetando) _digitou = true; }, true);
 function resetarFicha(){
   _resetando = true;
   try{
@@ -1069,6 +1072,7 @@ function abrirOp(op){
   const o = OPS.find(x => x.op === op);
   if(!o) return;
   opAtual = op;
+  _digitou = false; // nova OP: nada foi digitado ainda
   nCodOPAtual = o.nCodOP || null;
   opQtd = o.qtd || 4464;
   opUn = o.un || (o.sku === 'FX000' ? 'L' : 'UND');
@@ -1174,12 +1178,19 @@ async function carregarInsumosReais(op, nCodOP){
       montarInsumos();
       atualizarInsumosChk();
     }
-    // reabre a ficha salva (rascunho/completa) — popula os campos e a barra de progresso;
-    // rascunho local (mais recente) tem precedência e já foi aplicado em abrirOp;
-    // se o usuário já digitou algo, não sobrescreve com a ficha do servidor
-    const digitou = [...document.querySelectorAll('.sec input, .sec select, .sec textarea')]
-      .some(i => i.value.trim() !== '');
-    if(j.ficha && j.ficha.blocos && !carregarLocal(op) && !digitou) aplicarFichaSalva(j.ficha);
+    // reabre a ficha salva — prioridade pela FRESCURA (timestamp): o mais novo entre
+    // rascunho local (dispositivo) e servidor (R2/D1) vence. Evita o mobile carregar
+    // coisa antiga (local velho) ou sobrescrever o que o usuário digitou.
+    if(j.ficha && j.ficha.blocos && !_digitou){
+      const tsLocal = draftLocalTs(op);
+      const tsServ = j.ficha.rascunhoEm ? Date.parse(j.ficha.rascunhoEm) : 0;
+      const servidorVence = tsLocal == null || tsServ > tsLocal;
+      if(servidorVence){
+        aplicarFichaSalva(j.ficha);
+        // sincroniza o localStorage do aparelho com o estado mais novo (servidor)
+        try{ salvarLocal(); }catch(e){}
+      }
+    }
   }catch(e){}
 }
 
@@ -1962,6 +1973,7 @@ function montarPayload(){
         abv:false };
   d.status = 'parcial';
   d.registradoEm = new Date().toISOString();
+  d.rascunhoEm = new Date().toISOString(); // frescor — decide local vs servidor
   return d;
 }
 
@@ -1991,11 +2003,26 @@ function salvarLocal(){
   }catch(e){}
 }
 function carregarLocal(op){
+  // aplicar o rascunho NÃO pode re-carimbar o timestamp nem disparar auto-save —
+  // senão o rascunho local vira "sempre o mais novo" e o servidor nunca mais vence
+  const anterior = _resetando;
+  _resetando = true;
   try{
     const local = localStorage.getItem('ficha_rascunho_' + (op || opAtual));
     if(local){ const d = JSON.parse(local); if(d && temBloco(d)){ aplicarFichaSalva(d); return true; } }
   }catch(e){}
+  finally{ _resetando = anterior; }
   return false;
+}
+// timestamp do rascunho local (null = não existe; 0 = antigo, sem marcador)
+function draftLocalTs(op){
+  try{
+    const local = localStorage.getItem('ficha_rascunho_' + (op || opAtual));
+    if(!local) return null;
+    const d = JSON.parse(local);
+    const t = d && d.rascunhoEm ? Date.parse(d.rascunhoEm) : 0;
+    return Number.isFinite(t) ? t : 0;
+  }catch(e){ return null; }
 }
 
 function salvarRascunho(imediato){
@@ -2009,11 +2036,20 @@ function salvarRascunho(imediato){
         return Array.isArray(v) ? v.length > 0 : (typeof v === 'object' && v !== null) || String(v || '') !== '';
       });
       if(!temBloco && !(d.conferenciaInsumos || []).some(c => c.conferido)) return;
-      await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ficha: d }),
-        keepalive: true, // sobrevive ao unload/reload (mobile)
-      });
+      const envia = async (tentativa) => {
+        try {
+          const r = await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ficha: d }),
+            keepalive: true, // sobrevive ao unload/reload (mobile)
+          });
+          if (!r.ok && tentativa < 1) setTimeout(() => envia(1), 1500); // rede instável (mobile)
+        } catch(e) {
+          console.error('rascunho:', e.message);
+          if (tentativa < 1) setTimeout(() => envia(1), 1500);
+        }
+      };
+      await envia(0);
     }catch(e){ console.error('rascunho:', e.message); }
   };
   if(imediato) exec();
