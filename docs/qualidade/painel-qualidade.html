@@ -355,6 +355,23 @@ function renderFerm(){
 // ---------------------------------------------------------------------------
 // Cálculos a partir dos dados reais
 // ---------------------------------------------------------------------------
+// indicador → bloco da ficha (o rodapé/barra das OPs mostra o preenchimento destes blocos)
+const IND_BLOCO = { pH: 'preenvase', brix: 'preenvase', carbonatacao: 'carbonatacao', recravacao: 'recravacao', abv: 'fermentacao' };
+// coleta pelo preenchimento REAL dos blocos (blocos_status no D1 — o mesmo dos rodapés das OPs)
+function coletaPorBlocos(fichas){
+  const r = {};
+  for (const [ind, bloco] of Object.entries(IND_BLOCO)) {
+    let f = 0, t = 0;
+    for (const ficha of fichas) {
+      const bs = ficha.blocos_status || {};
+      const b = bs[bloco] || bs[bloco.toLowerCase()] || null;
+      if (b && b.t > 0) { f += b.f; t += b.t; }
+    }
+    r[ind] = t ? f / t : null;
+  }
+  return r;
+}
+// fallback: fichas antigas sem blocos_status usam o indice salvo
 function coletaPorIndicador(fichas){
   const IND = ['pH','brix','carbonatacao','recravacao','abv'];
   const r = {};
@@ -364,6 +381,10 @@ function coletaPorIndicador(fichas){
     r[k] = aplicaveis.length ? coletados.length / aplicaveis.length : null;
   }
   return r;
+}
+function coletaDe(fichas){
+  const porBlocos = coletaPorBlocos(fichas);
+  return Object.values(porBlocos).some(v => v !== null) ? porBlocos : coletaPorIndicador(fichas);
 }
 const somaMeses = (iso, n) => { const d = new Date(String(iso).slice(0,10) + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d; };
 const REC_SPEC = {
@@ -385,7 +406,7 @@ async function carregar(){
     const opsAbertas = (await rf.json()).fichas || [];
 
     // indicador de coleta
-    const indiceColeta = coletaPorIndicador(fichas);
+    const indiceColeta = coletaDe(fichas);
 
     // lotes
     const total = fichas.length;
@@ -461,7 +482,7 @@ async function carregar(){
       try {
         const r = await fetch(WORKER_URL + '/api/qualidade/mes/' + mm, { cache: 'no-store' });
         const fs = (await r.json()).fichas || [];
-        const ic = coletaPorIndicador(fs);
+        const ic = coletaDe(fs);
         const vals = Object.values(ic).filter(v => v !== null);
         const media = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100) : null;
         if (media !== null) evolucao.push([mm.slice(2).replace('-','/'), media]);

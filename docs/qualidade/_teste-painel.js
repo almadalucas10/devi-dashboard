@@ -7,10 +7,14 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const html = fs.readFileSync('/home/almadalucas/.reasonix/global-workspace/devi-dashboard/docs/qualidade/painel-qualidade.html', 'utf8');
 
 const FICHAS = [
-  { op: '2026/00517', sku: 'RF002', produto: 'Refri Frutas Vermelhas', data_producao: '2026-08-13', status: 'parcial', nc_count: 0, indice: { pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }, ncs: [] },
-  { op: '2026/00519', sku: 'RF001', produto: 'Refri Limão Siciliano', data_producao: '2026-08-17', status: 'parcial', nc_count: 0, indice: { pH: false, brix: false, carbonatacao: false, recravacao: false, abv: false }, ncs: [] },
-  { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data_producao: '2026-08-10', status: 'parcial', nc_count: 0, indice: { pH: true, brix: true, temperatura: true, abv: true, carbonatacao: false, recravacao: false }, ncs: [] },
-  { op: '2026/00528', sku: 'CH003', produto: 'Chá Camomila Maracujá', data_producao: '2026-08-14', status: 'completa', nc_count: 1, indice: { pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }, ncs: [{ bloco: 'recravacao', campo: 'transpasse', valor: 0.78, min: 0.8, max: 0.9 }] },
+  { op: '2026/00517', sku: 'RF002', produto: 'Refri Frutas Vermelhas', data_producao: '2026-08-13', status: 'parcial', nc_count: 0, indice: { pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }, ncs: [],
+    blocos_status: { preenvase: { f: 3, t: 4 }, carbonatacao: { f: 2, t: 3 }, recravacao: { f: 1, t: 3 }, estoque: { f: 0, t: 3 } } },
+  { op: '2026/00519', sku: 'RF001', produto: 'Refri Limão Siciliano', data_producao: '2026-08-17', status: 'parcial', nc_count: 0, indice: { pH: false, brix: false, carbonatacao: false, recravacao: false, abv: false }, ncs: [],
+    blocos_status: { preenvase: { f: 0, t: 4 }, carbonatacao: { f: 0, t: 3 }, recravacao: { f: 0, t: 3 }, estoque: { f: 0, t: 3 } } },
+  { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data_producao: '2026-08-10', status: 'parcial', nc_count: 0, indice: { pH: true, brix: true, temperatura: true, abv: true, carbonatacao: false, recravacao: false }, ncs: [],
+    blocos_status: { starter: { f: 1, t: 5 }, fermentacao: { f: 4, t: 5 }, filtracao: { f: 0, t: 2 }, produtoAcabado: { f: 0, t: 5 } } },
+  { op: '2026/00528', sku: 'CH003', produto: 'Chá Camomila Maracujá', data_producao: '2026-08-14', status: 'completa', nc_count: 1, indice: { pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }, ncs: [{ bloco: 'recravacao', campo: 'transpasse', valor: 0.78, min: 0.8, max: 0.9 }],
+    blocos_status: { preenvase: { f: 4, t: 4 }, carbonatacao: { f: 3, t: 3 }, recravacao: { f: 3, t: 3 }, estoque: { f: 3, t: 3 } } },
 ];
 
 function mockFetch(url, opts) {
@@ -52,13 +56,14 @@ setTimeout(() => {
   ok(jsErrors.length === 0, `sem erros de runtime (${jsErrors.join('; ') || 'nenhum'})`);
   const kpis = $('#kpis').textContent;
   // coleta: pH=2/3 (0.67) brix=2/3 (0.67) carbonatacao=2/4 (0.5) recravacao=2/4 (0.5) abv=0/4 (0) → média = (0.67+0.67+0.5+0.5+0)/5 = 0.466 → 47%
-  ok(kpis.includes('55%'), 'KPI Coleta do Mês = 55% (era: ' + $('#kpis').textContent.slice(0, 60) + ')');
+  // coleta pelo preenchimento real dos blocos: pH 7/12, brix 7/12, carb 5/9, rec 4/9, abv 4/5 → média 59%
+  ok(kpis.includes('59%'), 'KPI Coleta do Mês = 59% (era: ' + $('#kpis').textContent.slice(0, 60) + ')');
   ok(kpis.includes('0/4'), 'KPI Lotes Conformes = 0/4 (a única completa tem NC)');
   ok(/NÃO-CONFORMIDADES[\s\S]*?\b1\b/.test(kpis), 'KPI Não-Conformidades = 1');
 
   const col = $('#coleta').textContent;
-  ok(col.includes('pH') && col.includes('75%'), 'Coleta por indicador: pH 75%');
-  ok(col.includes('Recravação') && col.includes('50%'), 'Coleta por indicador: Recravação 50%');
+  ok(col.includes('pH') && col.includes('58%'), 'Coleta por indicador: pH 58% (preenchimento pré-envase)');
+  ok(col.includes('Recravação') && col.includes('44%'), 'Coleta por indicador: Recravação 44%');
 
   const lotes = $('#lotes').textContent;
   ok(lotes.includes('#528') && lotes.includes('CH003'), 'Lista de lotes com OP 528');
