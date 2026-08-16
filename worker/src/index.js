@@ -249,27 +249,48 @@ function json(data, status = 200) {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "*",
     },
   });
+}
+
+// CORS restrito — só os domínios do dashboard/páginas; o header é aplicado no wrapper
+const ORIGENS_OK = new Set([
+  "https://dashboard-3gm.pages.dev",
+  "https://cobertura-completa.dashboard-3gm.pages.dev",
+  "https://devikombucha.com",
+  "https://dashboard.devikombucha.com",
+]);
+function origemPermitida(o) {
+  return ORIGENS_OK.has(o)
+    || /^https:\/\/([a-z0-9-]+\.)?dashboard-3gm\.pages\.dev$/.test(o)
+    || /^https:\/\/([a-z0-9-]+\.)?devikombucha\.com$/.test(o);
 }
 
 // ============================================================================
 // Entry point
 // ============================================================================
 
-export default {
-  async fetch(request, env, ctx) {
+async function handle(request, env, ctx) {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
+        status: 204,
         headers: {
-          "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "*",
+          "Access-Control-Allow-Headers": "Content-Type, X-API-Key",
+          "Access-Control-Max-Age": "86400",
         },
       });
+    }
+
+    // ---- Auth: rotas de qualidade e debug exigem a API key (header ou ?key=) ----
+    const cam = url.pathname;
+    if (cam.startsWith("/api/qualidade/") || cam.startsWith("/api/debug/")) {
+      const chave = request.headers.get("X-API-Key") || url.searchParams.get("key") || "";
+      const esperada = env.QUALIDADE_API_KEY;
+      if (!esperada) return json({ erro: "QUALIDADE_API_KEY não configurada no worker" }, 503);
+      if (chave !== esperada) return json({ erro: "não autorizado" }, 401);
     }
 
     if (url.pathname === "/api/debug/estruturas") {
@@ -671,8 +692,11 @@ export default {
     }
     if (url.pathname.startsWith("/api/qualidade/pops/") && url.pathname.endsWith("/pdf")) {
       try {
-        const { baixarPOP } = await import("./pops.js");
+        const { listarPOPs, baixarPOP } = await import("./pops.js");
         const id = decodeURIComponent(url.pathname.split("/").slice(-2)[0]);
+        // allowlist: só serve arquivos que estão na pasta de POPs (não proxy de Drive arbitrário)
+        const { pops } = await listarPOPs(env);
+        if (!pops.some((p) => p.id === id)) return json({ erro: "POP não encontrado" }, 404);
         const { dados, contentType, nome } = await baixarPOP(env, id);
         return new Response(dados, {
           headers: {
@@ -859,9 +883,9 @@ if (url.pathname === "/api/health") {
     }
 
     return new Response("Not found", { status: 404 });
-  },
+}
 
-  async scheduled(event, env, ctx) {
+async function scheduled(event, env, ctx) {
     console.log("[cron] iniciando...");
     try {
       await runLightSync(env);
@@ -875,5 +899,24 @@ if (url.pathname === "/api/health") {
     } catch (e) {
       console.error("[cron] ❌ " + e.message);
     }
+}
+
+// ============================================================================
+// Entry point — aplica CORS restrito (só domínios do dashboard) em toda resposta
+// ============================================================================
+export default {
+  async fetch(request, env, ctx) {
+    const resp = await handle(request, env, ctx);
+    const origem = request.headers.get("Origin") || "";
+    if (origemPermitida(origem)) {
+      const h = new Headers(resp.headers);
+      h.set("Access-Control-Allow-Origin", origem);
+      h.set("Vary", "Origin");
+      return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
+    }
+    return resp;
+  },
+  async scheduled(event, env, ctx) {
+    await scheduled(event, env, ctx);
   },
 };

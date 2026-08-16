@@ -12,10 +12,12 @@ vc.on('jsdomError', e => { if (!/navigation/i.test(e.message)) jsErrors.push(e.m
 
 let postado = null;
 let puts = [];
+let chavesVistas = [];
 let gets = [];
 function mockFetch(url, opts) {
   const u = String(url), m = (opts && opts.method) || 'GET';
   if (u.includes('/api/qualidade/fichas')) {
+    chavesVistas.push((opts && opts.headers && opts.headers['X-API-Key']) || '');
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [
       { op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 },
       { op: '2026/00517', sku: 'RF002', qtd: 7435, nCodOP: 9226163665 },
@@ -200,6 +202,7 @@ setTimeout(() => {
             const pAntes = puts.length;
             window.flushRascunho();
             ok(puts.length > pAntes, 'flushRascunho dispara PUT (pagehide/visibilitychange)');
+          ok(chavesVistas.length > 0 && chavesVistas[0].length > 10, 'fetch ao worker envia X-API-Key (auditoria)');
             console.log(`\n${pass} passaram, ${fail} falharam`);
             process.exit(fail ? 1 : 0);
           }, 80);
