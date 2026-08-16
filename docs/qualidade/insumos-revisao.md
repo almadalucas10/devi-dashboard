@@ -57,7 +57,7 @@ Colunas: código · descrição · un · alcance (nº de SKUs) · SKUs
 - [ ] `MPC030` Extrato de Pêssego · KG · 1 SKU · CH001
 - [ ] `MPR004` Extrato de Guaraná · KG · 1 SKU · RF003
 - [ ] `MPR006` Aroma Natural de Guaraná · KG · 1 SKU · RF003
-- [ ] `MPR009` Aroma (009) 🆕 · kg · 1 SKU · RF003
+- [x] ~~`MPR009` Aroma (009)~~ · removido da lista monitorada (nome genérico/ruído — decisão 16/08)
 - [ ] `MPR023` Extrato de Cranberry · KG · 1 SKU · RF002
 
 ## Concentrados (11)

@@ -58,7 +58,6 @@ const INSUMOS = [
   { codigo: 'MP006', desc: 'Limão', un: 'L', familia: 'Hortifruti', skuQtd: {"FX007":0.013847} },
   { codigo: 'MP09', desc: 'Abacaxi (suco)', un: 'L', familia: 'Concentrados', skuQtd: {"FX002":0.019848} },
   { codigo: 'MPA032', desc: 'Ácido Ascórbico', un: 'kg', familia: 'Aditivos', skuQtd: {"CH004":0.000269,"RF001":0.000054,"RF002":0.000135,"RF004":0.000215,"RF005":0.000135,"RTM001":0.000054,"RTM002":0.000215,"RTM003":0.000135} },
-  { codigo: 'MPR009', desc: 'Aroma (009)', un: 'kg', familia: 'Aromas e Extratos', skuQtd: {"RF003":0.000027} },
   { codigo: 'MPR012', desc: 'Sorbato de Potássio', un: 'kg', familia: 'Aditivos', skuQtd: {"CH001":0.00015,"CH002":0.000108,"CH003":0.000134,"CH004":0.00015,"RF001":0.000108,"RF002":0.000108,"RF003":0.000135,"RF004":0.00014,"RF005":0.000108,"RTM001":0.000108,"RTM002":0.00014,"RTM003":0.000108} },
   { codigo: 'MPR013', desc: 'Ácido Cítrico', un: 'kg', familia: 'Aditivos', skuQtd: {"CH001":0.000323,"CH002":0.000269,"CH003":0.000027,"CH004":0.000323,"RF001":0.000269,"RF002":0.000538,"RF003":0.000161,"RF004":0.000387,"RF005":0.000229,"RTM001":0.000269,"RTM002":0.00043,"RTM003":0.000229} },
   { codigo: 'MPR022', desc: 'Conservante', un: 'kg', familia: 'Aditivos', skuQtd: {"CH001":0.000108,"CH002":0.000108,"CH003":0.000134,"CH004":0.000108,"RF001":0.000054,"RF002":0.000108,"RF003":0.000135,"RF004":0.000108,"RF005":0.000054,"RTM001":0.000054,"RTM002":0.000054,"RTM003":0.000054} },
