@@ -14,6 +14,15 @@
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--txt); padding:14px;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow-x:hidden}
+  /* marca d'água — logo ao fundo, igual ao dashboard PCP */
+  body::before{
+    content:''; position:fixed; inset:-15%;
+    background-image:url('logo-devi.png');
+    background-repeat:no-repeat; background-position:center; background-size:60%;
+    transform:rotate(-12deg);
+    opacity:.09; pointer-events:none; z-index:0;
+  }
+  body > *{ position:relative; z-index:1; }
 
   .topo{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px}
   .topo h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
