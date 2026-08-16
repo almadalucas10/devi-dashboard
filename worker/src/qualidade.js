@@ -679,8 +679,15 @@ async function saldoDo(env, codigo, cacheProduto) {
 /** Ficha de uma OP — itens reais (itensDetalhes) + saldo (opcional). */
 export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   const n = parseInt(op, 10);
-  const consulta = Number.isInteger(n) && String(n) === String(op)
-    ? { nCodOP: n } : { cCodIntOP: op };
+  let consulta;
+  if (/^\d{4}\/\d+$/.test(String(op))) {
+    // formato <ano>/<numero> (ex.: 2026/00520) → previsão/comando da Ordre de Produção
+    consulta = { cNumOP: op };
+  } else if (Number.isInteger(n) && String(n) === String(op)) {
+    consulta = { nCodOP: n };
+  } else {
+    consulta = { cCodIntOP: op };
+  }
 
   const r = await chamarOmie(env, "/produtos/op/", "ConsultarOrdemProducao", consulta);
   if (raw) return { op, nCodOP: n, raw: r };

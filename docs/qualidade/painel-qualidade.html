@@ -348,11 +348,26 @@ function renderFerm(){
     el('fermentacao').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma base em fermentação.</div>';
     return;
   }
-  el('fermentacao').innerHTML = DADOS.fermentacao.map(f => `
-    <div class="it ${f.cor}">
-      <div class="it-l1"><span class="it-nm">${esc(f.tanque)} · ${esc(f.nome)}</span>
+  el('fermentacao').innerHTML = DADOS.fermentacao.map(f => {
+    // última leitura (pH/brix/ABV)
+    let leit = '';
+    if (f.ultima && (f.ultima.pH != null || f.ultima.brix != null || f.ultima.abv != null)) {
+      const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
+      const partes = [];
+      if (f.ultima.pH != null) partes.push(`pH ${fmt(f.ultima.pH)}`);
+      if (f.ultima.brix != null) partes.push(`Brix ${fmt(f.ultima.brix)}`);
+      if (f.ultima.abv != null) partes.push(`ABV ${fmt(f.ultima.abv)}`);
+      leit = partes.join(' · ');
+    } else {
+      leit = 'sem medição de fermentação';
+    }
+    return `<div class="it ${f.cor}">
+      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}" style="color:inherit;text-decoration:none;flex:1;min-width:0">
+        <span class="it-nm">${esc(f.tanque)} · ${esc(f.nome)}</span></a>
         <span class="it-v" style="font-size:14px;${f.cor ? 'color:var(--al2)' : ''}">${esc(f.dia)}</span></div>
-      <div class="it-l2">${esc(f.txt)}</div></div>`).join('');
+      <div class="it-l2">${esc(f.txt)}</div>
+      <div class="it-l2" style="${f.ultima ? 'color:var(--txt2)' : 'color:var(--txt3)'}">${esc(leit)}</div></div>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------------
@@ -474,15 +489,28 @@ async function carregar(){
       else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
     }
 
-    // fermentação: bases (FX000) abertas
-    const fermentacao = (opsAbertas || [])
-      .filter(o => o.sku === 'FX000' && o.data)
-      .map(o => {
-        const m = String(o.data).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        let dias = null;
-        if (m) { const ini = new Date(+m[3], +m[2]-1, +m[1]); dias = Math.round((hoje - ini) / 864e5); }
-        return { tanque: o.tanque || '—', nome: o.produto || 'Base Kombucha', dia: dias == null ? '—' : `dia ${dias}`, txt: `fab ${o.data}`, cor: (dias != null && dias >= 11) ? 'e' : (dias != null && dias >= 7 ? 'a' : '') };
-      });
+    // fermentação: bases (FX000) abertas, com a última leitura (pH/brix/ABV) da ficha salva
+    const bases = (opsAbertas || []).filter(o => o.sku === 'FX000' && o.data);
+    const fermentacao = await Promise.all(bases.map(async (o) => {
+      const m = String(o.data).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      let dias = null;
+      if (m) { const ini = new Date(+m[3], +m[2]-1, +m[1]); dias = Math.round((hoje - ini) / 864e5); }
+      // última leitura de fermentação (igual ao padrão da recravação)
+      let ultima = null;
+      try {
+        const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(o.nCodOP || o.op), { cache: 'no-store' });
+        const j = await fr.json();
+        const fer = j.ficha && j.ficha.blocos && j.ficha.blocos.fermentacao;
+        if (Array.isArray(fer) && fer.length) ultima = fer[fer.length - 1];
+      } catch (e) { /* sem ficha salva */ }
+      return {
+        op: o.op || '', hrefOp: o.op || o.nCodOP || '',
+        tanque: o.tanque || '—', nome: o.produto || 'Base Kombucha',
+        dia: dias == null ? '—' : `dia ${dias}`, txt: `fab ${o.data}`,
+        cor: (dias != null && dias >= 11) ? 'e' : (dias != null && dias >= 7 ? 'a' : ''),
+        ultima,
+      };
+    }));
 
     // recravação: última ficha do mês com o bloco preenchido
     let recravacao = null;
