@@ -217,14 +217,15 @@ let DADOS = null;
 // ---------------------------------------------------------------------------
 function renderKpis(){
   const ic = DADOS.indiceColeta;
+  Object.keys(ic).forEach(k => { if (ic[k] === undefined) ic[k] = null; });
   const vals = Object.values(ic).filter(v => v !== null);
   const media = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   const nc = DADOS.ocorrencias.length;
   const L = DADOS.lotes;
   el('kpis').innerHTML = `
     <div class="kpi"><div class="r">COLETA DO MÊS</div>
-      <div class="v" style="color:${corColeta(media)}">${fmtPct(media)}</div>
-      <div class="d">média dos 5 indicadores</div></div>
+      <div class="v" style="color:${corColeta(media)}">${media === null ? '—' : fmtPct(media)}</div>
+      <div class="d">média dos ${vals.length} indicadores</div></div>
     <div class="kpi"><div class="r">LOTES CONFORMES</div>
       <div class="v" style="color:var(--ok2)">${L.conformes}/${L.total}</div>
       <div class="d">${L.total ? fmtPct(L.conformes / L.total) : '—'} no mês</div></div>
@@ -237,7 +238,7 @@ function renderKpis(){
 }
 
 function renderColeta(){
-  const nomes = { pH: 'pH', brix: 'Brix', carbonatacao: 'Carbonatação', recravacao: 'Recravação', abv: 'ABV' };
+  const nomes = { pH: 'pH', brix: 'Brix', carbonatacao: 'Carbonatação', recravacao: 'Recravação', estoque: 'Estoque', abv: 'ABV' };
   el('coletaSub').textContent = `${DADOS.lotes.total} lotes no mês`;
   el('coleta').innerHTML = Object.entries(nomes).map(([k, nome]) => {
     const p = DADOS.indiceColeta[k];
@@ -356,18 +357,42 @@ function renderFerm(){
 // Cálculos a partir dos dados reais
 // ---------------------------------------------------------------------------
 // indicador → bloco da ficha (o rodapé/barra das OPs mostra o preenchimento destes blocos)
-const IND_BLOCO = { pH: 'preenvase', brix: 'preenvase', carbonatacao: 'carbonatacao', recravacao: 'recravacao', abv: 'fermentacao' };
+const IND_BLOCO = { pH: 'preenvase', brix: 'preenvase', carbonatacao: 'carbonatacao', recravacao: 'recravacao', abv: 'fermentacao', estoque: 'estoque' };
 // D1 pode entregar JSON como string — normaliza
 const parseJson = (v) => { if (v == null) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch(e) { return null; } };
-// coleta pelo preenchimento REAL dos blocos (blocos_status no D1 — o mesmo dos rodapés das OPs)
+// Família do SKU — mesma regra do formulário (FX000=base; FX*=kombucha; CH/RF/RTM=refri-chá)
+function familiaDe(sku){
+  const s = String(sku || '');
+  if (s === 'FX000' || s === 'BAS') return 'base';
+  if (s.startsWith('FX')) return 'kombucha';
+  return 'refri'; // CH*/RF*/RTM* (e demais)
+}
+// Em que OPs um indicador se aplica (por família) — carbono/recravação/estoque não valem p/ base; ABV só base
+function indicadorAplicavel(ind, sku){
+  const fam = familiaDe(sku);
+  if (ind === 'estoque' || ind === 'carbonatacao' || ind === 'recravacao') return fam !== 'base';
+  if (ind === 'abv') return fam === 'base';
+  return true; // pH / brix aplicam-se a todas
+}
+// coleta pelo preenchimento REAL dos blocos (blocos_status no D1 — o mesmo dos rodapés das OPs).
+// Denominador = as OPs em que o indicador se aplica na família — não só as que já salvaram o bloco.
+// Assim OP sem o bloco (ou com bloco vazio) abaixa a %, em vez de ser ignorada/inflar.
 function coletaPorBlocos(fichas){
   const r = {};
   for (const [ind, bloco] of Object.entries(IND_BLOCO)) {
     let f = 0, t = 0;
     for (const ficha of fichas) {
+      if (!indicadorAplicavel(ind, ficha.sku)) continue; // família sem esse indicador
       const bs = parseJson(ficha.blocos_status) || {};
-      const b = bs[bloco] || bs[bloco.toLowerCase()] || null;
-      if (b && b.t > 0) { f += b.f; t += b.t; }
+      // chaves do D1 vêm do form (ex.: preEnvase) — normaliza para minúsculas no LOOKUP
+      const alvo = bloco.toLowerCase();
+      const b = bs[bloco] || bs[alvo] || bs[Object.keys(bs).find(k => k.toLowerCase() === alvo)] || null;
+      if (b && Number(b.t) > 0) { f += Number(b.f) || 0; t += Number(b.t) || 0; }
+      else if (b !== undefined) {
+        // bloco aplicável mas zerado (nada coletado ainda) — conta como pendência 0/1
+        // para a OP não inflar a coleta (senão OP sem medição pareceria completa)
+        t += 1;
+      }
     }
     r[ind] = t ? f / t : null;
   }
