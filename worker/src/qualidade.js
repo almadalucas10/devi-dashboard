@@ -260,7 +260,25 @@ export async function fichasDoMes(env, aaaamm) {
   const r = await env.QUALIDADE_DB.prepare(
     "SELECT op, sku, produto, data_producao, status, nc_count, indice FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
   ).bind(aaaamm).all();
-  return r.results || [];
+  const fichas = r.results || [];
+  // NCs detalhadas por OP (tabela ncs) — alimenta as "Ocorrências" do painel
+  try {
+    const ops = fichas.map((f) => f.op).filter(Boolean);
+    if (ops.length) {
+      const ph = ops.map(() => "?").join(",");
+      const rn = await env.QUALIDADE_DB.prepare(
+        `SELECT op, bloco, campo, leitura, valor, min, max FROM ncs WHERE op IN (${ph})`
+      ).bind(...ops).all();
+      const porOp = new Map();
+      for (const nc of rn.results || []) {
+        const arr = porOp.get(nc.op) || [];
+        arr.push(nc);
+        porOp.set(nc.op, arr);
+      }
+      for (const f of fichas) f.ncs = porOp.get(f.op) || [];
+    }
+  } catch (e) { console.error(`[qualidade] ncs do mes: ${e.message}`); }
+  return fichas;
 }
 
 /** Fichas salvas (arquivo) — todas, mais recentes primeiro */

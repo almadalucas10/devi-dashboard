@@ -174,60 +174,23 @@
 
 <script>
 // ---------------------------------------------------------------------------
-// Dados de demonstração — em produção vêm de GET /api/qualidade/mes/:aaaa-mm
-// (agregado mensal no R2, ver fase2-painel-e-anexo.md §2)
+// Painel de Qualidade — dados reais do worker (API key + senha do site)
+// Fontes: /api/qualidade/mes/:aaaamm (fichas do mês + NCs) · /api/qualidade/fichas (OPs)
+//         /api/qualidade/ficha/:op (recravação da última ficha)
 // ---------------------------------------------------------------------------
-const DADOS = {
-  mes: '2026-08',
-  mesNome: 'Agosto de 2026',
-  atualizadoEm: '08:14',
-  indiceColeta: { pH: 1.00, brix: 1.00, carbonatacao: 0.92, recravacao: 0.25, abv: 0.42 },
-  lotes: {
-    total: 12, conformes: 10, naoConformes: 2, semDado: 1,
-    lista: [
-      { op: '#527', sigla: 'KFV', status: 'nc', txt: '12/08 · transpasse 0,78 abaixo do mínimo' },
-      { op: '#518', sigla: 'KABX/3', status: 'sd', txt: '11/08 · análise não registrada' },
-      { op: '#517', sigla: 'RFV2K', status: 'ok', txt: '13/08 · pH 3,42 · Brix 5,0' },
-      { op: '#512', sigla: 'RLSSAMS2K', status: 'ok', txt: '10/08 · pH 3,35 · Brix 4,8' },
-      { op: '#500', sigla: 'KMÇ', status: 'ok', txt: '10/08 · pH 3,38 · Brix 5,9' }
-    ]
-  },
-  ocorrencias: [
-    { op: '#527', sigla: 'KFV', data: '12/08', txt: 'Transpasse fora de especificação — 0,78 mm' },
-    { op: '#505', sigla: 'RGA2K', data: '06/08', txt: 'Lata oxidada' },
-    { op: '#498', sigla: 'KPL', data: '03/08', txt: 'Coloração fraca e pouco doce' }
-  ],
-  analisesVencidas: { total: 4, lista: [
-    { op: '#471', sigla: 'CML', dias: '30 dias', txt: 'vencida há 4 dias · lote de 09/07', cor: 'e' },
-    { op: '#477', sigla: 'CVP', dias: '30 dias', txt: 'vencida há 2 dias · lote de 10/07', cor: 'e' },
-    { op: '#517', sigla: 'RFV2K', dias: '7 dias', txt: 'vence amanhã', cor: 'a' },
-    { op: '#448', sigla: 'KMIR', dias: '6 meses', txt: 'em 17/01/2027', cor: 'ok' }
-  ] },
-  fermentacao: [
-    { tanque: 'T5', nome: 'Frutas Vermelhas', dia: 'dia 6', txt: 'pH 3,1 → 2,9 · Brix 6,0 → 4,2 · 28 °C', cor: '' },
-    { tanque: 'T3', nome: 'Abacaxi', dia: 'dia 11', txt: 'pH 3,3 → 3,1 · lento · 22 °C', cor: 'a' },
-    { tanque: 'T1', nome: 'Pink Lemonade', dia: 'dia 3', txt: 'pH 3,6 → 3,4 · Brix 6,8 → 6,0 · 30 °C', cor: '' }
-  ],
-  recravacao: {
-    op: '#527', sigla: 'KFV', data: '12/08',
-    medidas: [
-      { nome: 'Altura',     valor: 2.58, un: 'mm', spec: { min: 2.50, alvo: 2.60, max: 2.65 } },
-      { nome: 'Espessura',  valor: 1.08, un: 'mm', spec: { min: 1.00, alvo: 1.05, max: 1.10 } },
-      { nome: 'Transpasse', valor: 0.78, un: 'mm', spec: { min: 0.80, alvo: 0.85, max: 0.90 } }
-    ]
-  },
-  // Série real da aba Estatísticas Indicadores Kombuc — coleta média mensal (pH·Brix·ABV)
-  evolucao: [
-    ['Jan/25', 75], ['Fev/25', 51], ['Mar/25', 100], ['Abr/25', 100], ['Mai/25', 75],
-    ['Jun/25', 100], ['Jul/25', 100], ['Ago/25', 92], ['Set/25', 66], ['Out/25', 50],
-    ['Nov/25', 78], ['Dez/25', 36], ['Jan/26', 100], ['Fev/26', 100], ['Mar/26', 100],
-    ['Abr/26', 100], ['Mai/26', 100], ['Jun/26', 83], ['Jul/26', 100]
-  ]
+const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
+const API_KEY = "fbbc2d53ae08bbfdbe3cf4e4439b91eda790d0f67a0c347c";
+const _fetchOrig = window.fetch.bind(window);
+window.fetch = (u, o) => {
+  if (typeof u === 'string' && u.indexOf(WORKER_URL) === 0) {
+    o = o || {};
+    o.headers = Object.assign({ 'X-API-Key': API_KEY }, o.headers || {});
+  }
+  return _fetchOrig(u, o);
 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
-// ---------------------------------------------------------------------------
-// Limiar de coleta (fase 2 §3.3): ≥95% neutro · 90–95% âmbar · <90% vermelho
-// ---------------------------------------------------------------------------
+// Limiar de coleta: ≥95% neutro · 90–95% âmbar · <90% vermelho
 const fmtPct = p => Math.round(p * 100) + '%';
 function corColeta(p){
   if(p === null || p === undefined) return 'var(--txt3)';
@@ -235,26 +198,32 @@ function corColeta(p){
   if(p >= 0.90) return '#fbbf24';
   return '#f87171';
 }
-
 const el = id => document.getElementById(id);
+const abreviaOp = s => { const d = String(s || '').replace(/\D/g, ''); return d.slice(-3) || s; };
+const fmtDataBR = iso => { const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso||''); };
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+let DADOS = null;
+
+// ---------------------------------------------------------------------------
 function renderKpis(){
   const ic = DADOS.indiceColeta;
-  const vals = Object.values(ic);
+  const vals = Object.values(ic).filter(v => v !== null);
   const media = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   const nc = DADOS.ocorrencias.length;
+  const L = DADOS.lotes;
   el('kpis').innerHTML = `
     <div class="kpi"><div class="r">COLETA DO MÊS</div>
       <div class="v" style="color:${corColeta(media)}">${fmtPct(media)}</div>
       <div class="d">média dos 5 indicadores</div></div>
     <div class="kpi"><div class="r">LOTES CONFORMES</div>
-      <div class="v" style="color:var(--ok2)">${DADOS.lotes.conformes}/${DADOS.lotes.total}</div>
-      <div class="d">${fmtPct(DADOS.lotes.conformes / DADOS.lotes.total)} no mês</div></div>
+      <div class="v" style="color:var(--ok2)">${L.conformes}/${L.total}</div>
+      <div class="d">${L.total ? fmtPct(L.conformes / L.total) : '—'} no mês</div></div>
     <div class="kpi"><div class="r">NÃO-CONFORMIDADES</div>
       <div class="v" style="color:var(--er2)">${nc}</div>
       <div class="d">${nc ? 'ver "Ocorrências"' : 'nenhuma no mês'}</div></div>
     <div class="kpi"><div class="r">ANÁLISES VENCIDAS</div>
-      <div class="v" style="color:var(--al2)">${DADOS.analisesVencidas.total}</div>
+      <div class="v" style="color:${DADOS.analisesVencidas.total ? 'var(--al2)' : 'var(--ok2)'}">${DADOS.analisesVencidas.total}</div>
       <div class="d">vida de prateleira</div></div>`;
 }
 
@@ -264,25 +233,36 @@ function renderColeta(){
   el('coleta').innerHTML = Object.entries(nomes).map(([k, nome]) => {
     const p = DADOS.indiceColeta[k];
     const cor = corColeta(p);
+    const exib = p === null ? '—' : fmtPct(p);
     return `<div class="col-lin">
-      <div class="col-l1"><span>${nome}</span><b style="color:${cor}">${fmtPct(p)}</b></div>
-      <div class="tr"><i style="width:${Math.round(p * 100)}%;background:${cor}"></i></div></div>`;
+      <div class="col-l1"><span>${nome}</span><b style="color:${cor}">${exib}</b></div>
+      <div class="tr"><i style="width:${p === null ? 0 : Math.round(p * 100)}%;background:${cor}"></i></div></div>`;
   }).join('');
 }
 
 function renderEvol(){
+  if(!DADOS.evolucao || !DADOS.evolucao.length){
+    el('evol').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Sem histórico mensal ainda (os meses anteriores não têm fichas salvas).</div>';
+    return;
+  }
   el('evol').innerHTML = '<div style="display:flex;align-items:flex-end;gap:3px;height:52px">' +
     DADOS.evolucao.map(([mes, v]) => {
       const cor = v >= 95 ? '#cfe0ee' : v >= 90 ? '#fbbf24' : '#f87171';
       return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"
         title="${mes} · ${v}%">
         <div style="width:100%;background:${cor};height:${Math.max(2, v / 100 * 40)}px;border-radius:2px;opacity:.9"></div>
-        <span style="font-size:7.5px;color:var(--txt3)">${mes}</span></div>`;
+        <span style="font-size:7.5px;color:var(--txt3)">${esc(mes)}</span></div>`;
     }).join('') + '</div>';
 }
 
 function renderRecravacao(){
   const r = DADOS.recravacao;
+  if(!r){
+    el('recTitulo').textContent = '🔧 Recravação';
+    el('recSub').textContent = 'sem ficha com recravação no mês';
+    el('recrava').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma medição de recravação registrada ainda.</div>';
+    return;
+  }
   el('recTitulo').textContent = `🔧 Recravação · OP ${r.op}`;
   el('recSub').textContent = `1 lata · ${r.data}`;
   el('recrava').innerHTML = r.medidas.map(m => {
@@ -290,8 +270,8 @@ function renderRecravacao(){
     const pos = v => Math.max(0, Math.min(100, (v - min) / (max - min) * 100));
     const cor = (m.valor >= min && m.valor <= max) ? 'var(--ok2)' : 'var(--er2)';
     return `<div class="rec">
-      <div class="rec-l1"><span class="nm">${m.nome}</span>
-        <span class="vl" style="color:${cor}">${String(m.valor).replace('.', ',')} <span style="font-size:10px;color:var(--txt3)">${m.un}</span></span></div>
+      <div class="rec-l1"><span class="nm">${esc(m.nome)}</span>
+        <span class="vl" style="color:${cor}">${String(m.valor).replace('.', ',')} <span style="font-size:10px;color:var(--txt3)">${esc(m.un)}</span></span></div>
       <div class="faixa">
         <div class="zona" style="left:${pos(min)}%;right:${100 - pos(max)}%"></div>
         <div class="alvo" style="left:${pos(alvo)}%"></div>
@@ -308,58 +288,200 @@ function renderLotes(){
   const status = {
     ok: ['ok', 'conforme', 'var(--ok2)'],
     nc: ['e', 'não conforme', 'var(--er2)'],
-    sd: ['a', 'sem recravação', 'var(--al2)']
+    sd: ['a', 'incompleta', 'var(--al2)']
   };
   el('lotes').innerHTML = L.lista.map(x => {
     const [cls, label, cor] = status[x.status] || status.ok;
     return `<div class="it ${cls}">
-      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${x.op.replace('#','')}" style="color:inherit;text-decoration:none;flex:1;min-width:0"><span class="it-nm">${x.op} · ${x.sigla}</span></a>
+      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}" style="color:inherit;text-decoration:none;flex:1;min-width:0"><span class="it-nm">${esc(x.op)} · ${esc(x.sku)}</span></a>
         <span class="it-v" style="font-size:12px;color:${cor}">${label}</span></div>
-      <div class="it-l2">${x.txt}</div></div>`;
+      <div class="it-l2">${esc(x.txt)}</div></div>`;
   }).join('');
+  if(!L.lista.length) el('lotes').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha salva no mês.</div>';
   const leg = el('lotes').parentElement.querySelector('.leg');
   if(leg) leg.innerHTML = '<span>toque no lote para abrir a ficha de qualidade</span>';
 }
 
 function renderOcorrencias(){
   el('occSub').textContent = `${DADOS.ocorrencias.length} no mês`;
+  if(!DADOS.ocorrencias.length){
+    el('ocorrencias').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma não-conformidade no mês.</div>';
+    return;
+  }
   el('ocorrencias').innerHTML = DADOS.ocorrencias.map((o, i) => `
     <div class="it ${i === 0 ? 'e' : 'a'}">
-      <div class="it-l1"><span class="it-nm">${o.op} · ${o.sigla}</span>
-        <span class="it-v" style="font-size:12px;color:${i === 0 ? 'var(--er2)' : 'var(--al2)'}">${o.data}</span></div>
-      <div class="it-l2">${o.txt}</div></div>`).join('');
+      <div class="it-l1"><span class="it-nm">${esc(o.op)} · ${esc(o.sku)}</span>
+        <span class="it-v" style="font-size:12px;color:${i === 0 ? 'var(--er2)' : 'var(--al2)'}">${esc(o.data)}</span></div>
+      <div class="it-l2">${esc(o.txt)}</div></div>`).join('');
 }
 
 function renderVida(){
   const V = DADOS.analisesVencidas;
   el('vidaSub').textContent = `${V.total} vencidas`;
+  if(!V.lista.length){
+    el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma análise vencida.</div>';
+    return;
+  }
   const cor = { e: 'var(--er2)', a: 'var(--al2)', ok: 'var(--ok2)' };
   el('vida').innerHTML = V.lista.map(x => `
     <div class="it ${x.cor === 'ok' ? '' : x.cor}">
-      <div class="it-l1"><span class="it-nm">${x.op} · ${x.sigla}</span>
-        <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${x.dias}</span></div>
-      <div class="it-l2">${x.txt}</div></div>`).join('');
+      <div class="it-l1"><span class="it-nm">${esc(x.op)} · ${esc(x.sku)}</span>
+        <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${esc(x.dias)}</span></div>
+      <div class="it-l2">${esc(x.txt)}</div></div>`).join('');
 }
 
 function renderFerm(){
   el('fermSub').textContent = `${DADOS.fermentacao.length} tanques`;
+  if(!DADOS.fermentacao.length){
+    el('fermentacao').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma base em fermentação.</div>';
+    return;
+  }
   el('fermentacao').innerHTML = DADOS.fermentacao.map(f => `
     <div class="it ${f.cor}">
-      <div class="it-l1"><span class="it-nm">${f.tanque} · ${f.nome}</span>
-        <span class="it-v" style="font-size:14px;${f.cor ? 'color:var(--al2)' : ''}">${f.dia}</span></div>
-      <div class="it-l2">${f.txt}</div></div>`).join('');
+      <div class="it-l1"><span class="it-nm">${esc(f.tanque)} · ${esc(f.nome)}</span>
+        <span class="it-v" style="font-size:14px;${f.cor ? 'color:var(--al2)' : ''}">${esc(f.dia)}</span></div>
+      <div class="it-l2">${esc(f.txt)}</div></div>`).join('');
 }
 
-el('sub').textContent = `${DADOS.mesNome} · ${DADOS.lotes.total} lotes produzidos`;
-el('rel').textContent = DADOS.atualizadoEm;
-renderKpis();
-renderColeta();
-renderEvol();
-renderRecravacao();
-renderLotes();
-renderOcorrencias();
-renderVida();
-renderFerm();
+// ---------------------------------------------------------------------------
+// Cálculos a partir dos dados reais
+// ---------------------------------------------------------------------------
+function coletaPorIndicador(fichas){
+  const IND = ['pH','brix','carbonatacao','recravacao','abv'];
+  const r = {};
+  for (const k of IND) {
+    const aplicaveis = fichas.filter(f => f.indice && f.indice[k] !== undefined && f.indice[k] !== null);
+    const coletados = aplicaveis.filter(f => f.indice[k] === true);
+    r[k] = aplicaveis.length ? coletados.length / aplicaveis.length : null;
+  }
+  return r;
+}
+const somaMeses = (iso, n) => { const d = new Date(String(iso).slice(0,10) + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d; };
+const REC_SPEC = {
+  altura: { min: 2.50, alvo: 2.60, max: 2.65 },
+  espessura: { min: 1.00, alvo: 1.05, max: 1.10 },
+  transpasse: { min: 0.80, alvo: 0.85, max: 0.90 }
+};
+const NOME_REC = { altura: 'Altura', espessura: 'Espessura', transpasse: 'Transpasse' };
+
+async function carregar(){
+  const agora = new Date();
+  const mes = agora.toISOString().slice(0, 7);
+  try {
+    const [rm, rf] = await Promise.all([
+      fetch(WORKER_URL + '/api/qualidade/mes/' + mes, { cache: 'no-store' }),
+      fetch(WORKER_URL + '/api/qualidade/fichas', { cache: 'no-store' }),
+    ]);
+    const fichas = (await rm.json()).fichas || [];
+    const opsAbertas = (await rf.json()).fichas || [];
+
+    // indicador de coleta
+    const indiceColeta = coletaPorIndicador(fichas);
+
+    // lotes
+    const total = fichas.length;
+    const conformes = fichas.filter(f => f.status === 'completa' && !(f.nc_count > 0)).length;
+    const naoConformes = fichas.filter(f => f.nc_count > 0).length;
+    const semDado = fichas.filter(f => f.status !== 'completa' && !(f.nc_count > 0)).length;
+
+    const lista = fichas.map(f => {
+      const status = f.nc_count > 0 ? 'nc' : (f.status === 'completa' ? 'ok' : 'sd');
+      let txt = fmtDataBR(f.data_producao);
+      if (f.ncs && f.ncs.length) txt += ' · ' + f.ncs[0].campo + ' ' + f.ncs[0].valor + ' fora de spec';
+      else if (status === 'ok') txt += ' · conforme';
+      else txt += ' · análise incompleta';
+      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', status, txt };
+    });
+
+    // ocorrências (NCs detalhadas)
+    const ocorrencias = [];
+    for (const f of fichas) {
+      for (const nc of f.ncs || []) {
+        ocorrencias.push({
+          op: '#' + abreviaOp(f.op), sku: f.sku || '—', data: fmtDataBR(f.data_producao),
+          txt: `${nc.campo} ${nc.valor} fora de spec (${nc.min}–${nc.max}) · ${nc.bloco || ''}`
+        });
+      }
+    }
+
+    // análises vencidas (validade = fabricação + 8 meses)
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const vencidas = [];
+    for (const f of fichas) {
+      const val = somaMeses(f.data_producao, 8);
+      const dias = Math.round((val - hoje) / 864e5);
+      if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
+      else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
+    }
+
+    // fermentação: bases (FX000) abertas
+    const fermentacao = (opsAbertas || [])
+      .filter(o => o.sku === 'FX000' && o.data)
+      .map(o => {
+        const m = String(o.data).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        let dias = null;
+        if (m) { const ini = new Date(+m[3], +m[2]-1, +m[1]); dias = Math.round((hoje - ini) / 864e5); }
+        return { tanque: o.tanque || '—', nome: o.produto || 'Base Kombucha', dia: dias == null ? '—' : `dia ${dias}`, txt: `fab ${o.data}`, cor: (dias != null && dias >= 11) ? 'e' : (dias != null && dias >= 7 ? 'a' : '') };
+      });
+
+    // recravação: última ficha do mês com o bloco preenchido
+    let recravacao = null;
+    const ordem = [...fichas].sort((a,b) => String(b.data_producao||'').localeCompare(String(a.data_producao||'')));
+    for (const f of ordem) {
+      try {
+        const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(f.op), { cache: 'no-store' });
+        const j = await fr.json();
+        const rec = j.ficha && j.ficha.blocos && j.ficha.blocos.recravacao;
+        if (rec && rec.length) {
+          recravacao = { op: '#' + abreviaOp(f.op), sigla: f.sku || '', data: fmtDataBR(f.data_producao) };
+          recravacao.medidas = [
+            { nome: 'Altura', valor: rec[0].altura, un: 'mm', spec: REC_SPEC.altura },
+            { nome: 'Espessura', valor: rec[0].espessura, un: 'mm', spec: REC_SPEC.espessura },
+            { nome: 'Transpasse', valor: rec[0].transpasse, un: 'mm', spec: REC_SPEC.transpasse },
+          ].filter(m => m.valor !== null && m.valor !== undefined);
+          break;
+        }
+      } catch(e) {}
+    }
+
+    // evolução: coleta média dos últimos 6 meses
+    const evolucao = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(agora); d.setUTCMonth(d.getUTCMonth() - i);
+      const mm = d.toISOString().slice(0,7);
+      try {
+        const r = await fetch(WORKER_URL + '/api/qualidade/mes/' + mm, { cache: 'no-store' });
+        const fs = (await r.json()).fichas || [];
+        const ic = coletaPorIndicador(fs);
+        const vals = Object.values(ic).filter(v => v !== null);
+        const media = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100) : null;
+        if (media !== null) evolucao.push([mm.slice(2).replace('-','/'), media]);
+      } catch(e) {}
+    }
+
+    DADOS = {
+      mes,
+      mesNome: MESES[agora.getUTCMonth()] + ' de ' + agora.getUTCFullYear(),
+      atualizadoEm: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      indiceColeta,
+      lotes: { total, conformes, naoConformes, semDado, lista },
+      ocorrencias,
+      analisesVencidas: { total: vencidas.length, lista: vencidas },
+      fermentacao,
+      recravacao,
+      evolucao,
+    };
+
+    el('sub').textContent = `${DADOS.mesNome} · ${total} ${total === 1 ? 'lote produzido' : 'lotes produzidos'}`;
+    el('rel').textContent = DADOS.atualizadoEm;
+    renderKpis(); renderColeta(); renderEvol(); renderRecravacao();
+    renderLotes(); renderOcorrencias(); renderVida(); renderFerm();
+  } catch(e) {
+    el('sub').textContent = 'Erro ao carregar os dados: ' + e.message;
+  }
+}
+
+carregar();
 </script>
 </body>
 </html>
