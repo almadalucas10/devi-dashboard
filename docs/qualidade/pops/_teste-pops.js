@@ -73,7 +73,10 @@ function make(url) {
     ok(abertos.length > 0 && abertos[0].includes('/pdf?key='), 'A · rotina baixa via worker (PDF do Drive)');
     window.abrir('POP11');
     window.baixar('POP11');
-    ok(abertos[abertos.length-1].includes('/docs/qualidade/pops/pdfs/POP11.pdf'), 'A · POP 09–17 baixa PDF local: ' + abertos[abertos.length-1]);
+    ok(abertos[abertos.length-1].includes('/pdf?key='), 'A · POP 09–17 baixa PDF do Drive (layout original): ' + abertos[abertos.length-1]);
+    // pops.json: 09–17 apontam para Google Docs (exporta PDF fiel)
+    const p11 = POPS_DATA.pops.find(x => x.codigo === 'POP11');
+    ok(/^[A-Za-z0-9_-]{20,}$/.test(p11.driveId), 'A · POP11 com driveId do Google Doc');
     window.abrir('POP14');
     ok(!!$('#op-m1') && !!$('#op-m3'), 'A · POP14 opções presentes');
     window.selecionar('m3');

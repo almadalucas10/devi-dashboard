@@ -48,7 +48,19 @@ export async function listarPOPs(env, folderId) {
     if (b.numero != null) return 1;
     return String(a.rotulo).localeCompare(String(b.rotulo));
   });
-  return { pops };
+  // dedupe: pasta pode ter o .docx original + o Google Doc convertido (mesmo rótulo).
+  // Prefere o Google Doc (exporta PDF fiel) e descarta o .docx duplicado.
+  const vistos = new Set();
+  const unicos = [];
+  for (const f of pops) {
+    const chave = f.rotulo || f.nome;
+    const anterior = unicos.find((x) => (x.rotulo || x.nome) === chave);
+    if (!anterior) { unicos.push(f); continue; }
+    const prefere = (a, b) =>
+      (a.mime === "application/vnd.google-apps.document" || a.mime === "application/vnd.google-apps.spreadsheet") ? a : b;
+    unicos[unicos.indexOf(anterior)] = prefere(anterior, f);
+  }
+  return { pops: unicos };
 }
 
 /** Conteúdo (bytes) do POP: PDF direto, Google Doc/Sheets exportados como PDF */
