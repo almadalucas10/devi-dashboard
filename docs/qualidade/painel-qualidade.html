@@ -303,7 +303,9 @@ function renderLotes(){
   el('lotes').innerHTML = L.lista.map(x => {
     const [cls, label, cor] = status[x.status] || status.ok;
     return `<div class="it ${cls}">
-      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}" style="color:inherit;text-decoration:none;flex:1;min-width:0"><span class="it-nm">${esc(x.op)} · ${esc(x.sku)}</span></a>
+      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}" style="color:inherit;text-decoration:none;flex:1;min-width:0">
+        <span class="it-nm">${esc(x.op)} · ${esc(x.produto)}</span>
+        <span style="font-size:10px;color:var(--txt3);margin-left:4px">(${esc(x.sku)})</span></a>
         <span class="it-v" style="font-size:12px;color:${cor}">${label}</span></div>
       <div class="it-l2">${esc(x.txt)}</div></div>`;
   }).join('');
@@ -320,7 +322,7 @@ function renderOcorrencias(){
   }
   el('ocorrencias').innerHTML = DADOS.ocorrencias.map((o, i) => `
     <div class="it ${i === 0 ? 'e' : 'a'}">
-      <div class="it-l1"><span class="it-nm">${esc(o.op)} · ${esc(o.sku)}</span>
+      <div class="it-l1"><span class="it-nm">${esc(o.op)} · ${esc(o.produto)}</span><span style="font-size:10px;color:var(--txt3)">(${esc(o.sku)})</span>
         <span class="it-v" style="font-size:12px;color:${i === 0 ? 'var(--er2)' : 'var(--al2)'}">${esc(o.data)}</span></div>
       <div class="it-l2">${esc(o.txt)}</div></div>`).join('');
 }
@@ -335,7 +337,7 @@ function renderVida(){
   const cor = { e: 'var(--er2)', a: 'var(--al2)', ok: 'var(--ok2)' };
   el('vida').innerHTML = V.lista.map(x => `
     <div class="it ${x.cor === 'ok' ? '' : x.cor}">
-      <div class="it-l1"><span class="it-nm">${esc(x.op)} · ${esc(x.sku)}</span>
+      <div class="it-l1"><span class="it-nm">${esc(x.op)} · ${esc(x.produto)}</span><span style="font-size:10px;color:var(--txt3)">(${esc(x.sku)})</span>
         <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${esc(x.dias)}</span></div>
       <div class="it-l2">${esc(x.txt)}</div></div>`).join('');
 }
@@ -447,7 +449,7 @@ async function carregar(){
       if (f.ncs && f.ncs.length) txt += ' · ' + f.ncs[0].campo + ' ' + f.ncs[0].valor + ' fora de spec';
       else if (status === 'ok') txt += ' · conforme';
       else txt += ' · análise incompleta';
-      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', status, txt };
+      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', produto: f.produto || f.sku || '', status, txt };
     });
 
     // ocorrências (NCs detalhadas)
@@ -455,7 +457,8 @@ async function carregar(){
     for (const f of fichas) {
       for (const nc of f.ncs || []) {
         ocorrencias.push({
-          op: '#' + abreviaOp(f.op), sku: f.sku || '—', data: fmtDataBR(f.data_producao),
+          op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '',
+          data: fmtDataBR(f.data_producao),
           txt: `${nc.campo} ${nc.valor} fora de spec (${nc.min}–${nc.max}) · ${nc.bloco || ''}`
         });
       }
@@ -467,8 +470,8 @@ async function carregar(){
     for (const f of fichas) {
       const val = somaMeses(f.data_producao, 8);
       const dias = Math.round((val - hoje) / 864e5);
-      if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
-      else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
+      if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
+      else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
     }
 
     // fermentação: bases (FX000) abertas
