@@ -795,7 +795,7 @@ async function abrirArquivo(){
     el.innerHTML = fs.map(f => {
       const st = f.status === 'completa' ? 'completa' : (f.status || 'salva');
       const stCls = st === 'completa' ? 'st completa' : (st === 'nc' ? 'st nc' : 'st parcial');
-      const link = `${WORKER_URL}/api/qualidade/ficha/${encodeURIComponent(f.op)}/arquivo?nCodOP=${f.n_cod_op || ''}&key=${encodeURIComponent(API_KEY)}`;
+      const link = `/api/qualidade/ficha/${encodeURIComponent(f.op)}/arquivo?nCodOP=${f.n_cod_op || ''}`;
       return `<div class="arqItem">
         <div>
           <div class="l1">OP <span>#${abreviaOp(f.op)}</span>${f.sigla ? ' · ' + f.sigla : ''}</div>
@@ -835,7 +835,7 @@ async function abrirPOPs(){
           <div class="l1"><span>${p.rotulo || 'DOC'}</span>${p.nome ? ' · ' + p.nome : ''}</div>
         </div>
         <div class="r">
-          <a class="btn btnNav" target="_blank" rel="noopener" href="${WORKER_URL}/api/qualidade/pops/${encodeURIComponent(p.id)}/pdf?key=${encodeURIComponent(API_KEY)}">📄 abrir</a>
+          <a class="btn btnNav" target="_blank" rel="noopener" href="/api/qualidade/pops/${encodeURIComponent(p.id)}/pdf">📄 abrir</a>
         </div>
       </div>`).join('');
   }catch(e){

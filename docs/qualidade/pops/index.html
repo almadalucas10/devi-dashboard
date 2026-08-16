@@ -266,7 +266,8 @@ function baixar(cod){
   const p = POPS.pops.find(x => x.codigo === cod);
   const id = p && p.driveId;
   if (id) {
-    window.open('https://devi-dashboard-worker.almadalucas.workers.dev/api/qualidade/pops/' + encodeURIComponent(id) + '/pdf?key=' + encodeURIComponent(API_KEY), '_blank');
+    // servido pelo próprio domínio (proxy Pages → worker) — devikombucha.com em produção
+    window.open('/api/qualidade/pops/' + encodeURIComponent(id) + '/pdf', '_blank');
     return;
   }
   alert(`Download do PDF do ${cod}.\n\nSem driveId configurado no pops.json.`);

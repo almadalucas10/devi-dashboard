@@ -70,10 +70,10 @@ function make(url) {
     ok(document.body.textContent.includes('Baixar PDF'), 'A · rotina com botão Baixar PDF');
     ok(!document.getElementById('btnFim'), 'A · rotina sem Concluir procedimento');
     window.baixar('POP01');
-    ok(abertos.length > 0 && abertos[0].includes('/pdf?key='), 'A · rotina baixa via worker (PDF do Drive)');
+    ok(abertos.length > 0 && abertos[0].startsWith('/api/qualidade/pops/') && abertos[0].endsWith('/pdf'), 'A · rotina baixa PDF pelo mesmo domínio (proxy): ' + abertos[0]);
     window.abrir('POP11');
     window.baixar('POP11');
-    ok(abertos[abertos.length-1].includes('/pdf?key='), 'A · POP 09–17 baixa PDF do Drive (layout original): ' + abertos[abertos.length-1]);
+    ok(abertos[abertos.length-1].startsWith('/api/qualidade/pops/') && abertos[abertos.length-1].endsWith('/pdf'), 'A · POP 09–17 baixa PDF pelo mesmo domínio: ' + abertos[abertos.length-1]);
     // pops.json: 09–17 apontam para Google Docs (exporta PDF fiel)
     const p11 = POPS_DATA.pops.find(x => x.codigo === 'POP11');
     ok(/^[A-Za-z0-9_-]{20,}$/.test(p11.driveId), 'A · POP11 com driveId do Google Doc');
