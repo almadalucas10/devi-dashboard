@@ -186,6 +186,7 @@ const CORES_FG = { azul:'#60a5fa', vermelho:'#f87171', roxo:'#c4aef0',
                    ambar:'#fbbf24', verde:'#4ade80', cinza:'#8b98a5' };
 
 let POPS = null, atual = null, contexto = null;
+const API_KEY = 'fbbc2d53ae08bbfdbe3cf4e4439b91eda790d0f67a0c347c';
 
 // contexto da OP — em produção vem da ficha
 const CTX_DEMO = { op:'2026/00517', sigla:'RFV', familia:'refri',
@@ -262,7 +263,7 @@ function baixar(cod){
   const p = POPS.pops.find(x => x.codigo === cod);
   const id = p && p.driveId;
   if (id) {
-    window.open('https://devi-dashboard-worker.almadalucas.workers.dev/api/qualidade/pops/' + encodeURIComponent(id) + '/pdf', '_blank');
+    window.open('https://devi-dashboard-worker.almadalucas.workers.dev/api/qualidade/pops/' + encodeURIComponent(id) + '/pdf?key=' + encodeURIComponent(API_KEY), '_blank');
     return;
   }
   alert(`Download do PDF do ${cod}.\n\nSem driveId configurado no pops.json.`);

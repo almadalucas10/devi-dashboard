@@ -722,9 +722,9 @@ function renderLista(){
     const dFer = (ehBase && o.data) ? diasFermentacao(o.data) : null;
     const corFer = dFer == null ? '' : (dFer >= 11 ? ' er' : (dFer >= 7 ? ' al' : ' ok'));
     const info = ehBase
-      ? (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '') +
+      ? (o.data ? `<span class="l3">📅 Fab: ${esc(o.data)}</span>` : '') +
         (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
-      : (o.data ? `<span class="l3">📅 Fab: ${o.data}</span>` : '');
+      : (o.data ? `<span class="l3">📅 Fab: ${esc(o.data)}</span>` : '');
     // blocos preenchidos (rodapé do card) — todos os blocos da família, com estado
     let blocosTxt = '';
     if (o.blocos_status && Object.keys(o.blocos_status).length) {
@@ -751,12 +751,15 @@ function renderLista(){
     } else if (demo) {
       blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
     }
+    // badge de status: "parcial" não aparece mais embaixo da quantidade (ruído;
+    // o andamento real fica nos chips de blocos do rodapé do card)
+    const badge = cls === 'parcial' ? '' : `<span class="st ${cls}">${label}</span>`;
     return `<div class="opc${o.nc ? ' nc-flag' : ''}" onclick="abrirOp('${o.op}')">
-      <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
-        <div class="l2">${p.nome || o.sku}</div>
+      <div><div class="l1">OP <span>#${esc(o.op)}</span> · ${esc(o.sigla)}</div>
+        <div class="l2">${esc(p.nome || o.sku)}</div>
         ${info}${blocosTxt}</div>
       <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
-        <span class="st ${cls}">${label}</span></div></div>`;
+        ${badge}</div></div>`;
   };
   // separa as bases (FX000) dos demais SKUs
   const base   = OPS.filter(o => o.sku === 'FX000');
@@ -936,11 +939,11 @@ function renderRegistros(j){
   if(!regs.length){ el.innerHTML = '<div class="sub" style="padding:10px;color:var(--txt3)">Nenhum registro ainda (ou planilha não compartilhada).</div>'; return; }
   el.innerHTML = regs.slice().reverse().map(r => `
     <div class="ctlRec">
-      <b>${r['Data'] || '—'}</b>
-      <span>${r['Horário Inicial'] || '—'}</span>
-      <span>${r['Horário Final'] || '—'}</span>
-      <span>OP ${r['OP'] || '—'} · ${r['Quantidade'] || ''} un${r['CIP*'] ? ' · CIP ' + r['CIP*'] : ''}</span>
-      <span class="r">${r['Responsável'] || ''}</span>
+      <b>${esc(r['Data'])}</b>
+      <span>${esc(r['Horário Inicial'])}</span>
+      <span>${esc(r['Horário Final'])}</span>
+      <span>OP ${esc(r['OP'])} · ${esc(r['Quantidade'])} un${r['CIP*'] ? ' · CIP ' + esc(r['CIP*']) : ''}</span>
+      <span class="r">${esc(r['Responsável'])}</span>
     </div>`).join('');
 }
 async function carregarRegistros(){
@@ -1095,6 +1098,19 @@ function abrirOp(op){
 
 // ---- integração com o endpoint do worker (mock quando file:// ou offline) ----
 const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
+// chave de API — as rotas /api/qualidade/* e /api/debug/* do worker exigem (auditoria de segurança)
+const API_KEY = "fbbc2d53ae08bbfdbe3cf4e4439b91eda790d0f67a0c347c";
+// injeta a chave em toda chamada ao worker (header) — uma única interceptação
+const _fetchOrig = window.fetch.bind(window);
+window.fetch = (u, o) => {
+  if (typeof u === 'string' && u.indexOf(WORKER_URL) === 0) {
+    o = o || {};
+    o.headers = Object.assign({ 'X-API-Key': API_KEY }, o.headers || {});
+  }
+  return _fetchOrig(u, o);
+};
+// escape de saída — nunca interpolar dado externo (planilha/Omie) sem escapar
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 function preencherOPS(fichas){
   OPS.length = 0;
   fichas.forEach(f => OPS.push({
@@ -1555,15 +1571,15 @@ function montarInsumos(){
     <div class="folha">
       <div class="fl-cab">
         <div class="fl-emp">DEVI Produção de Bebidas LTDA</div>
-        <div class="fl-op">Ordem de Produção Nº ${opAtual || '—'}</div>
+        <div class="fl-op">Ordem de Produção Nº ${esc(opAtual) || '—'}</div>
         <div class="fl-linha">
-          <span>Previsão de Conclusão: <b>${info.previsao || '—'}</b></span>
-          <span>Situação: <b>${info.situacao || 'Em andamento'}</b></span>
+          <span>Previsão de Conclusão: <b>${esc(info.previsao)}</b></span>
+          <span>Situação: <b>${esc(info.situacao)}</b></span>
         </div>
-        <div class="fl-prod">${skuAtual} - ${p.nome || skuAtual}</div>
+        <div class="fl-prod">${esc(skuAtual)} - ${esc(p.nome || skuAtual)}</div>
         <div class="fl-linha">
-          <span>Tipo de Produto: <b>${info.tipoProduto || '04 - Produto Acabado'}</b></span>
-          <span>Família: <b>${fam || '—'}</b></span>
+          <span>Tipo de Produto: <b>${esc(info.tipoProduto)}</b></span>
+          <span>Família: <b>${esc(fam)}</b></span>
           <span>Quantidade a Produzir: <b>${fmt(qtd)} ${opUn}${sufixoL(qtd, opUn)}</b></span>
         </div>
       </div>
@@ -1578,15 +1594,17 @@ function montarInsumos(){
             const falta = !semSaldo && i.saldo < qtde;
             const conf = conferidos.has(i.cod) ? 'conf' : '';
             const est = semSaldo ? '—' : (falta ? 'falta ' + fmtQ(qtde - i.saldo) : fmt(i.saldo)) + ' ' + (i.un || '');
-            return `<tr class="${conf}" onclick="toggleInsumo('${i.cod}')">
+            // cod em contexto de handler: só alfanumérico/._- (nunca quebra o atributo)
+            const codH = String(i.cod ?? '').replace(/[^A-Za-z0-9_.-]/g, '');
+            return `<tr class="${conf}" onclick="toggleInsumo('${codH}')">
               <td>
-                <div class="fl-cod">${i.cod}</div>
-                <div class="fl-desc">${i.nome || i.cod}</div>
+                <div class="fl-cod">${esc(i.cod)}</div>
+                <div class="fl-desc">${esc(i.nome || i.cod)}</div>
               </td>
               <td class="fl-q">${fmtFolha(qtde)}</td>
-              <td>${i.un || '—'}</td>
-              <td class="fl-est" style="color:${falta ? '#b91c1c' : '#333'}">${est}</td>
-              <td class="fl-chk"><span class="chk${conferidos.has(i.cod) ? ' on' : ''}" id="chk_${i.cod}">✓</span></td>
+              <td>${esc(i.un) || '—'}</td>
+              <td class="fl-est" style="color:${falta ? '#b91c1c' : '#333'}">${esc(est)}</td>
+              <td class="fl-chk"><span class="chk${conferidos.has(i.cod) ? ' on' : ''}" id="chk_${codH}">✓</span></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -1603,6 +1621,8 @@ function toggleInsumo(cod){
     chk.parentElement.parentElement.classList.toggle('conf', conferidos.has(cod));
   }
   atualizarInsumosChk();
+  // persiste na hora — conferência marcada e recarregar a página não pode perder
+  if(opAtual && !_resetando){ try{ salvarLocal(); salvarRascunho(true); }catch(e){} }
 }
 
 function atualizarInsumosChk(){
@@ -1991,13 +2011,26 @@ function salvarRascunho(imediato){
       if(!temBloco && !(d.conferenciaInsumos || []).some(c => c.conferido)) return;
       await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ficha: d })
+        body: JSON.stringify({ ficha: d }),
+        keepalive: true, // sobrevive ao unload/reload (mobile)
       });
     }catch(e){ console.error('rascunho:', e.message); }
   };
   if(imediato) exec();
   else _timerRascunho = setTimeout(exec, 900);
 }
+
+// flush ao sair/recarregar a página — fecha a janela do debounce e evita perder
+// as últimas marcações (reflexo do problema no mobile: recarregou, sumiu)
+function flushRascunho(){
+  if(!opAtual || location.protocol === 'file:') return;
+  try{ salvarLocal(); }catch(e){}
+  salvarRascunho(true);
+}
+window.addEventListener('pagehide', flushRascunho);
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') flushRascunho();
+});
 
 async function salvar(){
   const sku = skuAtual;

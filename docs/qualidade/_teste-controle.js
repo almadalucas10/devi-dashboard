@@ -11,10 +11,13 @@ const jsErrors = [];
 vc.on('jsdomError', e => { if (!/navigation/i.test(e.message)) jsErrors.push(e.message); });
 
 let postado = null;
+let puts = [];
+let chavesVistas = [];
 let gets = [];
 function mockFetch(url, opts) {
   const u = String(url), m = (opts && opts.method) || 'GET';
   if (u.includes('/api/qualidade/fichas')) {
+    chavesVistas.push((opts && opts.headers && opts.headers['X-API-Key']) || '');
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [
       { op: '2026/00528', sku: 'CH003', qtd: 4464, nCodOP: 9226377886 },
       { op: '2026/00517', sku: 'RF002', qtd: 7435, nCodOP: 9226163665 },
@@ -32,6 +35,10 @@ function mockFetch(url, opts) {
   if (u.includes('/api/qualidade/controle/pc3') && m === 'POST') {
     postado = JSON.parse(opts.body).registro;
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, linha: 3, registrado: [] }) });
+  }
+  if (u.includes('/api/qualidade/ficha/') && opts && opts.method === 'PUT') {
+    puts.push(u);
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
   }
   if (u.includes('/api/qualidade/ficha/')) {
     const ncod = u.split('/ficha/').pop();
@@ -172,8 +179,33 @@ setTimeout(() => {
           const linkDe2 = sec => { const el = document.querySelector('.sec[data-sec="' + sec + '"] .linkPOP'); return el ? el.textContent : ''; };
           ok(linkDe2('starter').includes('POP 09'), 'bloco Starter com ver POP 09 (base): ' + linkDe2('starter'));
           ok(linkDe2('fermentacao').includes('POP 17'), 'bloco Fermentação com ver POP 17 (base): ' + linkDe2('fermentacao'));
-          console.log(`\n${pass} passaram, ${fail} falharam`);
-          process.exit(fail ? 1 : 0);
+
+          // ---- sincronismo: conferir insumo persiste na hora (localStorage + servidor) ----
+          window.abrirOp('2026/00528'); // volta p/ chá
+          const cod = (document.querySelector('#insumos [id^="chk_"]') || {}).id;
+          const codInsumo = cod ? cod.replace('chk_', '') : null;
+          ok(!!codInsumo, 'há itens de insumo renderizados p/ conferir');
+          const putsAntes = puts.length;
+          window.toggleInsumo(codInsumo);
+          const draft528 = JSON.parse(window.localStorage.getItem('ficha_rascunho_2026/00528'));
+          ok(!!draft528 && (draft528.conferenciaInsumos || []).some(c => c.codigo === codInsumo && c.conferido),
+            'toggleInsumo salva no localStorage (ficha_rascunho_2026/00528) — ' + codInsumo);
+          ok(puts.length > putsAntes, 'toggleInsumo dispara PUT imediato (servidor/D1)');
+
+          // ---- restore ao reabrir ----
+          window.abrirOp('2026/00517'); window.abrirOp('2026/00528');
+          setTimeout(() => {
+            const chk = document.getElementById('chk_' + codInsumo);
+            ok(!!chk && chk.classList.contains('on'), 'conferido restaurado ao reabrir (chk_' + codInsumo + ' on)');
+
+            // ---- flush ao sair ----
+            const pAntes = puts.length;
+            window.flushRascunho();
+            ok(puts.length > pAntes, 'flushRascunho dispara PUT (pagehide/visibilitychange)');
+          ok(chavesVistas.length > 0 && chavesVistas[0].length > 10, 'fetch ao worker envia X-API-Key (auditoria)');
+            console.log(`\n${pass} passaram, ${fail} falharam`);
+            process.exit(fail ? 1 : 0);
+          }, 80);
         }, 160);
       }, 60);
     }, 60);
