@@ -62,16 +62,16 @@
   /* ---- card Fermentação ativa: destaque extra ---- */
   .ferm { position: relative; padding:10px 11px; }
   .ferm a { display:block; text-decoration:none; color:inherit; }
-  .ferm-tanque{font-size:20px; font-weight:700; letter-spacing:-.3px; color:var(--txt)}
-  .ferm-vol{font-size:13px; font-weight:600; color:var(--al2)}
-  .ferm-op{font-size:10px; color:var(--txt3); font-weight:400}
-  .ferm-dia{background:var(--trilho); border-radius:6px; padding:3px 8px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap}
-  .ferm-dia.al{color:var(--al2)} .ferm-dia.e{color:var(--er2)}
+  .ferm-tanque{font-size:22px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--txt); margin-bottom:2px}
+  .ferm-op{font-size:11px; color:var(--txt3); font-weight:400; text-transform:none; letter-spacing:0}
+  .ferm-dia{display:inline-block; background:var(--trilho); border-radius:6px; padding:3px 9px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap; margin-top:8px}
+  .ferm-dia.al{color:var(--al2); background:rgba(251,191,36,.14)} .ferm-dia.e{color:var(--er2); background:rgba(248,113,113,.14)}
   .ferm-leit{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px}
   .ferm-m{display:flex; flex-direction:column; gap:1px}
   .ferm-m .r{font-size:9px; letter-spacing:.6px; color:var(--txt3); text-transform:uppercase}
   .ferm-m .v{font-size:19px; font-weight:700; line-height:1; letter-spacing:-.4px; color:var(--txt)}
   .ferm-sem{font-size:11px; color:var(--txt3); margin-top:8px}
+  .ferm-vol{display:inline-block; font-size:12px; font-weight:600; color:var(--al2); margin-top:8px; margin-left:10px}
   .ferm-arq{font-size:10px; color:var(--txt3); margin-top:7px}
   .it.e.ferm{border-left-color:var(--er)} .it.a.ferm{border-left-color:var(--al)}
 
@@ -378,15 +378,17 @@ function renderFerm(){
     } else {
       leit = `<div class="ferm-sem">sem medição de fermentação</div>`;
     }
-    const diaCls = f.cor ? `ferm-dia ${f.cor}` : 'ferm-dia';
-    // destaque do tanque (fonte: bloco starter) + volume, com o nome da base como sub-info
+    // volume total do tanque (fonte: bloco starter)
     const vol = (f.volTanque != null && f.volTanque !== '')
-      ? ` <span class="ferm-vol">${esc(fmt(f.volTanque))} L</span>` : '';
+      ? `<div class="ferm-vol">volume ${esc(fmt(f.volTanque))} L</div>` : '';
+    // ordem no item: 1º TANQUE (maiúsculo, destaque) → 2º pH/Brix/ABV → 3º dias (cor) → 4º volume
+    const diaCls = f.cor ? `ferm-dia ${f.cor}` : 'ferm-dia';
     return `<div class="it ${f.cor} ferm">
       <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}">
-        <div class="it-l1"><span class="ferm-tanque">${esc(f.tanque)}${vol} <span class="ferm-op">${esc(f.nome)}</span></span>
-          <span class="${diaCls}">${esc(f.dia)}</span></div>
+        <div class="ferm-tanque">${esc(f.tanque)} <span class="ferm-op">${esc(f.nome)}</span></div>
         ${leit}
+        <span class="${diaCls}">${esc(f.dia)}</span>
+        ${vol}
         <div class="ferm-arq">toque para abrir a ficha da base</div>
       </a></div>`;
   }).join('');
