@@ -47,7 +47,7 @@ function mockFetch(url, opts) {
         itens: [], ficha: { op: '2026/00517', blocos: { preEnvase: { pH: 3.55, brix: 4.5, carbonatacao: 1.5 } } } }) }), 80));
     }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({
-      itens: [], ficha: { op: '2026/00528', blocos: { preEnvase: { pH: 3.3, brix: 4.5, carbonatacao: 1.5 } } } }) });
+      itens: [], ficha: { op: '2026/00528', rascunhoEm: '2026-08-16T12:00:00Z', blocos: { preEnvase: { pH: 3.3, brix: 4.5, carbonatacao: 1.5 } } } }) });
   }
   return Promise.resolve({ ok: false, json: () => Promise.resolve({ erro: 'não mockado ' + u }) });
 }
@@ -145,6 +145,7 @@ setTimeout(() => {
         ok($('#pc3Hi').value === '' && $('#pc3Resp').value === '', 'form limpo após gravar');
 
         // ---- RACE: resposta atrasada da OP 517 NÃO pode vazar para a 528 ----
+        window.localStorage.removeItem('ficha_rascunho_2026/00528'); // sem local: servidor aplica
         window.abrirOp('2026/00517'); // dispara fetch lento (80ms) da 517
         window.abrirOp('2026/00528'); // troca rápido; fetch da 528 aplica pH 3.3
         const pH = $('input[data-c="pH"]');
@@ -203,11 +204,38 @@ setTimeout(() => {
             window.flushRascunho();
             ok(puts.length > pAntes, 'flushRascunho dispara PUT (pagehide/visibilitychange)');
           ok(chavesVistas.length > 0 && chavesVistas[0].length > 10, 'fetch ao worker envia X-API-Key (auditoria)');
-            console.log(`\n${pass} passaram, ${fail} falharam`);
-            process.exit(fail ? 1 : 0);
+
+          // ---- FRESCURA: servidor mais novo vence rascunho local velho (não carrega coisa antiga) ----
+          const seed = (ts, pH) => window.localStorage.setItem('ficha_rascunho_2026/00528', JSON.stringify({
+            op: '2026/00528', rascunhoEm: ts, blocos: { preEnvase: { pH } }, conferenciaInsumos: [] }));
+          seed('2026-08-16T10:00:00Z', 3.9); // local VELHO (antes do servidor 12:00Z)
+          window.abrirOp('2026/00528');
+          setTimeout(() => {
+            const phA = $('input[data-c="pH"]');
+            ok(phA.value === '3.3', 'servidor mais novo vence local velho (pH 3.3, era ' + phA.value + ')');
+
+            // ---- FRESCURA: local mais novo vence servidor velho (não troca o que preenchi) ----
+            seed('2026-08-16T14:00:00Z', 3.9);
+            window.abrirOp('2026/00528');
+            setTimeout(() => {
+              ok($('input[data-c="pH"]').value === '3.9', 'local mais novo não é sobrescrito (pH 3.9, era ' + $('input[data-c="pH"]').value + ')');
+
+              // ---- digitação real protege do servidor ----
+              seed('2026-08-16T10:00:00Z', 3.9);
+              window.abrirOp('2026/00528');
+              const phT = $('input[data-c="pH"]');
+              phT.value = '2.2';
+              phT.dispatchEvent(new window.Event('input'));
+              setTimeout(() => {
+                ok($('input[data-c="pH"]').value === '2.2', 'digitação real não é sobrescrita pelo servidor (2.2)');
+                console.log(`\n${pass} passaram, ${fail} falharam`);
+                process.exit(fail ? 1 : 0);
+              }, 80);
+            }, 80);
           }, 80);
-        }, 160);
-      }, 60);
+        }, 80);
+      }, 160);
     }, 60);
   }, 60);
+}, 60);
 }, 60);
