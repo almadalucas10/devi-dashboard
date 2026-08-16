@@ -59,6 +59,21 @@
   .it-v{font-size:15px; font-weight:700; white-space:nowrap}
   .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
 
+  /* ---- card Fermentação ativa: destaque extra ---- */
+  .ferm { position: relative; padding:10px 11px; }
+  .ferm a { display:block; text-decoration:none; color:inherit; }
+  .ferm-tanque{font-size:16px; font-weight:700; letter-spacing:-.2px; color:var(--txt)}
+  .ferm-op{font-size:10px; color:var(--txt3); font-weight:400}
+  .ferm-dia{background:var(--trilho); border-radius:6px; padding:3px 8px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap}
+  .ferm-dia.al{color:var(--al2)} .ferm-dia.e{color:var(--er2)}
+  .ferm-leit{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px}
+  .ferm-m{display:flex; flex-direction:column; gap:1px}
+  .ferm-m .r{font-size:9px; letter-spacing:.6px; color:var(--txt3); text-transform:uppercase}
+  .ferm-m .v{font-size:19px; font-weight:700; line-height:1; letter-spacing:-.4px; color:var(--txt)}
+  .ferm-sem{font-size:11px; color:var(--txt3); margin-top:8px}
+  .ferm-arq{font-size:10px; color:var(--txt3); margin-top:7px}
+  .it.e.ferm{border-left-color:var(--er)} .it.a.ferm{border-left-color:var(--al)}
+
   .carta{height:96px; margin:4px 0}
   .carta svg{width:100%; height:100%; display:block}
 
@@ -349,24 +364,27 @@ function renderFerm(){
     return;
   }
   el('fermentacao').innerHTML = DADOS.fermentacao.map(f => {
-    // última leitura (pH/brix/ABV)
-    let leit = '';
+    // última leitura (pH/brix/ABV) em destaque
+    const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
+    const mm = (r, v) => (`<div class="ferm-m"><span class="r">${r}</span><span class="v">${esc(fmt(v))}</span></div>`);
+    let leit;
     if (f.ultima && (f.ultima.pH != null || f.ultima.brix != null || f.ultima.abv != null)) {
-      const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
-      const partes = [];
-      if (f.ultima.pH != null) partes.push(`pH ${fmt(f.ultima.pH)}`);
-      if (f.ultima.brix != null) partes.push(`Brix ${fmt(f.ultima.brix)}`);
-      if (f.ultima.abv != null) partes.push(`ABV ${fmt(f.ultima.abv)}`);
-      leit = partes.join(' · ');
+      const blocos = [];
+      if (f.ultima.pH != null) blocos.push(mm('pH', f.ultima.pH));
+      if (f.ultima.brix != null) blocos.push(mm('Brix', f.ultima.brix));
+      if (f.ultima.abv != null) blocos.push(mm('ABV', f.ultima.abv));
+      leit = `<div class="ferm-leit">${blocos.join('')}</div>`;
     } else {
-      leit = 'sem medição de fermentação';
+      leit = `<div class="ferm-sem">sem medição de fermentação</div>`;
     }
-    return `<div class="it ${f.cor}">
-      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}" style="color:inherit;text-decoration:none;flex:1;min-width:0">
-        <span class="it-nm">${esc(f.tanque)} · ${esc(f.nome)}</span></a>
-        <span class="it-v" style="font-size:14px;${f.cor ? 'color:var(--al2)' : ''}">${esc(f.dia)}</span></div>
-      <div class="it-l2">${esc(f.txt)}</div>
-      <div class="it-l2" style="${f.ultima ? 'color:var(--txt2)' : 'color:var(--txt3)'}">${esc(leit)}</div></div>`;
+    const diaCls = f.cor ? `ferm-dia ${f.cor}` : 'ferm-dia';
+    return `<div class="it ${f.cor} ferm">
+      <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}">
+        <div class="it-l1"><span class="ferm-tanque">${esc(f.tanque)} <span class="ferm-op">${esc(f.nome)}</span></span>
+          <span class="${diaCls}">${esc(f.dia)}</span></div>
+        ${leit}
+        <div class="ferm-arq">toque para abrir a ficha da base</div>
+      </a></div>`;
   }).join('');
 }
 
