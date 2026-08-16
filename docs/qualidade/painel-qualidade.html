@@ -60,21 +60,29 @@
   .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
 
   /* ---- card Fermentação ativa: destaque extra ---- */
-  .ferm { position: relative; padding:10px 11px; }
-  .ferm a { display:block; text-decoration:none; color:inherit; }
-  .ferm-tanque{font-size:22px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--txt); margin-bottom:2px}
-  .ferm-op{font-size:11px; color:var(--txt3); font-weight:400; text-transform:none; letter-spacing:0}
-  .ferm-dia{display:inline-block; background:var(--trilho); border-radius:6px; padding:3px 9px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap}
-  .ferm-dia.al{color:var(--al2); background:rgba(251,191,36,.14)} .ferm-dia.e{color:var(--er2); background:rgba(248,113,113,.14)}
-  .ferm-leit{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; width:100%; margin-top:10px}
-  .ferm-m{display:flex; flex-direction:column; gap:2px; background:var(--campo); border-radius:7px; padding:6px 9px}
-  .ferm-m .r{font-size:9px; letter-spacing:.6px; color:var(--txt3); text-transform:uppercase}
-  .ferm-m .v{font-size:20px; font-weight:700; line-height:1.1; letter-spacing:-.4px; color:var(--txt)}
-  .ferm-sem{font-size:11px; color:var(--txt3); margin-top:10px}
-  .ferm-rod{display:flex; justify-content:space-between; align-items:baseline; gap:10px; width:100%; margin-top:10px; flex-wrap:wrap}
-  .ferm-vol{font-size:12px; font-weight:600; color:var(--al2)}
-  .ferm-arq{font-size:10px; color:var(--txt3); margin-top:8px}
-  .it.e.ferm{border-left-color:var(--er)} .it.a.ferm{border-left-color:var(--al)}
+  .ferm-item{background:var(--cell); border-left:3px solid var(--ok); border-radius:7px; padding:9px 11px; margin-bottom:7px; position:relative}
+  .ferm-item.al{border-left-color:var(--al)} .ferm-item.er{border-left-color:var(--er)}
+  .ferm-item.off{border-left-color:#39434f; opacity:.7}
+  .ferm-item a{display:block; text-decoration:none; color:inherit}
+  .ferm-l1{display:flex; align-items:baseline; gap:8px}
+  .ferm-tq{font-size:17px; font-weight:700; min-width:30px; text-transform:uppercase}
+  .ferm-sub{font-size:12px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  .ferm-estado{margin-left:auto; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap}
+  .ferm-e-ok{background:#12241a; color:var(--ok2)}
+  .ferm-e-al{background:#2a2412; color:var(--al2)}
+  .ferm-e-off{background:#1c2733; color:var(--txt3)}
+
+  .ferm-barra{position:relative; height:22px; background:var(--trilho); border-radius:5px; margin-top:7px; overflow:hidden}
+  .ferm-barra i{display:block; height:100%; border-radius:5px}
+  .ferm-barra .ferm-faixa{position:absolute; top:0; bottom:0; background:#ffffff12;
+    border-left:1px dashed #ffffff33; border-right:1px dashed #ffffff33}
+  .ferm-barra .ferm-lab{position:absolute; left:8px; top:3px; font-size:12px; font-weight:700; color:#fff}
+
+  .ferm-mini{display:flex; gap:12px; margin-top:6px; font-size:11px; color:var(--txt3); flex-wrap:wrap}
+  .ferm-mini b{color:var(--txt2); font-size:13px; font-weight:700}
+  .ferm-mini .m-ok{color:var(--ok2)}
+
+  .ferm-rodape{font-size:10px; color:var(--txt3); margin-top:8px; padding-top:6px; border-top:1px solid var(--linha)}
 
   .carta{height:96px; margin:4px 0}
   .carta svg{width:100%; height:100%; display:block}
@@ -359,39 +367,81 @@ function renderVida(){
       <div class="it-l2">${esc(x.txt)}</div></div>`).join('');
 }
 
+// ---------------------------------------------------------------------------
+// Fermentação ativa — opção C (barra de dias + estado do POP 17)
+// ---------------------------------------------------------------------------
+// Metas do POP 17 (ponto de colheita): pH < 3,20 e ABV < 0,5 %.
+// §5.1: ler de pops/pops.json; fallback provisório aqui está marcado como tal.
+const FERM_META = { pH: { max: 3.20 }, abv: { max: 0.50 } };
+let FERM_META_REAL = null;           // preenchido de pops.json quando disponível
+const ESCALA_MAX_DIAS = 20;          // barra chega a 100 % neste nº de dias
+// Faixa típica de fermentação (provisória — recalcular do histórico, percentil 10-90)
+const FAIXA_DAYS = { min: 7, max: 12 };
+function metaFerm(){ return FERM_META_REAL || FERM_META; }
+function corBarraFerm(dias){
+  const f = FAIXA_DAYS;
+  if (dias > f.max) return 'linear-gradient(90deg,#3f5163,#ef4444)';
+  if (dias >= f.min) return 'var(--ok)';
+  return 'var(--az)';
+}
+// Estado derivado do POP 17: fermentação no ponto quando atingiu o pH-alvo e ABV.
+// Limite tratado como inclusivo (pH ≤ 3,20 e ABV ≤ 0,50 = colheita pronta).
+function estadoFerm(t){
+  const m = metaFerm();
+  if (t == null || t.pH == null || t.abv == null) return 'sem_medicao';
+  const pHok = !(m.pH && t.pH > m.pH.max);
+  const abvok = !(m.abv && t.abv > m.abv.max);
+  return (pHok && abvok) ? 'no_ponto' : 'em_curso';
+}
+const FERM_ESTADO_LABEL = { no_ponto:['no ponto','ferm-e-ok','ok'], em_curso:['em curso','ferm-e-al','al'], sem_medicao:['sem medição','ferm-e-off','off'] };
+
 function renderFerm(){
   el('fermSub').textContent = `${DADOS.fermentacao.length} tanques`;
+  const sem = DADOS.fermentacao.filter(t => estadoFerm(t.ultima) === 'sem_medicao').length;
   if(!DADOS.fermentacao.length){
     el('fermentacao').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma base em fermentação.</div>';
     return;
   }
-  el('fermentacao').innerHTML = DADOS.fermentacao.map(f => {
-    // última leitura (pH/brix/ABV) em destaque
-    const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
-    const mm = (r, v) => (`<div class="ferm-m"><span class="r">${r}</span><span class="v">${esc(fmt(v))}</span></div>`);
-    let leit;
-    if (f.ultima && (f.ultima.pH != null || f.ultima.brix != null || f.ultima.abv != null)) {
-      const blocos = [];
-      if (f.ultima.pH != null) blocos.push(mm('pH', f.ultima.pH));
-      if (f.ultima.brix != null) blocos.push(mm('Brix', f.ultima.brix));
-      if (f.ultima.abv != null) blocos.push(mm('ABV', f.ultima.abv));
-      leit = `<div class="ferm-leit">${blocos.join('')}</div>`;
-    } else {
-      leit = `<div class="ferm-sem">sem medição de fermentação</div>`;
+  const itens = [...DADOS.fermentacao].sort((a, b) => (b.diasNum||0) - (a.diasNum||0));
+  const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
+  const fmd = v => String(v).replace('.', ',');
+  const itensHtml = itens.map(t => {
+    const est = estadoFerm(t.ultima);
+    const [label, eCls, itemCls] = FERM_ESTADO_LABEL[est];
+    const tanque = (t.tanque || '').trim() || 'sem tanque';
+    const sub = [t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
+    const dias = t.diasNum != null ? t.diasNum : null;
+    const pct = dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100);
+    const fLeft  = (FAIXA_DAYS.min / ESCALA_MAX_DIAS) * 100;
+    const fWidth = ((FAIXA_DAYS.max - FAIXA_DAYS.min) / ESCALA_MAX_DIAS) * 100;
+    const cor = corBarraFerm(dias == null ? 0 : dias);
+    // linha de medições (só quando há alguma)
+    const u = t.ultima;
+    const hasMed = u && (u.pH != null || u.brix != null || u.abv != null);
+    let mini = '';
+    if (hasMed) {
+      const ehOk = p => (u[p] != null && metaFerm()[p] && u[p] <= metaFerm()[p].max);
+      const m = x => (u[x] != null ? `<span>${x === 'abv' ? 'ABV' : x === 'pH' ? 'pH' : 'Brix'} <b class="${ehOk(x) ? 'm-ok' : ''}">${esc(fmd(u[x]))}</b></span>` : '');
+      mini = `<div class="ferm-mini">${m('pH')}${m('brix')}${m('abv')}</div>`;
     }
-    // volume total do tanque (fonte: bloco starter)
-    const vol = (f.volTanque != null && f.volTanque !== '')
-      ? `<span class="ferm-vol">volume ${esc(fmt(f.volTanque))} L</span>` : '';
-    // ordem no item: 1º TANQUE (maiúsculo, destaque) → 2º pH/Brix/ABV (grade 3×1) → 3º dia|volume nas pontas
-    const diaCls = f.cor ? `ferm-dia ${f.cor}` : 'ferm-dia';
-    return `<div class="it ${f.cor} ferm">
-      <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}">
-        <div class="ferm-tanque">${esc(f.tanque)} <span class="ferm-op">${esc(f.nome)}</span></div>
-        ${leit}
-        <div class="ferm-rod"><span class="${diaCls}">${esc(f.dia)}</span>${vol}</div>
-        <div class="ferm-arq">toque para abrir a ficha da base</div>
+    const labDias = dias == null ? 'dia ?' : `dia ${dias}`;
+    return `<div class="ferm-item ${itemCls}">
+      <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(t.hrefOp || t.op)}">
+        <div class="ferm-l1"><span class="ferm-tq">${esc(tanque)}</span>
+          <span class="ferm-sub">${esc(sub)}</span>
+          <span class="ferm-estado ${eCls}">${label}</span></div>
+        <div class="ferm-barra">
+          <i style="width:${pct}%;background:${cor}"></i>
+          <span class="ferm-faixa" style="left:${fLeft}%;width:${fWidth}%"></span>
+          <span class="ferm-lab">${esc(labDias)}</span>
+        </div>
+        ${mini}
       </a></div>`;
   }).join('');
+  el('fermentacao').innerHTML = `<div>${itensHtml}</div>`;
+  el('fermSub').textContent = `${DADOS.fermentacao.length} tanques · ${sem} sem medição`;
+  el('fermentacao').insertAdjacentHTML('beforeend',
+    `<div class="ferm-rodape">toque no tanque para abrir a ficha · ▒ faixa típica ${FAIXA_DAYS.min}–${FAIXA_DAYS.max} dias</div>`);
 }
 
 // ---------------------------------------------------------------------------
@@ -531,10 +581,10 @@ async function carregar(){
       } catch (e) { /* sem ficha salva */ }
       return {
         op: o.op || '', hrefOp: o.op || o.nCodOP || '',
-        tanque: (starter && starter.tanque) || o.tanque || '—',
+        tanque: (starter && starter.tanque) || o.tanque || '',
         volTanque: (starter && starter.volumeTanque) || null,
         nome: o.produto || 'Base Kombucha',
-        dia: dias == null ? '—' : `dia ${dias}`, txt: `fab ${o.data}`,
+        dia: dias == null ? '—' : `dia ${dias}`, diasNum: dias, txt: `fab ${o.data}`,
         cor: (dias != null && dias >= 11) ? 'e' : (dias != null && dias >= 7 ? 'a' : ''),
         ultima,
       };
@@ -597,7 +647,24 @@ async function carregar(){
   }
 }
 
+// Carrega as metas do POP 17 de pops.json (§5.1). Fallback provisório se falhar.
+async function carregarMetaFerm(){
+  try {
+    const r = await fetch('pops/pops.json', { cache: 'no-store' });
+    if (r.ok) {
+      const data = await r.json();
+      const p17 = (data.pops || []).find(p => p.codigo === 'POP17');
+      if (p17 && p17.metasProcesso) {
+        FERM_META_REAL = p17.metasProcesso;
+        // re-render com as metas reais (pode ter chegado depois do primeiro renderFerm)
+        if (typeof renderFerm === 'function') renderFerm();
+      }
+    }
+  } catch (e) { /* fallback provisório */ }
+}
+
 carregar();
+carregarMetaFerm();
 </script>
 </body>
 </html>
