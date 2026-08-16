@@ -70,7 +70,10 @@ function make(url) {
     ok(document.body.textContent.includes('Baixar PDF'), 'A · rotina com botão Baixar PDF');
     ok(!document.getElementById('btnFim'), 'A · rotina sem Concluir procedimento');
     window.baixar('POP01');
-    ok(abertos.length > 0 && abertos[0].includes('/pdf?key='), 'A · download com chave da API');
+    ok(abertos.length > 0 && abertos[0].includes('/pdf?key='), 'A · rotina baixa via worker (PDF do Drive)');
+    window.abrir('POP11');
+    window.baixar('POP11');
+    ok(abertos[abertos.length-1].includes('/docs/qualidade/pops/pdfs/POP11.pdf'), 'A · POP 09–17 baixa PDF local: ' + abertos[abertos.length-1]);
     window.abrir('POP14');
     ok(!!$('#op-m1') && !!$('#op-m3'), 'A · POP14 opções presentes');
     window.selecionar('m3');

@@ -263,6 +263,13 @@ const contaPassos = p => {
 
 function baixar(cod){
   const p = POPS.pops.find(x => x.codigo === cod);
+  if (!p) return;
+  // 09–17: PDF gerado do pops.json, servido pelo próprio site (mesmo domínio, protegido por senha)
+  if (p.tipo !== 'rotina') {
+    window.open('/docs/qualidade/pops/pdfs/' + cod + '.pdf', '_blank');
+    return;
+  }
+  // 01–08 (rotinas): PDF exportado do Drive (Google Docs) via worker
   const id = p && p.driveId;
   if (id) {
     window.open('https://devi-dashboard-worker.almadalucas.workers.dev/api/qualidade/pops/' + encodeURIComponent(id) + '/pdf?key=' + encodeURIComponent(API_KEY), '_blank');
