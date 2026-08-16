@@ -1603,6 +1603,8 @@ function toggleInsumo(cod){
     chk.parentElement.parentElement.classList.toggle('conf', conferidos.has(cod));
   }
   atualizarInsumosChk();
+  // persiste na hora — conferência marcada e recarregar a página não pode perder
+  if(opAtual && !_resetando){ try{ salvarLocal(); salvarRascunho(true); }catch(e){} }
 }
 
 function atualizarInsumosChk(){
@@ -1991,13 +1993,26 @@ function salvarRascunho(imediato){
       if(!temBloco && !(d.conferenciaInsumos || []).some(c => c.conferido)) return;
       await fetch(WORKER_URL + '/api/qualidade/ficha/' + nCodOPAtual, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ficha: d })
+        body: JSON.stringify({ ficha: d }),
+        keepalive: true, // sobrevive ao unload/reload (mobile)
       });
     }catch(e){ console.error('rascunho:', e.message); }
   };
   if(imediato) exec();
   else _timerRascunho = setTimeout(exec, 900);
 }
+
+// flush ao sair/recarregar a página — fecha a janela do debounce e evita perder
+// as últimas marcações (reflexo do problema no mobile: recarregou, sumiu)
+function flushRascunho(){
+  if(!opAtual || location.protocol === 'file:') return;
+  try{ salvarLocal(); }catch(e){}
+  salvarRascunho(true);
+}
+window.addEventListener('pagehide', flushRascunho);
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') flushRascunho();
+});
 
 async function salvar(){
   const sku = skuAtual;
