@@ -62,7 +62,8 @@
   /* ---- card Fermentação ativa: destaque extra ---- */
   .ferm { position: relative; padding:10px 11px; }
   .ferm a { display:block; text-decoration:none; color:inherit; }
-  .ferm-tanque{font-size:16px; font-weight:700; letter-spacing:-.2px; color:var(--txt)}
+  .ferm-tanque{font-size:20px; font-weight:700; letter-spacing:-.3px; color:var(--txt)}
+  .ferm-vol{font-size:13px; font-weight:600; color:var(--al2)}
   .ferm-op{font-size:10px; color:var(--txt3); font-weight:400}
   .ferm-dia{background:var(--trilho); border-radius:6px; padding:3px 8px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap}
   .ferm-dia.al{color:var(--al2)} .ferm-dia.e{color:var(--er2)}
@@ -378,9 +379,12 @@ function renderFerm(){
       leit = `<div class="ferm-sem">sem medição de fermentação</div>`;
     }
     const diaCls = f.cor ? `ferm-dia ${f.cor}` : 'ferm-dia';
+    // destaque do tanque (fonte: bloco starter) + volume, com o nome da base como sub-info
+    const vol = (f.volTanque != null && f.volTanque !== '')
+      ? ` <span class="ferm-vol">${esc(fmt(f.volTanque))} L</span>` : '';
     return `<div class="it ${f.cor} ferm">
       <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}">
-        <div class="it-l1"><span class="ferm-tanque">${esc(f.tanque)} <span class="ferm-op">${esc(f.nome)}</span></span>
+        <div class="it-l1"><span class="ferm-tanque">${esc(f.tanque)}${vol} <span class="ferm-op">${esc(f.nome)}</span></span>
           <span class="${diaCls}">${esc(f.dia)}</span></div>
         ${leit}
         <div class="ferm-arq">toque para abrir a ficha da base</div>
@@ -513,17 +517,21 @@ async function carregar(){
       const m = String(o.data).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       let dias = null;
       if (m) { const ini = new Date(+m[3], +m[2]-1, +m[1]); dias = Math.round((hoje - ini) / 864e5); }
-      // última leitura de fermentação (igual ao padrão da recravação)
-      let ultima = null;
+      // mesma ficha salva da base: última leitura de fermentação + dados do starter (tanque/volume)
+      let ultima = null, starter = null;
       try {
         const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(o.nCodOP || o.op), { cache: 'no-store' });
         const j = await fr.json();
-        const fer = j.ficha && j.ficha.blocos && j.ficha.blocos.fermentacao;
+        const blocos = j.ficha && j.ficha.blocos;
+        const fer = blocos && blocos.fermentacao;
         if (Array.isArray(fer) && fer.length) ultima = fer[fer.length - 1];
+        starter = (blocos && blocos.starter) || null;
       } catch (e) { /* sem ficha salva */ }
       return {
         op: o.op || '', hrefOp: o.op || o.nCodOP || '',
-        tanque: o.tanque || '—', nome: o.produto || 'Base Kombucha',
+        tanque: (starter && starter.tanque) || o.tanque || '—',
+        volTanque: (starter && starter.volumeTanque) || null,
+        nome: o.produto || 'Base Kombucha',
         dia: dias == null ? '—' : `dia ${dias}`, txt: `fab ${o.data}`,
         cor: (dias != null && dias >= 11) ? 'e' : (dias != null && dias >= 7 ? 'a' : ''),
         ultima,
