@@ -262,6 +262,7 @@ const contaPassos = p => {
 };
 
 function baixar(cod){
+  // todos os POPs (01–17) baixam o PDF do Drive via worker — layout original dos documentos
   const p = POPS.pops.find(x => x.codigo === cod);
   const id = p && p.driveId;
   if (id) {
