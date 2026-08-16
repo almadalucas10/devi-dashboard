@@ -677,6 +677,7 @@ const SIGLA = { FX000:'BASE',CH001:'CVP',CH002:'CML',CH003:'CCM',CH004:'CHM',FX0
   RF005:'RUV',RTM001:'RTMLA',RTM002:'RTMLS',RTM003:'RTMUV' };
 // SKU da ficha — sempre derivado da OP aberta (sem seletor no cabeçalho)
 let skuAtual = 'FX001';
+let _pendingOp = null; // deep-link ?op= guardado p/ abrir depois que o OPS real carregar
 const produtoAtual = () => PRODUTOS[skuAtual] || {};
 
 // ---------------------------------------------------------------------------
@@ -1125,12 +1126,26 @@ function preencherOPS(fichas){
     insumos_conferidos: f.insumos_conferidos || 0, insumos_total: f.insumos_total || 0
   }));
   OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
+  // deep-link: se veio ?op=, abre assim que o OPS do server estiver disponível
+  if (_pendingOp) {
+    const alvo = _pendingOp;
+    _pendingOp = null;
+    if (OPS.some(o => o.op === alvo)) abrirOp(alvo);
+  }
 }
 
 async function carregarOPS(){
   mostrarLista();
   const el = document.getElementById('opLista');
-  if(location.protocol === 'file:') return; // demo: mantém o mock
+  if(location.protocol === 'file:'){ // demo: mantém o mock
+    // deep-link em demonstração local: tenta com o mock numérico; senão descarta
+    if (_pendingOp) {
+      const alvo = _pendingOp;
+      _pendingOp = null;
+      if (OPS.some(o => o.op === alvo)) abrirOp(alvo);
+    }
+    return;
+  }
   if(el) el.innerHTML = '<div class="sub" style="padding:14px;color:var(--txt3)">Carregando OPs do Omie…</div>';
   try{
     const r = await fetch(WORKER_URL + '/api/qualidade/fichas');
@@ -2176,10 +2191,12 @@ document.querySelectorAll('input[data-req], select[data-req], textarea[data-req]
 });
 atualizar();
 
-// view inicial: ?op= abre direto a ficha da OP; sem parâmetro, carrega a lista
-// (do endpoint quando servido pelo worker; mock local em file://)
+// view inicial: ?op= abre direto a ficha da OP; sem parâmetro, carrega a lista.
+// O deep-link (?op=) precisa esperar o OPS real (do server) ser populado — o
+// mock inicial usa só o número da OP, incompatível com o formato <ano>/<num>.
 const qp = new URLSearchParams(location.search).get('op');
-if(qp && OPS.some(o => o.op === qp)) abrirOp(qp); else carregarOPS();
+if (qp) { _pendingOp = qp; carregarOPS(); }
+else carregarOPS();
 </script>
 </body>
 </html>
