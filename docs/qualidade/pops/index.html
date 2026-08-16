@@ -233,7 +233,9 @@ function lista(){
         <span class="n">${p.numero}</span>
         <span class="c">
           <span class="h">${p.titulo}</span>
-          <span class="s">rev. ${p.revisao} · ${p.data} · ${contaPassos(p)} passos</span>
+          <span class="s">${p.tipo === 'rotina'
+            ? 'rotina periódica · pré-requisito (não ligada a OP)'
+            : `rev. ${p.revisao} · ${p.data} · ${contaPassos(p)} passos`}</span>
         </span>
         <button class="baixar" onclick="event.stopPropagation(); baixar('${p.codigo}')">↓ Baixar</button>
       </div>`).join('')}` : '';
@@ -274,16 +276,17 @@ function abrir(cod){
   atual = POPS.pops.find(p => p.codigo === cod);
   if (!atual) return;
 
+  const ehRotina = atual.tipo === 'rotina';
   document.getElementById('topo').innerHTML = `
     <button class="voltar" onclick="lista()">‹ todos os POPs</button>
     <div class="t1">
       <div><div class="cod">POP ${atual.numero}</div>
         <div class="tit">${atual.titulo}</div></div>
-      <div class="rev">Revisão ${atual.revisao}<br>${atual.data}</div>
+      <div class="rev">Revisão ${atual.revisao || '—'}<br>${atual.data || ''}</div>
     </div>
     ${contexto ? `<div class="ctx">Aberto a partir da <b>OP #${contexto.op}</b> — ${contexto.sigla}</div>` : ''}
-    <div class="prog"><i id="pb"></i></div>
-    <div class="ptxt" id="pt"></div>`;
+    ${ehRotina ? '' : `<div class="prog"><i id="pb"></i></div>
+    <div class="ptxt" id="pt"></div>`}`;
 
   let html = paramsBox(atual);
 
@@ -297,6 +300,13 @@ function abrir(cod){
   if (atual.encadeamento) html += blocoEncadeamento(atual);
   if (atual.pendencia) html += `<div class="pend"><b style="color:var(--al2)">Pendência:</b> ${atual.pendencia}</div>`;
 
+  if (ehRotina) {
+    html += `<div class="aviso" style="margin-top:14px"><b>Rotina periódica de pré-requisito</b> — não é ligada a uma OP. ${atual.nota || 'Consulte o PDF do procedimento.'}</div>
+      <button class="btn-fim" style="margin-top:12px" onclick="baixar('${atual.codigo}')">↓ Baixar PDF</button>`;
+    document.getElementById('wrap').innerHTML = html;
+    document.getElementById('rod').innerHTML = '';
+    return;
+  }
   document.getElementById('wrap').innerHTML = html;
   document.getElementById('rod').innerHTML =
     `<button class="btn-fim" id="btnFim" onclick="concluir()">Concluir procedimento</button>`;

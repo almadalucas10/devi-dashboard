@@ -8,6 +8,7 @@ const POPS_DATA = JSON.parse(fs.readFileSync('/home/almadalucas/.reasonix/global
 const viewerHtml = fs.readFileSync('/home/almadalucas/.reasonix/global-workspace/devi-dashboard/docs/qualidade/pops/index.html', 'utf8');
 
 let pass = 0, fail = 0;
+let abertos = [];
 const ok = (c, n) => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL') + ' · ' + n); };
 
 function make(url) {
@@ -18,7 +19,7 @@ function make(url) {
     runScripts: 'dangerously', virtualConsole: vc, url,
     beforeParse(w) {
       w.fetch = () => Promise.resolve({ ok: true, json: () => Promise.resolve(POPS_DATA) });
-      w.open = () => {};
+      w.open = (u) => { abertos.push(u); };
     },
   });
   return { dom, jsErrors };
@@ -33,7 +34,7 @@ function make(url) {
 
   setTimeout(() => {
     ok(jsErrors.length === 0, `A · sem erros de runtime (${jsErrors.join('; ') || 'nenhum'})`);
-    ok($$('.cardpop').length === 9, 'A · lista com 9 POPs');
+    ok($$('.cardpop').length === 17, 'A · lista com 17 POPs (01–17)');
     ok(document.body.textContent.includes('TODOS OS PROCEDIMENTOS'), 'A · grupo TODOS OS PROCEDIMENTOS');
 
     // POP11 — sequencial com timer
@@ -62,6 +63,14 @@ function make(url) {
     ok($('#upTotal').textContent === '90,92', 'A · UP acumulada 60+30,92 = 90,92 (era ' + $('#upTotal').textContent + ')');
 
     // POP14 — decisão: Metodologia 3 pula filtragem
+    window.abrir('POP14');
+    // rotina (POP01): sem passos, só consulta + download
+    window.abrir('POP01');
+    ok($$('.passo').length === 0, 'A · rotina POP01 sem passos interativos');
+    ok(document.body.textContent.includes('Baixar PDF'), 'A · rotina com botão Baixar PDF');
+    ok(!document.getElementById('btnFim'), 'A · rotina sem Concluir procedimento');
+    window.baixar('POP01');
+    ok(abertos.length > 0 && abertos[0].includes('/pdf?key='), 'A · download com chave da API');
     window.abrir('POP14');
     ok(!!$('#op-m1') && !!$('#op-m3'), 'A · POP14 opções presentes');
     window.selecionar('m3');
