@@ -7,14 +7,14 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const html = fs.readFileSync('/home/almadalucas/.reasonix/global-workspace/devi-dashboard/docs/qualidade/painel-qualidade.html', 'utf8');
 
 const FICHAS = [
-  { op: '2026/00517', sku: 'RF002', produto: 'Refri Frutas Vermelhas', data_producao: '2026-08-13', status: 'parcial', nc_count: 0, indice: { pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }, ncs: [],
-    blocos_status: { preenvase: { f: 3, t: 4 }, carbonatacao: { f: 2, t: 3 }, recravacao: { f: 1, t: 3 }, estoque: { f: 0, t: 3 } } },
-  { op: '2026/00519', sku: 'RF001', produto: 'Refri Limão Siciliano', data_producao: '2026-08-17', status: 'parcial', nc_count: 0, indice: { pH: false, brix: false, carbonatacao: false, recravacao: false, abv: false }, ncs: [],
-    blocos_status: { preenvase: { f: 0, t: 4 }, carbonatacao: { f: 0, t: 3 }, recravacao: { f: 0, t: 3 }, estoque: { f: 0, t: 3 } } },
-  { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data_producao: '2026-08-10', status: 'parcial', nc_count: 0, indice: { pH: true, brix: true, temperatura: true, abv: true, carbonatacao: false, recravacao: false }, ncs: [],
-    blocos_status: { starter: { f: 1, t: 5 }, fermentacao: { f: 4, t: 5 }, filtracao: { f: 0, t: 2 }, produtoAcabado: { f: 0, t: 5 } } },
-  { op: '2026/00528', sku: 'CH003', produto: 'Chá Camomila Maracujá', data_producao: '2026-08-14', status: 'completa', nc_count: 1, indice: { pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }, ncs: [{ bloco: 'recravacao', campo: 'transpasse', valor: 0.78, min: 0.8, max: 0.9 }],
-    blocos_status: { preenvase: { f: 4, t: 4 }, carbonatacao: { f: 3, t: 3 }, recravacao: { f: 3, t: 3 }, estoque: { f: 3, t: 3 } } },
+  { op: '2026/00517', sku: 'RF002', produto: 'Refri Frutas Vermelhas', data_producao: '2026-08-13', status: 'parcial', nc_count: 0, indice: JSON.stringify({ pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }), ncs: [],
+    blocos_status: JSON.stringify({ preenvase: { f: 3, t: 4 }, carbonatacao: { f: 2, t: 3 }, recravacao: { f: 1, t: 3 }, estoque: { f: 0, t: 3 } }) },
+  { op: '2026/00519', sku: 'RF001', produto: 'Refri Limão Siciliano', data_producao: '2026-08-17', status: 'parcial', nc_count: 0, indice: JSON.stringify({ pH: false, brix: false, carbonatacao: false, recravacao: false, abv: false }), ncs: [],
+    blocos_status: JSON.stringify({ preenvase: { f: 0, t: 4 }, carbonatacao: { f: 0, t: 3 }, recravacao: { f: 0, t: 3 }, estoque: { f: 0, t: 3 } }) },
+  { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data_producao: '2026-08-10', status: 'parcial', nc_count: 0, indice: JSON.stringify({ pH: true, brix: true, temperatura: true, abv: true, carbonatacao: false, recravacao: false }), ncs: [],
+    blocos_status: JSON.stringify({ starter: { f: 1, t: 5 }, fermentacao: { f: 4, t: 5 }, filtracao: { f: 0, t: 2 }, produtoAcabado: { f: 0, t: 5 } }) },
+  { op: '2026/00528', sku: 'CH003', produto: 'Chá Camomila Maracujá', data_producao: '2026-08-14', status: 'completa', nc_count: 1, indice: JSON.stringify({ pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }), ncs: [{ bloco: 'recravacao', campo: 'transpasse', valor: 0.78, min: 0.8, max: 0.9 }],
+    blocos_status: JSON.stringify({ preenvase: { f: 4, t: 4 }, carbonatacao: { f: 3, t: 3 }, recravacao: { f: 3, t: 3 }, estoque: { f: 3, t: 3 } }) },
 ];
 
 function mockFetch(url, opts) {

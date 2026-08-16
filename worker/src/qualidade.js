@@ -260,7 +260,12 @@ export async function fichasDoMes(env, aaaamm) {
   const r = await env.QUALIDADE_DB.prepare(
     "SELECT op, sku, produto, data_producao, status, nc_count, indice, blocos_status FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
   ).bind(aaaamm).all();
-  const fichas = r.results || [];
+  const fichas = (r.results || []).map((f) => ({
+    ...f,
+    // D1 guarda JSON como texto — devolve parseado (consistente com /api/qualidade/fichas)
+    blocos_status: typeof f.blocos_status === 'string' ? (() => { try { return JSON.parse(f.blocos_status); } catch(e) { return null; } })() : f.blocos_status,
+    indice: typeof f.indice === 'string' ? (() => { try { return JSON.parse(f.indice); } catch(e) { return null; } })() : f.indice,
+  }));
   // NCs detalhadas por OP (tabela ncs) — alimenta as "Ocorrências" do painel
   try {
     const ops = fichas.map((f) => f.op).filter(Boolean);
