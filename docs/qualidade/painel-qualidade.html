@@ -6,7 +6,7 @@
 <title>Dashboard Qualidade — Dêvi</title>
 <style>
   :root{
-    --bg:#0a0f16; --painel:#0d141c; --cell:#141d27; --trilho:#1c2733; --linha:#1b2430;
+    --bg:#0a0f16; --painel:#0d141c; --cell:#141d27; --campo:#141d27; --trilho:#1c2733; --linha:#1b2430;
     --txt:#e8eef4; --txt2:#cfe0ee; --txt3:#8b98a5;
     --ok:#22c55e; --al:#f59e0b; --er:#ef4444;
     --ok2:#4ade80; --al2:#fbbf24; --er2:#f87171;
@@ -64,15 +64,16 @@
   .ferm a { display:block; text-decoration:none; color:inherit; }
   .ferm-tanque{font-size:22px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--txt); margin-bottom:2px}
   .ferm-op{font-size:11px; color:var(--txt3); font-weight:400; text-transform:none; letter-spacing:0}
-  .ferm-dia{display:inline-block; background:var(--trilho); border-radius:6px; padding:3px 9px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap; margin-top:8px}
+  .ferm-dia{display:inline-block; background:var(--trilho); border-radius:6px; padding:3px 9px; font-size:13px; font-weight:700; color:var(--txt2); white-space:nowrap}
   .ferm-dia.al{color:var(--al2); background:rgba(251,191,36,.14)} .ferm-dia.e{color:var(--er2); background:rgba(248,113,113,.14)}
-  .ferm-leit{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px}
-  .ferm-m{display:flex; flex-direction:column; gap:1px}
+  .ferm-leit{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; width:100%; margin-top:10px}
+  .ferm-m{display:flex; flex-direction:column; gap:2px; background:var(--campo); border-radius:7px; padding:6px 9px}
   .ferm-m .r{font-size:9px; letter-spacing:.6px; color:var(--txt3); text-transform:uppercase}
-  .ferm-m .v{font-size:19px; font-weight:700; line-height:1; letter-spacing:-.4px; color:var(--txt)}
-  .ferm-sem{font-size:11px; color:var(--txt3); margin-top:8px}
-  .ferm-vol{display:inline-block; font-size:12px; font-weight:600; color:var(--al2); margin-top:8px; margin-left:10px}
-  .ferm-arq{font-size:10px; color:var(--txt3); margin-top:7px}
+  .ferm-m .v{font-size:20px; font-weight:700; line-height:1.1; letter-spacing:-.4px; color:var(--txt)}
+  .ferm-sem{font-size:11px; color:var(--txt3); margin-top:10px}
+  .ferm-rod{display:flex; justify-content:space-between; align-items:baseline; gap:10px; width:100%; margin-top:10px; flex-wrap:wrap}
+  .ferm-vol{font-size:12px; font-weight:600; color:var(--al2)}
+  .ferm-arq{font-size:10px; color:var(--txt3); margin-top:8px}
   .it.e.ferm{border-left-color:var(--er)} .it.a.ferm{border-left-color:var(--al)}
 
   .carta{height:96px; margin:4px 0}
@@ -380,15 +381,14 @@ function renderFerm(){
     }
     // volume total do tanque (fonte: bloco starter)
     const vol = (f.volTanque != null && f.volTanque !== '')
-      ? `<div class="ferm-vol">volume ${esc(fmt(f.volTanque))} L</div>` : '';
-    // ordem no item: 1º TANQUE (maiúsculo, destaque) → 2º pH/Brix/ABV → 3º dias (cor) → 4º volume
+      ? `<span class="ferm-vol">volume ${esc(fmt(f.volTanque))} L</span>` : '';
+    // ordem no item: 1º TANQUE (maiúsculo, destaque) → 2º pH/Brix/ABV (grade 3×1) → 3º dia|volume nas pontas
     const diaCls = f.cor ? `ferm-dia ${f.cor}` : 'ferm-dia';
     return `<div class="it ${f.cor} ferm">
       <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(f.hrefOp || f.op)}">
         <div class="ferm-tanque">${esc(f.tanque)} <span class="ferm-op">${esc(f.nome)}</span></div>
         ${leit}
-        <span class="${diaCls}">${esc(f.dia)}</span>
-        ${vol}
+        <div class="ferm-rod"><span class="${diaCls}">${esc(f.dia)}</span>${vol}</div>
         <div class="ferm-arq">toque para abrir a ficha da base</div>
       </a></div>`;
   }).join('');
