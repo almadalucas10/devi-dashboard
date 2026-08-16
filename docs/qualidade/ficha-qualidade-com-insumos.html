@@ -751,12 +751,15 @@ function renderLista(){
     } else if (demo) {
       blocosTxt = `<div class="blocos"><span class="bqcount">${demo.blocos} de ${demo.total} blocos</span></div>`;
     }
+    // badge de status: "parcial" não aparece mais embaixo da quantidade (ruído;
+    // o andamento real fica nos chips de blocos do rodapé do card)
+    const badge = cls === 'parcial' ? '' : `<span class="st ${cls}">${label}</span>`;
     return `<div class="opc${o.nc ? ' nc-flag' : ''}" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${o.op}</span> · ${o.sigla}</div>
         <div class="l2">${p.nome || o.sku}</div>
         ${info}${blocosTxt}</div>
       <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
-        <span class="st ${cls}">${label}</span></div></div>`;
+        ${badge}</div></div>`;
   };
   // separa as bases (FX000) dos demais SKUs
   const base   = OPS.filter(o => o.sku === 'FX000');
