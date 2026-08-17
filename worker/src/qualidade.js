@@ -255,6 +255,24 @@ export async function lerFichaSalvaPorNcod(env, nCodOP) {
   return null;
 }
 
+/** Apaga uma ficha salva (documento R2 + linha D1 fichas/ncs). Retorna o que removeu. */
+export async function apagarFichaSalva(env, op) {
+  const num = String(op).replace(/\D/g, "").slice(-5);
+  const ano = String(op).replace(/\D/g, "").slice(0, 4) || "0000";
+  const key = `qualidade/fichas/${ano}/${num || op}.json`;
+  // R2 — documento completo
+  let removidoR2 = false;
+  try { await env.CACHE_BUCKET.delete(key); removidoR2 = true; } catch (e) { console.error(`[qualidade] apagar R2: ${e.message}`); }
+  // D1 — fichas + ncs
+  let removidoD1 = false;
+  try {
+    await env.QUALIDADE_DB.prepare("DELETE FROM ncs WHERE op = ?1").bind(op).run();
+    const r = await env.QUALIDADE_DB.prepare("DELETE FROM fichas WHERE op = ?1").bind(op).run();
+    removidoD1 = (r && r.meta && r.meta.changes > 0);
+  } catch (e) { console.error(`[qualidade] apagar D1: ${e.message}`); }
+  return { ok: true, op, key, removidoR2, removidoD1 };
+}
+
 /** Fichas salvas no mês (D1) — alimenta o painel/lista */
 export async function fichasDoMes(env, aaaamm) {
   const r = await env.QUALIDADE_DB.prepare(
