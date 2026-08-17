@@ -566,30 +566,42 @@ async function handle(request, env, ctx) {
     }
     // Debug — mostra a linha que seria gravada na planilha de indicadores (sem escrever)
     // GET /api/qualidade/debug/sheets-mapping?op=<op ou nCodOP>
-    // Histórico dos indicadores de um produto (da planilha — aba Indicadores Kombucha)
-    // GET /api/qualidade/hist/indicadores?produto=Frutas%20Vermelhas&n=14
+    // Histórico dos indicadores de um produto (da planilha), por família.
+    // GET /api/qualidade/hist/indicadores?produto=Frutas%20Vermelhas&familia=kombucha&n=14
     if (url.pathname === "/api/qualidade/hist/indicadores" || url.pathname === "/api/qualidade/hist/pH") {
       try {
         const { getAccessToken, getValues } = await import("./sheets.js");
         const id = env.INDICADORES_SPREADSHEET_ID;
         if (!id) return json({ erro: "INDICADORES_SPREADSHEET_ID não configurado" }, 503);
         const produto = url.searchParams.get("produto") || "Frutas Vermelhas";
+        const familia = (url.searchParams.get("familia") || "kombucha").toLowerCase();
         const n = Math.min(50, Math.max(2, parseInt(url.searchParams.get("n") || "14", 10) || 14));
+        // Resolve aba e coluna do produto conforme a família:
+        //   kombucha (FX*) → aba "Indicadores Kombucha", produto na coluna D
+        //   chá (CH*) / refri (RF*/RTM*) → aba "Indicadores Refi e Chá", produto na coluna E
+        const komb = familia === "kombucha" || familia === "komb";
+        const tab = komb ? "Indicadores Kombucha" : "Indicadores Refri e Chá";
+        const colProd = komb ? "D" : "E";
         const token = await getAccessToken(env);
-        const rows = await getValues(env, token, "Indicadores Kombucha!A2:L2000", id);
+        const rows = await getValues(env, token, `${tab}!A2:N2000`, id);
         const num = v => { if (v == null || v === "") return null; const x = parseFloat(String(v).replace(",", ".")); return isNaN(x) ? null : x; };
-        // colunas: 0 Data, 3 Produto, 4 Lote, 5 pH, 6 Brix, 7 Carbonatação, 9 ABV
+        // Colunas diferem por aba:
+        //   Kombucha: 0 Data, 3 Produto, 4 Lote, 5 pH, 6 Brix, 7 Carbonatação, 9 ABV
+        //   Refri/Chá: 0 Data, 4 Sabor, 5 Lote, 6 pH, 7 Brix, 8 Carbonatação (sem ABV)
+        const iProd = komb ? 3 : 4, iLote = komb ? 4 : 5, iPh = komb ? 5 : 6,
+              iBrix = komb ? 6 : 7, iCarb = komb ? 7 : 8, iAbv = komb ? 9 : null;
         const filtrados = [];
         for (const r of rows) {
-          if ((r[3] || "").trim() !== produto) continue;
-          const p = { data: r[0] || "", lote: r[4] || "", pH: num(r[5]) };
-          if (r[6] != null) p.brix = num(r[6]);
-          if (r[7] != null) p.carbonatacao = num(r[7]);
-          if (r[9] != null) p.abv = num(r[9]);
+          const nome = (r[iProd] || "").trim();
+          if (nome !== produto) continue;
+          const p = { data: r[0] || "", lote: r[iLote] || "", pH: num(r[iPh]) };
+          if (r[iBrix] != null) p.brix = num(r[iBrix]);
+          if (r[iCarb] != null) p.carbonatacao = num(r[iCarb]);
+          if (iAbv != null && r[iAbv] != null) p.abv = num(r[iAbv]);
           filtrados.push(p);
         }
         const ultimos = filtrados.slice(-n);
-        return json({ produto, n, total: filtrados.length, pontos: ultimos });
+        return json({ produto, familia, tab, n, total: filtrados.length, pontos: ultimos });
       } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
     }
     if (url.pathname === "/api/qualidade/debug/sheets-mapping") {

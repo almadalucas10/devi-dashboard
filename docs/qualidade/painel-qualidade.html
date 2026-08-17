@@ -87,6 +87,19 @@
   .carta{height:96px; margin:4px 0}
   .carta svg{width:100%; height:100%; display:block}
 
+  /* ---- card Indicadores (A3): 4 mini-gráficos + tooltip ---- */
+  .ind-ga{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:4px}
+  .ind-g{background:var(--cell); border-radius:8px; padding:7px 9px; position:relative}
+  .ind-k{font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
+  .ind-atual{font-size:17px; font-weight:700; line-height:1.15}
+  .ind-svg{position:relative; height:56px; margin-top:4px}
+  .ind-svg svg{width:100%; height:100%; display:block}
+  .ind-m{font-size:9px; color:var(--txt3); margin-top:4px}
+  .ind-tip{position:absolute; display:none; background:#0b111a; border:1px solid var(--linha);
+    border-radius:5px; padding:3px 7px; font-size:10px; color:var(--txt2);
+    pointer-events:none; white-space:nowrap; z-index:5}
+  .ind-tip b{color:var(--txt)}
+
   .rec{margin-bottom:10px}
   .rec-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:4px}
   .rec-l1 .nm{color:var(--txt2)}
@@ -148,14 +161,10 @@
     </div>
 
     <div class="pn">
-      <div class="pn-cab"><span class="t">📉 pH · Komb Frutas Vermelhas</span>
-        <span class="s">últimos 14 lotes</span></div>
-
-      <div class="carta" id="phChart">
-        <div style="padding:20px;font-size:11px;color:var(--txt3)">Carregando pH…</div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt3)" id="phMeta">
-        <span>últimos 14 lotes</span>
+      <div class="pn-cab"><span class="t">📊 Indicadores do SKU</span>
+        <span class="s"><select id="skuSel" style="background:var(--campo);color:var(--txt);border:1px solid var(--linha);border-radius:6px;font-size:12px;padding:3px 6px"></select> · últimos 14 lotes</span></div>
+      <div id="indChart">
+        <div style="padding:20px;font-size:11px;color:var(--txt3)">Carregando indicadores…</div>
       </div>
       <div class="leg" style="margin-top:6px">
         <span><i class="pt-l" style="background:#16351f"></i>faixa de especificação</span>
@@ -261,48 +270,123 @@ function renderKpis(){
       <div class="d">vida de prateleira</div></div>`;
 }
 
-// Card pH · Komb Frutas Vermelhas — desenha o SVG com os últimos lotes reais (planilha)
-async function renderPh(){
-  const chart = document.getElementById('phChart');
-  const meta = document.getElementById('phMeta');
-  if (!chart) return;
+// Card de indicadores do SKU (A3): faixa de spec + tooltip por ponto + último ponto em destaque.
+// Mapa dos 17 SKUs: sku → {nome, fam, plan (nome na planilha), spec por indicador}.
+const MAPA_SKU = {"CH001":{"nome":"Chá Verde Pêssego","fam":"cha","plan":"Pêssego","spec":{"pH":{"min":3.20,"max":3.31},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.70}}},
+"CH002":{"nome":"Chá Hibisco Morango","fam":"cha","plan":"Hibiscos","spec":{"pH":{"min":3.0,"max":3.30},"brix":{"min":6.50,"max":7.00},"carbonatacao":{"min":1.50,"max":2.00}}},
+"CH003":{"nome":"Chá Camomila Maracujá","fam":"cha","plan":"Chá Camomila Maracujá","spec":{"pH":{"min":2.80,"max":3.10},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.70}}},
+"CH004":{"nome":"Chá Mate Limão","fam":"cha","plan":"Mate","spec":{"pH":{"min":3.70,"max":3.90},"brix":{"min":2.0,"max":2.50},"carbonatacao":{"min":1.50,"max":1.50}}},
+"FX001":{"nome":"Komb Frutas Vermelhas","fam":"kombucha","plan":"Frutas Vermelhas","spec":{"pH":{"min":3.25,"max":3.50},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.40},"abv":{"min":0.10,"max":1.82}}},
+"FX002":{"nome":"Komb Abacaxi Gengibre","fam":"kombucha","plan":"Abacaxi","spec":{"pH":{"min":3.40,"max":3.65},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.18,"max":1.20}}},
+"FX003":{"nome":"Komb Maçã Gengibre","fam":"kombucha","plan":"Maçã","spec":{"pH":{"min":3.40,"max":3.65},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.12,"max":0.58}}},
+"FX006":{"nome":"Komb Mirtilo Morango","fam":"kombucha","plan":"Mirtilo","spec":{"pH":{"min":3.35,"max":3.55},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.20,"max":0.75}}},
+"FX007":{"nome":"Komb Pink Lemonade","fam":"kombucha","plan":"Pink L","spec":{"pH":{"min":3.0,"max":3.30},"brix":{"min":3.0,"max":3.50},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.10,"max":1.75}}},
+"RF001":{"nome":"Refri Limão Siciliano","fam":"refri","plan":"Limão","spec":{"pH":{"min":3.25,"max":3.50},"brix":{"min":4.0,"max":4.50},"carbonatacao":{"min":1.50,"max":2.00}}},
+"RF002":{"nome":"Refri Frutas Vermelhas","fam":"refri","plan":"Frutas Vermelhas","spec":{"pH":{"min":3.30,"max":3.55},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":2.00}}},
+"RF003":{"nome":"Refri Guaraná Açaí","fam":"refri","plan":"Guaraná","spec":{"pH":{"min":3.50,"max":3.80},"brix":{"min":4.0,"max":4.50},"carbonatacao":{"min":1.50,"max":2.20}}},
+"RF004":{"nome":"Refri Uva","fam":"refri","plan":"Uva","spec":{"pH":{"min":3.40,"max":3.60},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RF005":{"nome":"Refri Laranja","fam":"refri","plan":"Laranja","spec":{"pH":{"min":3.70,"max":3.90},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RTM001":{"nome":"Refri Limão Mônica","fam":"refri","plan":"TM Limão","spec":{"pH":{"min":3.36,"max":3.39},"brix":{"min":3.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RTM002":{"nome":"Refri Uva Mônica","fam":"refri","plan":"TM Uva","spec":{"pH":{"min":3.20,"max":3.53},"brix":{"min":4.0,"max":5.0},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RTM003":{"nome":"Refri Laranja Mônica","fam":"refri","plan":"TM Laranja","spec":{"pH":{"min":3.76,"max":3.94},"brix":{"min":4.0,"max":4.50},"carbonatacao":{"min":1.50,"max":1.50}}}};
+
+// preenche o select com os 17 SKUs (padrão: FX001)
+function preencherSelect(){
+  const sel = document.getElementById('skuSel');
+  if (!sel) return;
+  sel.innerHTML = Object.keys(MAPA_SKU).map(s => {
+    const m = MAPA_SKU[s];
+    return `<option value="${s}"${s === 'FX001' ? ' selected' : ''}>${m.nome} (${s})</option>`;
+  }).join('');
+  sel.addEventListener('change', renderIndicadores);
+}
+
+// desenha um mini-gráfico de um indicador (A3): faixa + tooltip + último ponto em destaque
+function minigrafoInd(k, pts, spec, cor){
+  const vals = pts.map(p => p[k]).filter(v => v != null && !isNaN(v));
+  if (vals.length < 2) return null;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const sp = spec && spec[k];
+  const lo = sp ? Math.max(0, sp.min - (max - min) * 0.15) : min - (max - min) * 0.15;
+  const hi = sp ? sp.max + (max - min) * 0.15 : max + (max - min) * 0.15;
+  const W = 100, H = 56, pad = 4;
+  const X = i => pad + (i / (pts.length - 1)) * (W - pad * 2);
+  const Y = v => pad + (1 - (v - lo) / (hi - lo)) * (H - pad * 2);
+  let faixa = '';
+  if (sp) {
+    const y1 = Y(sp.min), y2 = Y(sp.max);
+    faixa = `<rect x="0" y="${y1.toFixed(1)}" width="${W}" height="${(y2 - y1).toFixed(1)}" fill="#16351f" opacity=".45"/>`;
+  }
+  const poly = pts.map((p, i) => {
+    const v = p[k];
+    if (v == null || isNaN(v)) return '';
+    return `${X(i).toFixed(1)},${Y(v).toFixed(1)}`;
+  }).filter(Boolean).join(' ');
+  // pontos com cabaz de tooltip; último em destaque (anel)
+  const circs = pts.map((p, i) => {
+    const v = p[k];
+    if (v == null || isNaN(v)) return '';
+    const x = X(i).toFixed(1), y = Y(v).toFixed(1);
+    const fora = sp && (v < sp.min || v > sp.max);
+    const ult = i === pts.length - 1;
+    const corP = fora ? '#f87171' : cor;
+    const r = ult ? 3.4 : 2.6;
+    const lbl = `${p.data} · L${p.lote} · ${k} ${String(v).replace('.', ',')}`;
+    const anel = ult ? `<circle cx="${x}" cy="${y}" r="${(r + 2.2).toFixed(1)}" fill="none" stroke="${corP}" opacity=".5"/>` : '';
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="${corP}" data-tip="${esc(lbl)}"/>${anel}`;
+  }).join('');
+  const media = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return {
+    k, cor, atual: String(vals[vals.length - 1]).replace('.', ','),
+    media: media.toFixed(2).replace('.', ','),
+    faixaTxt: sp ? `${sp.min}–${sp.max}` : 'sem faixa',
+    svg: `<div class="ind-svg"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${faixa}
+      <polyline fill="none" stroke="${cor}" stroke-width="2" points="${poly}"/>
+      <g>${circs}</g></svg><div class="ind-tip"></div></div>`
+  };
+}
+
+async function renderIndicadores(){
+  const el = document.getElementById('indChart');
+  if (!el) return;
+  const sel = document.getElementById('skuSel');
+  const sku = sel && sel.value ? sel.value : 'FX001';
+  const m = MAPA_SKU[sku] || MAPA_SKU['FX001'];
   try {
-    const r = await fetch(WORKER_URL + '/api/qualidade/hist/pH?produto=' + encodeURIComponent('Frutas Vermelhas') + '&n=14', { cache: 'no-store' });
+    const r = await fetch(WORKER_URL + '/api/qualidade/hist/indicadores?produto=' + encodeURIComponent(m.plan) + '&familia=' + encodeURIComponent(m.fam) + '&n=14', { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
-    const pts = (d.pontos || []).filter(p => !isNaN(p.pH));
+    const pts = (d.pontos || []);
     if (pts.length < 2) {
-      chart.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--txt3)">Sem histórico de pH.</div>';
+      el.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--txt3)">Sem histórico para este SKU.</div>';
       return;
     }
-    const W = 400, H = 96, padX = 14, padY = 10;
-    const pHs = pts.map(p => p.pH);
-    const min = Math.min(...pHs), max = Math.max(...pHs);
-    const lo = Math.max(2.4, Math.floor((min - 0.1) * 2) / 2);   // piso de escala
-    const hi = Math.min(4.6, Math.ceil((max + 0.1) * 2) / 2);    // teto de escala
-    // zona de spec do produto (pH) — aproximação da planilha; ajustável
-    const SPEC = { min: 3.00, max: 3.60 };
-    const X = i => padX + (i / (pts.length - 1)) * (W - padX * 2);
-    const Y = v => padY + (1 - (v - lo) / (hi - lo)) * (H - padY * 2);
-    const ySpecMin = Y(SPEC.min), ySpecMax = Y(SPEC.max);
-    const poly = pts.map((p, i) => `${X(i).toFixed(1)},${Y(p.pH).toFixed(1)}`).join(' ');
-    const circs = pts.map((p, i) => {
-      const x = X(i).toFixed(1), y = Y(p.pH).toFixed(1);
-      const fora = p.pH < SPEC.min || p.pH > SPEC.max;
-      return `<circle cx="${x}" cy="${y}" r="${fora ? 4.5 : 3}" fill="${fora ? '#f87171' : '#60a5fa'}"/>`;
-    }).join('');
-    const media = (pHs.reduce((a, b) => a + b, 0) / pHs.length);
-    const dp = Math.sqrt(pHs.reduce((a, b) => a + (b - media) * (b - media), 0) / pHs.length);
-    const meioY = ((ySpecMin + ySpecMax) / 2).toFixed(1);
-    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;width:100%;height:100%">
-      <rect x="0" y="${ySpecMin}" width="${W}" height="${ySpecMax - ySpecMin}" fill="#16351f" opacity=".4"/>
-      <line x1="0" y1="${meioY}" x2="${W}" y2="${meioY}" stroke="#ffffff30" stroke-width="1" stroke-dasharray="4 4"/>
-      <polyline fill="none" stroke="#60a5fa" stroke-width="2" points="${poly}"/>
-      <g fill="#60a5fa">${circs}</g>
-    </svg>`;
-    meta.innerHTML = `<span>${pts.length} lotes</span><span>média ${media.toFixed(2).replace('.', ',')} · dp ${dp.toFixed(2).replace('.', ',')}</span><span>${pts[pts.length - 1].data}</span>`;
+    const graf = [['pH', '#60a5fa'], ['brix', '#fbbf24'], ['carbonatacao', '#4ade80'], ['abv', '#f87171']]
+      .map(([k, cor]) => minigrafoInd(k, pts, m.spec, cor))
+      .filter(Boolean);
+    el.innerHTML = `<div class="ind-ga">${graf.map(g => `
+      <div class="ind-g"><div class="ind-k">${g.k}</div>
+        <div class="ind-atual" style="color:${g.cor}">${g.atual}</div>
+        ${g.svg}
+        <div class="ind-m">faixa ${g.faixaTxt} · média ${g.media}</div>
+      </div>`).join('')}</div>`;
+    // tooltip por ponto
+    el.querySelectorAll('.ind-svg').forEach(svg => {
+      const tip = svg.querySelector('.ind-tip');
+      svg.querySelectorAll('circle[data-tip]').forEach(c => {
+        c.style.cursor = 'pointer';
+        c.addEventListener('mousemove', e => {
+          const r = svg.getBoundingClientRect();
+          tip.style.display = 'block';
+          tip.innerHTML = '<b>' + c.getAttribute('data-tip') + '</b>';
+          tip.style.left = Math.max(0, Math.min(90, ((e.clientX - r.left) / r.width) * 90)) + '%';
+          tip.style.top = (e.offsetY < r.height / 2 ? -16 : r.height + 4) + 'px';
+        });
+        c.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+      });
+    });
   } catch (e) {
-    chart.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--er2)">falha ao carregar o pH</div>';
+    el.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--er2)">falha ao carregar indicadores</div>';
   }
 }
 
@@ -699,7 +783,7 @@ async function carregar(){
     el('sub').textContent = `${DADOS.mesNome} · ${total} ${total === 1 ? 'lote produzido' : 'lotes produzidos'}`;
     el('rel').textContent = DADOS.atualizadoEm;
     renderKpis(); renderColeta(); renderEvol(); renderRecravacao();
-    renderLotes(); renderOcorrencias(); renderVida(); renderFerm(); renderPh();
+    renderLotes(); renderOcorrencias(); renderVida(); renderFerm(); preencherSelect(); renderIndicadores();
   } catch(e) {
     el('sub').textContent = 'Erro ao carregar os dados: ' + e.message;
   }
