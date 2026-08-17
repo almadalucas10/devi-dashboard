@@ -411,12 +411,13 @@ function renderFerm(){
     const tanque = (t.tanque || '').trim() || 'sem tanque';
     const sub = [t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
     const dias = t.diasNum != null ? t.diasNum : null;
-    // Barra é exclusivamente de dias (spec §4) — o estado (no_ponto) é só o selo,
-    // não deve encher a barra nem forçar cor verde.
+    // Barra é exclusivamente de dias (spec §4) — mas destaca em VERDE quando o
+    // tanque atingiu o ponto de colheita (no_ponto, POP 17), mantendo a largura
+    // proporcional aos dias.
     const pct = dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100);
     const fLeft  = (FAIXA_DAYS.min / ESCALA_MAX_DIAS) * 100;
     const fWidth = ((FAIXA_DAYS.max - FAIXA_DAYS.min) / ESCALA_MAX_DIAS) * 100;
-    const cor = corBarraFerm(dias == null ? 0 : dias);
+    const cor = (est === 'no_ponto') ? 'var(--ok)' : corBarraFerm(dias == null ? 0 : dias);
     // linha de medições (só quando há alguma)
     const u = t.ultima;
     const hasMed = u && (u.pH != null || u.brix != null || u.abv != null);
