@@ -258,7 +258,7 @@ export async function lerFichaSalvaPorNcod(env, nCodOP) {
 /** Fichas salvas no mês (D1) — alimenta o painel/lista */
 export async function fichasDoMes(env, aaaamm) {
   const r = await env.QUALIDADE_DB.prepare(
-    "SELECT op, sku, produto, data_producao, status, nc_count, indice, blocos_status FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
+    "SELECT op, sku, produto, data_producao, status, nc_count, indice, blocos_status, qtd, un, n_cod_op FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
   ).bind(aaaamm).all();
   const fichas = (r.results || []).map((f) => ({
     ...f,
@@ -283,6 +283,19 @@ export async function fichasDoMes(env, aaaamm) {
       for (const f of fichas) f.ncs = porOp.get(f.op) || [];
     }
   } catch (e) { console.error(`[qualidade] ncs do mes: ${e.message}`); }
+  // Bases (FX000) podem ter qtd/un nulos se gravadas antes de o form enviar esses campos.
+  // Backfill via fichaDaOp (cache do worker) para que o KPI "volume de base" no painel funcione.
+  try {
+    const precisam = fichas.filter(f => f.sku === 'FX000' && (f.qtd == null || f.un == null));
+    for (const f of precisam) {
+      try {
+        const op = f.n_cod_op ?? f.op;
+        const dados = await fichaDaOp(env, op, false, false);
+        if (dados.qtd != null) f.qtd = dados.qtd;
+        if (dados.un != null) f.un = dados.un;
+      } catch (e) { /* mantém null */ }
+    }
+  } catch (e) { console.error(`[qualidade] backfill base: ${e.message}`); }
   return fichas;
 }
 

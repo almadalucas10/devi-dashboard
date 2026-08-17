@@ -263,9 +263,9 @@ function renderKpis(){
     <div class="kpi"><div class="r">COLETA DO MÊS</div>
       <div class="v" style="color:${corColeta(media)}">${media === null ? '—' : fmtPct(media)}</div>
       <div class="d">média dos ${vals.length} indicadores</div></div>
-    <div class="kpi"><div class="r">LOTES CONFORMES</div>
-      <div class="v" style="color:var(--ok2)">${L.conformes}/${L.total}</div>
-      <div class="d">${L.total ? fmtPct(L.conformes / L.total) : '—'} no mês</div></div>
+    <div class="kpi"><div class="r">BASE PRODUZIDA</div>
+      <div class="v" style="color:var(--ok2)">${DADOS.volumeBaseL || 0} L</div>
+      <div class="d">base FX000 no mês</div></div>
     <div class="kpi"><div class="r">NÃO-CONFORMIDADES</div>
       <div class="v" style="color:var(--er2)">${nc}</div>
       <div class="d">${nc ? 'ver "Ocorrências"' : 'nenhuma no mês'}</div></div>
@@ -652,6 +652,10 @@ async function carregar(){
       atualizadoEm: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       indiceColeta,
       lotes: { total, conformes, naoConformes, semDado, lista },
+      // volume de base (FX000) produzido no mês, em litros
+      volumeBaseL: fichas
+        .filter(f => f.sku === 'FX000')
+        .reduce((s, f) => s + (Number(f.qtd) || 0), 0),
       ocorrencias,
       analisesVencidas: { total: vencidas.length, lista: vencidas },
       fermentacao,

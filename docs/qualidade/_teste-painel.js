@@ -11,7 +11,7 @@ const FICHAS = [
     blocos_status: JSON.stringify({ preenvase: { f: 3, t: 4 }, carbonatacao: { f: 2, t: 3 }, recravacao: { f: 1, t: 3 }, estoque: { f: 0, t: 3 } }) },
   { op: '2026/00519', sku: 'RF001', produto: 'Refri Limão Siciliano', data_producao: '2026-08-17', status: 'parcial', nc_count: 0, indice: JSON.stringify({ pH: false, brix: false, carbonatacao: false, recravacao: false, abv: false }), ncs: [],
     blocos_status: JSON.stringify({ preenvase: { f: 0, t: 4 }, carbonatacao: { f: 0, t: 3 }, recravacao: { f: 0, t: 3 }, estoque: { f: 0, t: 3 } }) },
-  { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data_producao: '2026-08-10', status: 'parcial', nc_count: 0, indice: JSON.stringify({ pH: true, brix: true, temperatura: true, abv: true, carbonatacao: false, recravacao: false }), ncs: [],
+  { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data_producao: '2026-08-10', status: 'parcial', nc_count: 0, qtd: 450, un: 'L', indice: JSON.stringify({ pH: true, brix: true, temperatura: true, abv: true, carbonatacao: false, recravacao: false }), ncs: [],
     blocos_status: JSON.stringify({ starter: { f: 1, t: 5 }, fermentacao: { f: 4, t: 5 }, filtracao: { f: 0, t: 2 }, produtoAcabado: { f: 0, t: 5 } }) },
   { op: '2026/00528', sku: 'CH003', produto: 'Chá Camomila Maracujá', data_producao: '2026-08-14', status: 'completa', nc_count: 1, indice: JSON.stringify({ pH: true, brix: true, carbonatacao: true, recravacao: true, abv: false }), ncs: [{ bloco: 'recravacao', campo: 'transpasse', valor: 0.78, min: 0.8, max: 0.9 }],
     blocos_status: JSON.stringify({ preenvase: { f: 4, t: 4 }, carbonatacao: { f: 3, t: 3 }, recravacao: { f: 3, t: 3 }, estoque: { f: 3, t: 3 } }) },
@@ -58,7 +58,7 @@ setTimeout(() => {
   // coleta: agora 6 indicadores (inclui estoque) + exclusão de FX000 nas contagens de lote.
   // Valores reais com o mock: pH 54%, Brix 54%, ABV 80%, Carb 56%, Rec 44%, Est 33% → média 54%
   ok(kpis.includes('54%'), 'KPI Coleta do Mês = 54% (era: ' + $('#kpis').textContent.slice(0, 60) + ')');
-  ok(kpis.includes('0/3'), 'KPI Lotes Conformes = 0/3 (FX000 excluído; única completa tem NC)');
+  ok(kpis.includes('450 L'), 'KPI Base Produzida = 450 L (base FX000 do mês)');
   ok(/NÃO-CONFORMIDADES[\s\S]*?\b1\b/.test(kpis), 'KPI Não-Conformidades = 1');
 
   const col = $('#coleta').textContent;

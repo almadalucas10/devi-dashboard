@@ -1908,7 +1908,7 @@ function montarPayload(){
   const g = c => { const e=document.querySelector(`[data-c="${c}"]`);
     return e && e.value.trim()!=='' ? e.value.trim() : null; };
   const d = { op: opAtual || '2026/00527', nCodOP: nCodOPAtual || 0, sku:sku, sigla:SIGLA[sku]||'',
-              familia:fam, dataProducao: iso(opData) || '2026-08-12', blocos:{} };
+              familia:fam, qtd: opQtd || null, un: opUn || null, dataProducao: iso(opData) || '2026-08-12', blocos:{} };
   if(folhaInfo){
     d.previsao = folhaInfo.previsao || '';
     d.situacao = folhaInfo.situacao || '';
