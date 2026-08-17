@@ -79,10 +79,6 @@ setTimeout(() => {
   const ferm = $('#fermentacao').textContent;
   ok(ferm.includes('Base Kombucha'), 'Fermentação: base FX000 listada');
 
-  const rec = $('#recrava').textContent;
-  ok(rec.includes('Altura') && rec.includes('2,58'), 'Recravação da última ficha renderizada');
-  ok(rec.includes('0,78'), 'Recravação com transpasse 0,78 (fora de spec)');
-
   console.log(`\n${pass} passaram, ${fail} falharam`);
   process.exit(fail ? 1 : 0);
 }, 400);

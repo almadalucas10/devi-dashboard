@@ -189,13 +189,6 @@
   <div class="col">
 
     <div class="pn">
-      <div class="pn-cab"><span class="t" id="recTitulo">🔧 Recravação</span>
-        <span class="s" id="recSub">—</span></div>
-      <div id="recrava"></div>
-      <div class="leg"><span>1 medição por lote — altura, espessura e transpasse da mesma lata</span></div>
-    </div>
-
-    <div class="pn">
       <div class="pn-cab"><span class="t">📋 Lotes do mês</span>
         <span class="s" id="lotesSub">—</span></div>
       <div id="lotes"></div>
@@ -382,33 +375,6 @@ function renderEvol(){
         <div style="width:100%;background:${cor};height:${Math.max(2, v / 100 * 40)}px;border-radius:2px;opacity:.9"></div>
         <span style="font-size:7.5px;color:var(--txt3)">${esc(mes)}</span></div>`;
     }).join('') + '</div>';
-}
-
-function renderRecravacao(){
-  const r = DADOS.recravacao;
-  if(!r){
-    el('recTitulo').textContent = '🔧 Recravação';
-    el('recSub').textContent = 'sem ficha com recravação no mês';
-    el('recrava').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma medição de recravação registrada ainda.</div>';
-    return;
-  }
-  el('recTitulo').textContent = `🔧 Recravação · OP ${r.op}`;
-  el('recSub').textContent = `1 lata · ${r.data}`;
-  el('recrava').innerHTML = r.medidas.map(m => {
-    const { min, alvo, max } = m.spec;
-    const pos = v => Math.max(0, Math.min(100, (v - min) / (max - min) * 100));
-    const cor = (m.valor >= min && m.valor <= max) ? 'var(--ok2)' : 'var(--er2)';
-    return `<div class="rec">
-      <div class="rec-l1"><span class="nm">${esc(m.nome)}</span>
-        <span class="vl" style="color:${cor}">${String(m.valor).replace('.', ',')} <span style="font-size:10px;color:var(--txt3)">${esc(m.un)}</span></span></div>
-      <div class="faixa">
-        <div class="zona" style="left:${pos(min)}%;right:${100 - pos(max)}%"></div>
-        <div class="alvo" style="left:${pos(alvo)}%"></div>
-        <div class="pt" style="left:${pos(m.valor)}%;background:${cor}"></div>
-      </div>
-      <div class="faixa-esc"><span>${String(min).replace('.', ',')}</span><span>alvo ${String(alvo).replace('.', ',')}</span><span>${String(max).replace('.', ',')}</span></div>
-    </div>`;
-  }).join('');
 }
 
 function renderLotes(){
@@ -606,13 +572,6 @@ function coletaDe(fichas){
   return Object.values(porBlocos).some(v => v !== null) ? porBlocos : coletaPorIndicador(fichas);
 }
 const somaMeses = (iso, n) => { const d = new Date(String(iso).slice(0,10) + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d; };
-const REC_SPEC = {
-  altura: { min: 2.50, alvo: 2.60, max: 2.65 },
-  espessura: { min: 1.00, alvo: 1.05, max: 1.10 },
-  transpasse: { min: 0.80, alvo: 0.85, max: 0.90 }
-};
-const NOME_REC = { altura: 'Altura', espessura: 'Espessura', transpasse: 'Transpasse' };
-
 async function carregar(){
   const agora = new Date();
   const mes = agora.toISOString().slice(0, 7);
@@ -693,26 +652,6 @@ async function carregar(){
       };
     }));
 
-    // recravação: última ficha do mês com o bloco preenchido
-    let recravacao = null;
-    const ordem = [...fichas].sort((a,b) => String(b.data_producao||'').localeCompare(String(a.data_producao||'')));
-    for (const f of ordem) {
-      try {
-        const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(f.n_cod_op || f.op), { cache: 'no-store' });
-        const j = await fr.json();
-        const rec = j.ficha && j.ficha.blocos && j.ficha.blocos.recravacao;
-        if (rec && rec.length) {
-          recravacao = { op: '#' + abreviaOp(f.op), sigla: f.sku || '', data: fmtDataBR(f.data_producao) };
-          recravacao.medidas = [
-            { nome: 'Altura', valor: rec[0].altura, un: 'mm', spec: REC_SPEC.altura },
-            { nome: 'Espessura', valor: rec[0].espessura, un: 'mm', spec: REC_SPEC.espessura },
-            { nome: 'Transpasse', valor: rec[0].transpasse, un: 'mm', spec: REC_SPEC.transpasse },
-          ].filter(m => m.valor !== null && m.valor !== undefined);
-          break;
-        }
-      } catch(e) {}
-    }
-
     // evolução: coleta média dos últimos 6 meses
     const evolucao = [];
     for (let i = 5; i >= 0; i--) {
@@ -742,13 +681,12 @@ async function carregar(){
       ocorrencias,
       analisesVencidas: { total: vencidas.length, lista: vencidas },
       fermentacao,
-      recravacao,
       evolucao,
     };
 
     el('sub').textContent = `${DADOS.mesNome} · ${total} ${total === 1 ? 'lote produzido' : 'lotes produzidos'}`;
     el('rel').textContent = DADOS.atualizadoEm;
-    renderKpis(); renderColeta(); renderEvol(); renderRecravacao();
+    renderKpis(); renderColeta(); renderEvol();
     renderLotes(); renderOcorrencias(); renderVida(); renderFerm(); preencherSelect(); renderIndicadores();
   } catch(e) {
     el('sub').textContent = 'Erro ao carregar os dados: ' + e.message;
