@@ -1072,6 +1072,9 @@ function resetarFicha(){
 function abrirOp(op){
   const o = OPS.find(x => x.op === op);
   if(!o) return;
+  // suprime o auto-save durante a transição — senão o auto-save de opAtual (que
+  // ainda é a OP anterior) com os campos já alterados grava o rascunho da OP errada
+  _resetando = true;
   opAtual = op;
   _digitou = false; // nova OP: nada foi digitado ainda
   nCodOPAtual = o.nCodOP || null;
@@ -1098,6 +1101,7 @@ function abrirOp(op){
   resetarFicha();
   mostrarFicha();
   carregarLocal(op); // restaura o rascunho local imediatamente (não espera o fetch)
+  _resetando = false; // fim da transição — autoriza o auto-save a partir daqui (op já atualizada)
   carregarInsumosReais(op, o.nCodOP);
 }
 
@@ -2014,6 +2018,8 @@ function salvarLocal(){
   try{
     const d = montarPayload();
     if(!temBloco(d)) return; // não grava rascunho vazio (troca de OP/reset)
+    // garante que o payload é da OP que está na tela — nunca de outra (evita vazar)
+    if(d.op && d.op !== opAtual) return;
     localStorage.setItem('ficha_rascunho_' + opAtual, JSON.stringify(d));
   }catch(e){}
 }

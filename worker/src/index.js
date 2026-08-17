@@ -18,6 +18,16 @@ import { R2_KEYS } from "./constants.js";
 // Sync leve — a cada 30 min (dashboard + fila + estoque)
 // ============================================================================
 
+// Mantém o dado anterior quando a nova tentativa falha (não grava erro por cima do dado bom)
+function seguro(nome, novo, anterior) {
+  if (novo && typeof novo === 'object' && 'erro' in novo && anterior &&
+      !(anterior && typeof anterior === 'object' && 'erro' in anterior && !Array.isArray(anterior))) {
+    console.log(`⚠️ ${nome} falhou — mantém cache anterior`);
+    return anterior;
+  }
+  return novo;
+}
+
 async function runLightSync(env) {
   const t0 = Date.now();
   console.log("[light] iniciando...");
@@ -35,13 +45,14 @@ async function runLightSync(env) {
   try {
     const partial = (await readJson(env, R2_KEYS.omie)) || { geradoEm: new Date().toISOString() };
     partial.geradoEm = new Date().toISOString();
+    const antes = { filaDePedidos: partial.filaDePedidos, estoque: partial.estoque, insumos: partial.insumos, reposicao: partial.reposicao };
     const cacheProd = await construirCacheProdutos(env);
 
     try {
       partial.filaDePedidos = await buscarFilaDePedidos(env);
       console.log(`[light] ✅ Fila: ${partial.filaDePedidos.length} pedidos`);
     } catch (e) {
-      partial.filaDePedidos = { erro: e.message };
+      partial.filaDePedidos = seguro('Fila', { erro: e.message }, antes.filaDePedidos);
       console.error(`[light] ❌ Fila: ${e.message}`);
     }
 
@@ -49,7 +60,7 @@ async function runLightSync(env) {
       partial.estoque = await buscarEstoque(env, cacheProd);
       console.log(`[light] ✅ Estoque: ${partial.estoque.length} SKUs`);
     } catch (e) {
-      partial.estoque = { erro: e.message };
+      partial.estoque = seguro('Estoque', { erro: e.message }, antes.estoque);
       console.error(`[light] ❌ Estoque: ${e.message}`);
     }
 
@@ -57,7 +68,7 @@ async function runLightSync(env) {
       partial.insumos = await buscarEstoqueInsumos(env);
       console.log(`[light] ✅ Insumos: ${partial.insumos.length} itens`);
     } catch (e) {
-      partial.insumos = { erro: e.message };
+      partial.insumos = seguro('Insumos', { erro: e.message }, antes.insumos);
       console.error(`[light] ❌ Insumos: ${e.message}`);
     }
 
@@ -147,6 +158,7 @@ async function runHeavySync(env) {
   try {
     const data = (await readJson(env, R2_KEYS.omie)) || { geradoEm: new Date().toISOString() };
     data.geradoEm = new Date().toISOString();
+    const hAntes = { filaDePedidos: data.filaDePedidos, estoque: data.estoque, insumos: data.insumos, reposicao: data.reposicao };
 
     const cacheProd = await construirCacheProdutos(env);
 
@@ -155,14 +167,14 @@ async function runHeavySync(env) {
       data.filaDePedidos = await buscarFilaDePedidos(env);
       console.log(`[heavy] ✅ Fila: ${data.filaDePedidos.length} pedidos`);
     } catch (e) {
-      data.filaDePedidos = { erro: e.message };
+      data.filaDePedidos = seguro('Fila', { erro: e.message }, hAntes.filaDePedidos);
     }
 
     try {
       data.estoque = await buscarEstoque(env, cacheProd);
       console.log(`[heavy] ✅ Estoque: ${data.estoque.length} SKUs`);
     } catch (e) {
-      data.estoque = { erro: e.message };
+      data.estoque = seguro('Estoque', { erro: e.message }, hAntes.estoque);
     }
 
     // KPIs + Ranking + Tendência (usa OPE/28, pesado)
