@@ -2126,9 +2126,13 @@ async function salvar(){
     return `<li><span>${sec.querySelector('h2').textContent}</span><b>${b.textContent}</b></li>`;
   });
   linhas.unshift(`<li><span>Insumos (conferência)</span><b>${conferidos.size} de ${insumosDaOp().length}</b></li>`);
-  const ncTxt = fora.length
-    ? `<div class="nc"><b>⚠ ${fora.length} não-conformidade(s):</b> ` +
-      fora.map(f=>`${f.campo} ${f.valor} — spec ${f.spec.min} a ${f.spec.max}`).join(' · ') + `</div>`
+  // as não-conformidades vêm do payload montado (campo `naoConformidades`) —
+  // antes usava `fora`, uma variável local de montarPayload() que não existe
+  // neste escopo (ReferenceError silencioso → 'nada acontecia' ao fechar a ficha)
+  const ncLista = d.naoConformidades || [];
+  const ncTxt = ncLista.length
+    ? `<div class="nc"><b>⚠ ${ncLista.length} não-conformidade(s):</b> ` +
+      ncLista.map(f=>`${f.campo} ${f.valor} — spec ${f.spec.min} a ${f.spec.max}`).join(' · ') + `</div>`
     : `<div class="nc" style="color:var(--ok2)"><b>✓ Sem não-conformidades</b></div>`;
 
   const res = document.getElementById('resumo');
@@ -2139,7 +2143,7 @@ async function salvar(){
   const tot = secVisiveis().length;
   const feitos = document.querySelectorAll(
     '.sec:not([data-consulta]):not(.hid) [data-est].done, .sec:not([data-consulta]):not(.hid) [data-est].err').length;
-  if(opAtual) FICHAS[opAtual] = { blocos: feitos, total: tot, nc: fora.length > 0, completa: feitos === tot };
+  if(opAtual) FICHAS[opAtual] = { blocos: feitos, total: tot, nc: ncLista.length > 0, completa: feitos === tot };
 
   const s = document.getElementById('saida');
   s.style.display='block';
