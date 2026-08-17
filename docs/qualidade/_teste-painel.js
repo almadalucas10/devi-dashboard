@@ -86,9 +86,11 @@ setTimeout(() => {
 
   const vida = $('#vida').textContent;
   ok(vida.includes('vencida') || vida.includes('vence em'), 'Análises vencidas calculadas (validade = fab + 8m)');
-  // vida de prateleira integra as OPs FECHADAS / antigas (2025-12-20 → vencida)
-  ok($('#vidaSub').textContent.includes('1'), 'Vida de prateleira conta a OP fechada vencida: ' + $('#vidaSub').textContent);
-  ok(vida.includes('#471') && vida.includes('Chá Camomila'), 'Card vida lista a OP arquivada vencida (#471)');
+  // vida de prateleira integra TODAS as OPs fechadas, destacando vencidas por cor
+  ok($('#vidaSub').textContent.includes('2 fichas') && $('#vidaSub').textContent.includes('0 vencidas'),
+    'Vida: 2 fichas fechadas listadas, 0 vencidas (' + $('#vidaSub').textContent + ')');
+  ok(vida.includes('#471') && vida.includes('Chá Camomila'), 'Card vida lista a arquivada #471 (vence em 3 dias, âmbar)');
+  ok(vida.includes('#472'), 'Card vida lista a fechada #472 (validade em ~241 dias, ok)');
 
   const ferm = $('#fermentacao').textContent;
   ok(ferm.includes('Base Kombucha'), 'Fermentação: base FX000 listada');

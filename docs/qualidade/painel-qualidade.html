@@ -420,9 +420,10 @@ function renderOcorrencias(){
 
 function renderVida(){
   const V = DADOS.analisesVencidas;
-  el('vidaSub').textContent = `${V.total} vencidas`;
+  const vencidas = V.lista.filter(x => x.cor === 'e').length;
+  el('vidaSub').textContent = `${V.lista.length} fichas · ${vencidas} vencidas`;
   if(!V.lista.length){
-    el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma análise vencida.</div>';
+    el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha fechada ainda.</div>';
     return;
   }
   const cor = { e: 'var(--er2)', a: 'var(--al2)', ok: 'var(--ok2)' };
@@ -624,15 +625,25 @@ async function carregar(){
       }
     }
 
-    // análises vencidas (validade = fabricação + 8 meses) — das OPs FECHADAS, de qualquer mês
+    // vida de prateleira — TODAS as OPs fechadas (de qualquer mês), com dias restantes
+    // e destaque de cor por proximidade: vermelho = vencida · âmbar = ≤30 dias · normal = ok
     const hoje = new Date(); hoje.setHours(0,0,0,0);
-    const vencidas = [];
-    for (const f of fichasCompletas) {
+    const vencidas = fichasCompletas.map(f => {
       const val = somaMeses(f.data_producao, 8);
       const dias = Math.round((val - hoje) / 864e5);
-      if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
-      else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
-    }
+      let cor, diasTxt, txt;
+      if (dias < 0) {
+        cor = 'e'; diasTxt = `${-dias} dias vencida`;
+        txt = `vencida há ${-dias} dias · validade ${fmtDataBR(val.toISOString().slice(0,10))}`;
+      } else if (dias <= 30) {
+        cor = 'a'; diasTxt = `${dias} dias`;
+        txt = `vence em ${fmtDataBR(val.toISOString().slice(0,10))} · fabricado ${fmtDataBR(f.data_producao)}`;
+      } else {
+        cor = 'ok'; diasTxt = `${dias} dias`;
+        txt = `validade ${fmtDataBR(val.toISOString().slice(0,10))} · fabricado ${fmtDataBR(f.data_producao)}`;
+      }
+      return { op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: diasTxt, txt, cor };
+    }).sort((a, b) => parseInt(a.dias) - parseInt(b.dias)); // vencidas/urgentes primeiro
 
     // fermentação: bases (FX000) abertas, com a última leitura (pH/brix/ABV) da ficha salva
     const bases = (opsAbertas || []).filter(o => o.sku === 'FX000' && o.data);
