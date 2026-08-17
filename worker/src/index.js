@@ -566,9 +566,9 @@ async function handle(request, env, ctx) {
     }
     // Debug — mostra a linha que seria gravada na planilha de indicadores (sem escrever)
     // GET /api/qualidade/debug/sheets-mapping?op=<op ou nCodOP>
-    // Histórico de pH de um produto (da planilha de indicadores — aba Indicadores Kombucha)
-    // GET /api/qualidade/hist/pH?produto=Frutas%20Vermelhas&n=14
-    if (url.pathname === "/api/qualidade/hist/pH") {
+    // Histórico dos indicadores de um produto (da planilha — aba Indicadores Kombucha)
+    // GET /api/qualidade/hist/indicadores?produto=Frutas%20Vermelhas&n=14
+    if (url.pathname === "/api/qualidade/hist/indicadores" || url.pathname === "/api/qualidade/hist/pH") {
       try {
         const { getAccessToken, getValues } = await import("./sheets.js");
         const id = env.INDICADORES_SPREADSHEET_ID;
@@ -576,15 +576,19 @@ async function handle(request, env, ctx) {
         const produto = url.searchParams.get("produto") || "Frutas Vermelhas";
         const n = Math.min(50, Math.max(2, parseInt(url.searchParams.get("n") || "14", 10) || 14));
         const token = await getAccessToken(env);
-        const rows = await getValues(env, token, "Indicadores Kombucha!A2:F2000", id);
-        // colunas: 0 Data, 3 Produto, 4 Lote, 5 pH Produto
+        const rows = await getValues(env, token, "Indicadores Kombucha!A2:L2000", id);
+        const num = v => { if (v == null || v === "") return null; const x = parseFloat(String(v).replace(",", ".")); return isNaN(x) ? null : x; };
+        // colunas: 0 Data, 3 Produto, 4 Lote, 5 pH, 6 Brix, 7 Carbonatação, 9 ABV
         const filtrados = [];
         for (const r of rows) {
-          if ((r[3] || "").trim() === produto && r[5] != null && r[5] !== "") {
-            filtrados.push({ data: r[0] || "", lote: r[4] || "", pH: parseFloat(String(r[5]).replace(",", ".")) });
-          }
+          if ((r[3] || "").trim() !== produto) continue;
+          const p = { data: r[0] || "", lote: r[4] || "", pH: num(r[5]) };
+          if (r[6] != null) p.brix = num(r[6]);
+          if (r[7] != null) p.carbonatacao = num(r[7]);
+          if (r[9] != null) p.abv = num(r[9]);
+          filtrados.push(p);
         }
-        const ultimos = filtrados.slice(-n).filter(p => !isNaN(p.pH));
+        const ultimos = filtrados.slice(-n);
         return json({ produto, n, total: filtrados.length, pontos: ultimos });
       } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
     }
