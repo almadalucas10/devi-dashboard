@@ -87,7 +87,7 @@
   .carta{height:96px; margin:4px 0}
   .carta svg{width:100%; height:100%; display:block}
 
-  /* ---- card Indicadores (A3): 4 mini-gráficos + tooltip ---- */
+  /* ---- card Indicadores (opção B): tabela dos últimos lotes ---- */
   .ind-ga{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
   .ind-g{background:var(--cell); border-radius:8px; padding:8px 10px; position:relative}
   .ind-k{font-size:10px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
@@ -99,6 +99,17 @@
     border-radius:5px; padding:3px 7px; font-size:10px; color:var(--txt2);
     pointer-events:none; white-space:nowrap; z-index:5}
   .ind-tip b{color:var(--txt)}
+
+  /* tabela de lotes (opção B) */
+  .tbl{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px}
+  .tbl th{font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px;
+    text-align:left; padding:4px 6px; border-bottom:1px solid var(--linha)}
+  .tbl td{padding:5px 6px; border-bottom:1px solid var(--linha)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .tb-data{color:var(--txt3)}
+  .tbl .tb-lote{color:var(--txt3)}
+  .tbl .tb-ok{color:var(--ok2); font-weight:700}
+  .tbl .tb-er{color:var(--er2); font-weight:700}
 
   .rec{margin-bottom:10px}
   .rec-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:4px}
@@ -301,53 +312,6 @@ function preencherSelect(){
   sel.addEventListener('change', renderIndicadores);
 }
 
-// desenha um mini-gráfico de um indicador (A3): faixa + tooltip + último ponto em destaque
-function minigrafoInd(k, pts, spec, cor){
-  const vals = pts.map(p => p[k]).filter(v => v != null && !isNaN(v));
-  if (vals.length < 2) return null;
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const sp = spec && spec[k];
-  // folga além dos dados E da faixa, para nada ser cortado nas bordas
-  const dataSpan = (max - min) || 0.5;
-  const lo = sp ? Math.max(0, Math.min(sp.min, min) - dataSpan * 0.25) : min - dataSpan * 0.25;
-  const hi = sp ? Math.max(sp.max, max) + dataSpan * 0.25 : max + dataSpan * 0.25;
-  const W = 100, H = 120, pad = 8; // viewBox interno; altura ~ .ind-svg (120px)
-  const X = i => pad + (i / (pts.length - 1)) * (W - pad * 2);
-  const Y = v => pad + (1 - (v - lo) / (hi - lo)) * (H - pad * 2);
-  let faixa = '';
-  if (sp) {
-    const yTop = Math.min(Y(sp.min), Y(sp.max)), yBot = Math.max(Y(sp.min), Y(sp.max));
-    faixa = `<rect x="${pad}" y="${yTop.toFixed(1)}" width="${(W - pad * 2).toFixed(1)}" height="${(yBot - yTop).toFixed(1)}" fill="#16351f" opacity=".45"/>`;
-  }
-  const poly = pts.map((p, i) => {
-    const v = p[k];
-    if (v == null || isNaN(v)) return '';
-    return `${X(i).toFixed(1)},${Y(v).toFixed(1)}`;
-  }).filter(Boolean).join(' ');
-  // pontos com tooltip; último em destaque (anel) — com folga para o anel não cortar
-  const circs = pts.map((p, i) => {
-    const v = p[k];
-    if (v == null || isNaN(v)) return '';
-    const x = X(i).toFixed(1), y = Y(v).toFixed(1);
-    const fora = sp && (v < sp.min || v > sp.max);
-    const ult = i === pts.length - 1;
-    const corP = fora ? '#f87171' : cor;
-    const r = ult ? 3 : 2.4;
-    const lbl = `${p.data} · L${p.lote} · ${k} ${String(v).replace('.', ',')}`;
-    const anel = ult ? `<circle cx="${x}" cy="${y}" r="${(r + 2.2).toFixed(1)}" fill="none" stroke="${corP}" opacity=".5"/>` : '';
-    return `<circle cx="${x}" cy="${y}" r="${r}" fill="${corP}" data-tip="${esc(lbl)}"/>${anel}`;
-  }).join('');
-  const media = vals.reduce((a, b) => a + b, 0) / vals.length;
-  return {
-    k, cor, atual: String(vals[vals.length - 1]).replace('.', ','),
-    media: media.toFixed(2).replace('.', ','),
-    faixaTxt: sp ? `${sp.min}–${sp.max}` : 'sem faixa',
-    svg: `<div class="ind-svg"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${faixa}
-      <polyline fill="none" stroke="${cor}" stroke-width="2" points="${poly}"/>
-      <g>${circs}</g></svg><div class="ind-tip"></div></div>`
-  };
-}
-
 async function renderIndicadores(){
   const el = document.getElementById('indChart');
   if (!el) return;
@@ -363,30 +327,30 @@ async function renderIndicadores(){
       el.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--txt3)">Sem histórico para este SKU.</div>';
       return;
     }
-    const graf = [['pH', '#60a5fa'], ['brix', '#fbbf24'], ['carbonatacao', '#4ade80'], ['abv', '#f87171']]
-      .map(([k, cor]) => minigrafoInd(k, pts, m.spec, cor))
-      .filter(Boolean);
-    el.innerHTML = `<div class="ind-ga">${graf.map(g => `
-      <div class="ind-g"><div class="ind-k">${g.k}</div>
-        <div class="ind-atual" style="color:${g.cor}">${g.atual}</div>
-        ${g.svg}
-        <div class="ind-m">faixa ${g.faixaTxt} · média ${g.media}</div>
-      </div>`).join('')}</div>`;
-    // tooltip por ponto
-    el.querySelectorAll('.ind-svg').forEach(svg => {
-      const tip = svg.querySelector('.ind-tip');
-      svg.querySelectorAll('circle[data-tip]').forEach(c => {
-        c.style.cursor = 'pointer';
-        c.addEventListener('mousemove', e => {
-          const r = svg.getBoundingClientRect();
-          tip.style.display = 'block';
-          tip.innerHTML = '<b>' + c.getAttribute('data-tip') + '</b>';
-          tip.style.left = Math.max(0, Math.min(90, ((e.clientX - r.left) / r.width) * 90)) + '%';
-          tip.style.top = (e.offsetY < r.height / 2 ? -16 : r.height + 4) + 'px';
-        });
-        c.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-      });
-    });
+    // Tabela dos últimos lotes (opção B): Data | Lote | pH | Brix | Carb | ABV%
+    const IND_COLS = [
+      ['pH', 'pH'], ['brix', 'Brix'], ['carbonatacao', 'Carb'], ['abv', 'ABV%']
+    ];
+    const cols = IND_COLS.filter(([k]) => m.spec && m.spec[k] && m.spec[k].min != null && m.spec[k].max != null);
+    // formata número pt-BR
+    const fnum = v => (v == null || isNaN(v)) ? '' : String(v).replace('.', ',');
+    // classe/cor de uma célula conforme a faixa
+    const cel = (k, v) => {
+      if (v == null || isNaN(v)) return { txt: '', cls: '' };
+      const sp = m.spec[k];
+      if (!sp) return { txt: fnum(v), cls: '' };
+      const fora = v < sp.min || v > sp.max;
+      return { txt: fnum(v), cls: fora ? 'tb-er' : 'tb-ok' };
+    };
+    const th = cols.map(c => `<th>${c[1]}</th>`).join('');
+    const rows = [...pts].reverse().map(p => {
+      const tds = cols.map(([k]) => {
+        const c = cel(k, p[k]);
+        return `<td class="${c.cls}">${c.txt}</td>`;
+      }).join('');
+      return `<tr><td class="tb-data">${esc(p.data)}</td><td class="tb-lote">L${esc(p.lote || '')}</td>${tds}</tr>`;
+    }).join('');
+    el.innerHTML = `<table class="tbl"><thead><tr><th>Data</th><th>Lote</th>${th}</tr></thead><tbody>${rows}</tbody></table>`;
   } catch (e) {
     el.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--er2)">falha ao carregar indicadores</div>';
   }
