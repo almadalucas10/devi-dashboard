@@ -652,10 +652,11 @@ async function carregar(){
       atualizadoEm: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       indiceColeta,
       lotes: { total, conformes, naoConformes, semDado, lista },
-      // volume de base (FX000) produzido no mês, em litros
+      // volume de base (FX000) produzido no mês, em litros.
+      // Soma o qtd de cada lote + 50 L fixos por lote (regra do KPI).
       volumeBaseL: fichas
         .filter(f => f.sku === 'FX000')
-        .reduce((s, f) => s + (Number(f.qtd) || 0), 0),
+        .reduce((s, f) => s + (Number(f.qtd) || 0) + 50, 0),
       ocorrencias,
       analisesVencidas: { total: vencidas.length, lista: vencidas },
       fermentacao,

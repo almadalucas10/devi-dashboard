@@ -58,7 +58,7 @@ setTimeout(() => {
   // coleta: agora 6 indicadores (inclui estoque) + exclusão de FX000 nas contagens de lote.
   // Valores reais com o mock: pH 54%, Brix 54%, ABV 80%, Carb 56%, Rec 44%, Est 33% → média 54%
   ok(kpis.includes('54%'), 'KPI Coleta do Mês = 54% (era: ' + $('#kpis').textContent.slice(0, 60) + ')');
-  ok(kpis.includes('450 L'), 'KPI Base Produzida = 450 L (base FX000 do mês)');
+  ok(kpis.includes('500 L'), 'KPI Base Produzida = 500 L (450 qtd + 50 fixos por lote FX000)');
   ok(/NÃO-CONFORMIDADES[\s\S]*?\b1\b/.test(kpis), 'KPI Não-Conformidades = 1');
 
   const col = $('#coleta').textContent;
