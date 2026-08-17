@@ -55,18 +55,18 @@ const ok = (c, n) => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL') + 
 setTimeout(() => {
   ok(jsErrors.length === 0, `sem erros de runtime (${jsErrors.join('; ') || 'nenhum'})`);
   const kpis = $('#kpis').textContent;
-  // coleta: pH=2/3 (0.67) brix=2/3 (0.67) carbonatacao=2/4 (0.5) recravacao=2/4 (0.5) abv=0/4 (0) → média = (0.67+0.67+0.5+0.5+0)/5 = 0.466 → 47%
-  // coleta pelo preenchimento real dos blocos: pH 7/12, brix 7/12, carb 5/9, rec 4/9, abv 4/5 → média 59%
-  ok(kpis.includes('59%'), 'KPI Coleta do Mês = 59% (era: ' + $('#kpis').textContent.slice(0, 60) + ')');
-  ok(kpis.includes('0/4'), 'KPI Lotes Conformes = 0/4 (a única completa tem NC)');
+  // coleta: agora 6 indicadores (inclui estoque) + exclusão de FX000 nas contagens de lote.
+  // Valores reais com o mock: pH 54%, Brix 54%, ABV 80%, Carb 56%, Rec 44%, Est 33% → média 54%
+  ok(kpis.includes('54%'), 'KPI Coleta do Mês = 54% (era: ' + $('#kpis').textContent.slice(0, 60) + ')');
+  ok(kpis.includes('0/3'), 'KPI Lotes Conformes = 0/3 (FX000 excluído; única completa tem NC)');
   ok(/NÃO-CONFORMIDADES[\s\S]*?\b1\b/.test(kpis), 'KPI Não-Conformidades = 1');
 
   const col = $('#coleta').textContent;
-  ok(col.includes('pH') && col.includes('58%'), 'Coleta por indicador: pH 58% (preenchimento pré-envase)');
+  ok(col.includes('pH') && col.includes('54%'), 'Coleta por indicador: pH 54% (preenchimento pré-envase)');
   ok(col.includes('Recravação') && col.includes('44%'), 'Coleta por indicador: Recravação 44%');
 
   const lotes = $('#lotes').textContent;
-  ok(lotes.includes('#528') && lotes.includes('CH003'), 'Lista de lotes com OP 528');
+  ok(lotes.includes('#528') && lotes.includes('Chá Camomila'), 'Lista de lotes com OP 528');
   ok(lotes.includes('transpasse 0.78'), 'Lote NC mostra a ocorrência');
 
   const occ = $('#ocorrencias').textContent;

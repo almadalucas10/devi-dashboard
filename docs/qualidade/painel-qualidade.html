@@ -424,7 +424,8 @@ function renderFerm(){
     const est = estadoFerm(t.ultima);
     const [label, eCls, itemCls] = FERM_ESTADO_LABEL[est];
     const tanque = (t.tanque || '').trim() || 'sem tanque';
-    const sub = [t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
+    const opShort = t.op ? '#' + abreviaOp(t.op) : '#' + abreviaOp(t.hrefOp || '');
+    const sub = [opShort, t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
     const dias = t.diasNum != null ? t.diasNum : null;
     // Barra é exclusivamente de dias (spec §4) — mas destaca em VERDE quando o
     // tanque atingiu o ponto de colheita (no_ponto, POP 17), mantendo a largura
@@ -545,12 +546,14 @@ async function carregar(){
     const indiceColeta = coletaDe(fichas);
 
     // lotes
-    const total = fichas.length;
-    const conformes = fichas.filter(f => f.status === 'completa' && !(f.nc_count > 0)).length;
-    const naoConformes = fichas.filter(f => f.nc_count > 0).length;
-    const semDado = fichas.filter(f => f.status !== 'completa' && !(f.nc_count > 0)).length;
+    // exclui bases (FX000) do card Lotes do mês (e das contagens)
+    const fichasNaoBase = fichas.filter(f => f.sku !== 'FX000');
+    const total = fichasNaoBase.length;
+    const conformes = fichasNaoBase.filter(f => f.status === 'completa' && !(f.nc_count > 0)).length;
+    const naoConformes = fichasNaoBase.filter(f => f.nc_count > 0).length;
+    const semDado = fichasNaoBase.filter(f => f.status !== 'completa' && !(f.nc_count > 0)).length;
 
-    const lista = fichas.map(f => {
+    const lista = fichasNaoBase.map(f => {
       const status = f.nc_count > 0 ? 'nc' : (f.status === 'completa' ? 'ok' : 'sd');
       let txt = fmtDataBR(f.data_producao);
       if (f.ncs && f.ncs.length) txt += ' · ' + f.ncs[0].campo + ' ' + f.ncs[0].valor + ' fora de spec';
