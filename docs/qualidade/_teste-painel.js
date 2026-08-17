@@ -25,6 +25,12 @@ function mockFetch(url, opts) {
   if (/mes\/\d{4}-\d{2}/.test(u)) { // meses passados — vazios
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [] }) });
   }
+  if (u.includes('/api/qualidade/arquivo')) {
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [
+      { op: '2026/00471', sku: 'CH003', produto: 'Chá Camomila', data_producao: '2025-12-20', status: 'completa' },
+      { op: '2026/00472', sku: 'RF001', produto: 'Refri Limão', data_producao: '2026-08-15', status: 'completa' },
+    ] }) });
+  }
   if (u.includes('/api/qualidade/fichas')) {
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ fichas: [
       { op: '2026/00520', sku: 'FX000', produto: 'Base Kombucha', data: '10/08/2026' },
@@ -80,6 +86,9 @@ setTimeout(() => {
 
   const vida = $('#vida').textContent;
   ok(vida.includes('vencida') || vida.includes('vence em'), 'Análises vencidas calculadas (validade = fab + 8m)');
+  // vida de prateleira integra as OPs FECHADAS / antigas (2025-12-20 → vencida)
+  ok($('#vidaSub').textContent.includes('1'), 'Vida de prateleira conta a OP fechada vencida: ' + $('#vidaSub').textContent);
+  ok(vida.includes('#471') && vida.includes('Chá Camomila'), 'Card vida lista a OP arquivada vencida (#471)');
 
   const ferm = $('#fermentacao').textContent;
   ok(ferm.includes('Base Kombucha'), 'Fermentação: base FX000 listada');

@@ -579,12 +579,16 @@ async function carregar(){
   const agora = new Date();
   const mes = agora.toISOString().slice(0, 7);
   try {
-    const [rm, rf] = await Promise.all([
+    const [rm, rf, ra] = await Promise.all([
       fetch(WORKER_URL + '/api/qualidade/mes/' + mes, { cache: 'no-store' }),
       fetch(WORKER_URL + '/api/qualidade/fichas', { cache: 'no-store' }),
+      fetch(WORKER_URL + '/api/qualidade/arquivo?limite=500', { cache: 'no-store' }),
     ]);
     const fichas = (await rm.json()).fichas || [];
     const opsAbertas = (await rf.json()).fichas || [];
+    // todas as fichas FECHADAS (histórico, de qualquer mês) — fonte da vida de prateleira
+    const fichasArquivadas = (await ra.json()).fichas || [];
+    const fichasCompletas = fichasArquivadas.filter(f => f.status === 'completa');
 
     // indicador de coleta
     const indiceColeta = coletaDe(fichas);
@@ -620,10 +624,10 @@ async function carregar(){
       }
     }
 
-    // análises vencidas (validade = fabricação + 8 meses)
+    // análises vencidas (validade = fabricação + 8 meses) — das OPs FECHADAS, de qualquer mês
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     const vencidas = [];
-    for (const f of fichas) {
+    for (const f of fichasCompletas) {
       const val = somaMeses(f.data_producao, 8);
       const dias = Math.round((val - hoje) / 864e5);
       if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
