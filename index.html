@@ -77,7 +77,8 @@
   .bottom-pair .panel h2{ font-size:clamp(14.4px,0.85vw,22.9px); margin-bottom:.3vh; }
 
   /* Fila de Pedidos — teste substituindo o painel da pizza */
-  .fila-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow-y:auto; overflow-x:hidden; justify-content:flex-start; }
+  .fila-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow-y:auto; overflow-x:hidden; justify-content:flex-start; scrollbar-width:none; -ms-overflow-style:none; }
+  .fila-lista::-webkit-scrollbar{ display:none; width:0; height:0; }
   .fila-item{
     display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:8px;
     background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:10px;
@@ -120,7 +121,8 @@
   .fam-refri{ background:#f59e0b; } .fam-rtm{ background:#3b82f6; } .fam-outro{ background:#64748b; }
 
   /* Lista de Estoque — mesmo modelo visual da Fila de Pedidos (borda + selo coloridos) */
-  .estoque-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow-y:auto; overflow-x:hidden; justify-content:flex-start; }
+  .estoque-lista{ flex:1; display:flex; flex-direction:column; gap:4px; overflow-y:auto; overflow-x:hidden; justify-content:flex-start; scrollbar-width:none; -ms-overflow-style:none; }
+  .estoque-lista::-webkit-scrollbar{ display:none; width:0; height:0; }
   .estoque-item{
     display:grid; grid-template-columns:30px minmax(0,1fr) auto; align-items:center; gap:10px;
     background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:10px;
@@ -356,7 +358,8 @@
     .panel h2{ font-size:16px; }
 
     .fila-estoque-col{ grid-column:1; grid-row:auto; grid-template-rows:none; gap:1.5vh; margin-top:0; }
-    .fila-lista{ overflow-y:auto; overflow-x:hidden; }
+    .fila-lista{ overflow-y:auto; overflow-x:hidden; scrollbar-width:none; -ms-overflow-style:none; }
+    .fila-lista::-webkit-scrollbar{ display:none; width:0; height:0; }
     .top-pair{ grid-template-columns:1fr; gap:1.5vh; }
     .top-pair .panel{ height:320px; }
     .bottom-pair{ grid-template-columns:1fr; gap:1.5vh; }
