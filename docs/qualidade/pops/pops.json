@@ -2039,7 +2039,17 @@
         ]
       },
       "pendencia": "O histórico registra lotes com ABV de até 1,82 % — mais de três vezes o limite de 0,5 % deste procedimento.",
-      "driveId": "1jjO8bdLfcImJl1GVSjkgIcKQhcIcgWQ3rLJpX4QtISM"
+      "driveId": "1jjO8bdLfcImJl1GVSjkgIcKQhcIcgWQ3rLJpX4QtISM",
+      "metasProcesso": {
+        "pH": {
+          "op": "lt",
+          "max": 3.2
+        },
+        "abv": {
+          "op": "lt",
+          "max": 0.5
+        }
+      }
     }
   ]
 }

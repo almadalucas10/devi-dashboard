@@ -6,7 +6,7 @@
 <title>Dashboard Qualidade — Dêvi</title>
 <style>
   :root{
-    --bg:#0a0f16; --painel:#0d141c; --cell:#141d27; --trilho:#1c2733; --linha:#1b2430;
+    --bg:#0a0f16; --painel:#0d141c; --cell:#141d27; --campo:#141d27; --trilho:#1c2733; --linha:#1b2430;
     --txt:#e8eef4; --txt2:#cfe0ee; --txt3:#8b98a5;
     --ok:#22c55e; --al:#f59e0b; --er:#ef4444;
     --ok2:#4ade80; --al2:#fbbf24; --er2:#f87171;
@@ -14,6 +14,15 @@
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--txt); padding:14px;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow-x:hidden}
+  /* marca d'água — logo ao fundo, igual ao dashboard PCP */
+  body::before{
+    content:''; position:fixed; inset:-15%;
+    background-image:url('logo-devi.png');
+    background-repeat:no-repeat; background-position:center; background-size:60%;
+    transform:rotate(-12deg);
+    opacity:.09; pointer-events:none; z-index:0;
+  }
+  body > *{ position:relative; z-index:1; }
 
   .topo{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px}
   .topo h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
@@ -50,8 +59,57 @@
   .it-v{font-size:15px; font-weight:700; white-space:nowrap}
   .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
 
+  /* ---- card Fermentação ativa: destaque extra ---- */
+  .ferm-item{background:var(--cell); border-left:3px solid var(--ok); border-radius:7px; padding:9px 11px; margin-bottom:7px; position:relative}
+  .ferm-item.al{border-left-color:var(--al)} .ferm-item.er{border-left-color:var(--er)}
+  .ferm-item.off{border-left-color:#39434f; opacity:.7}
+  .ferm-item a{display:block; text-decoration:none; color:inherit}
+  .ferm-l1{display:flex; align-items:baseline; gap:8px}
+  .ferm-tq{font-size:17px; font-weight:700; min-width:30px; text-transform:uppercase}
+  .ferm-sub{font-size:12px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  .ferm-estado{margin-left:auto; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap}
+  .ferm-e-ok{background:#12241a; color:var(--ok2)}
+  .ferm-e-al{background:#2a2412; color:var(--al2)}
+  .ferm-e-off{background:#1c2733; color:var(--txt3)}
+
+  .ferm-barra{position:relative; height:22px; background:var(--trilho); border-radius:5px; margin-top:7px; overflow:hidden}
+  .ferm-barra i{display:block; height:100%; border-radius:5px}
+  .ferm-barra .ferm-faixa{position:absolute; top:0; bottom:0; background:#ffffff12;
+    border-left:1px dashed #ffffff33; border-right:1px dashed #ffffff33}
+  .ferm-barra .ferm-lab{position:absolute; left:8px; top:3px; font-size:12px; font-weight:700; color:#fff}
+
+  .ferm-mini{display:flex; gap:12px; margin-top:6px; font-size:11px; color:var(--txt3); flex-wrap:wrap}
+  .ferm-mini b{color:var(--txt2); font-size:13px; font-weight:700}
+  .ferm-mini .m-ok{color:var(--ok2)}
+
+  .ferm-rodape{font-size:10px; color:var(--txt3); margin-top:8px; padding-top:6px; border-top:1px solid var(--linha)}
+
   .carta{height:96px; margin:4px 0}
   .carta svg{width:100%; height:100%; display:block}
+
+  /* ---- card Indicadores (opção B): tabela dos últimos lotes ---- */
+  .ind-ga{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
+  .ind-g{background:var(--cell); border-radius:8px; padding:8px 10px; position:relative}
+  .ind-k{font-size:10px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
+  .ind-atual{font-size:24px; font-weight:700; line-height:1.15}
+  .ind-svg{position:relative; height:120px; margin-top:8px}
+  .ind-svg svg{width:100%; height:100%; display:block; overflow:visible}
+  .ind-m{font-size:10px; color:var(--txt3); margin-top:5px}
+  .ind-tip{position:absolute; display:none; background:#0b111a; border:1px solid var(--linha);
+    border-radius:5px; padding:3px 7px; font-size:10px; color:var(--txt2);
+    pointer-events:none; white-space:nowrap; z-index:5}
+  .ind-tip b{color:var(--txt)}
+
+  /* tabela de lotes (opção B) */
+  .tbl{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px}
+  .tbl th{font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px;
+    text-align:left; padding:4px 6px; border-bottom:1px solid var(--linha)}
+  .tbl td{padding:5px 6px; border-bottom:1px solid var(--linha)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .tb-data{color:var(--txt3)}
+  .tbl .tb-lote{color:var(--txt3)}
+  .tbl .tb-ok{color:var(--ok2); font-weight:700}
+  .tbl .tb-er{color:var(--er2); font-weight:700}
 
   .rec{margin-bottom:10px}
   .rec-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:4px}
@@ -66,6 +124,18 @@
   .leg{display:flex; gap:11px; font-size:10px; color:var(--txt3); margin-top:8px; flex-wrap:wrap}
   .leg span{display:flex; align-items:center; gap:4px}
   .pt-l{width:8px;height:8px;border-radius:2px}
+
+  /* ---- Lotes do mês (opção B): cartão com barra de status ---- */
+  .cart{background:var(--cell); border-left:3px solid var(--ok); border-radius:8px; padding:10px 12px; margin-bottom:7px}
+  .cart.b{border-left-color:var(--al)} .cart.c{border-left-color:var(--er)}
+  .cart a{display:block; text-decoration:none; color:inherit}
+  .cart-l1{display:flex; align-items:baseline; gap:9px}
+  .cart-op{font-size:18px; font-weight:700; letter-spacing:-.4px}
+  .cart-nm{font-size:12px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  .cart-barra{height:5px; background:var(--trilho); border-radius:3px; overflow:hidden; margin-top:8px}
+  .cart-barra i{display:block; height:100%; border-radius:3px}
+  .cart-foot{display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--txt3); margin-top:5px}
+  .cart-foot b{color:var(--txt2); font-weight:700}
 
   @media (max-width:900px){ .grade{grid-template-columns:1fr} }
 </style>
@@ -102,27 +172,10 @@
     </div>
 
     <div class="pn">
-      <div class="pn-cab"><span class="t">📉 pH · Komb Frutas Vermelhas</span>
-        <span class="s">últimos 14 lotes</span></div>
-
-      <div class="carta">
-        <svg viewBox="0 0 400 96" preserveAspectRatio="none">
-          <rect x="0" y="24" width="400" height="46" fill="#16351f" opacity=".4"/>
-          <line x1="0" y1="47" x2="400" y2="47" stroke="#ffffff30" stroke-width="1" stroke-dasharray="4 4"/>
-          <polyline fill="none" stroke="#60a5fa" stroke-width="2"
-            points="12,40 40,52 68,34 96,60 124,44 152,38 180,64 208,50 236,42 264,58 292,30 320,46 348,78 376,54"/>
-          <g fill="#60a5fa">
-            <circle cx="12" cy="40" r="3"/><circle cx="40" cy="52" r="3"/><circle cx="68" cy="34" r="3"/>
-            <circle cx="96" cy="60" r="3"/><circle cx="124" cy="44" r="3"/><circle cx="152" cy="38" r="3"/>
-            <circle cx="180" cy="64" r="3"/><circle cx="208" cy="50" r="3"/><circle cx="236" cy="42" r="3"/>
-            <circle cx="264" cy="58" r="3"/><circle cx="292" cy="30" r="3"/><circle cx="320" cy="46" r="3"/>
-            <circle cx="376" cy="54" r="3"/>
-          </g>
-          <circle cx="348" cy="78" r="4.5" fill="#f87171"/>
-        </svg>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt3)">
-        <span>#448</span><span>média 3,23 · dp 0,21</span><span>#527</span>
+      <div class="pn-cab"><span class="t">📊 Indicadores do SKU</span>
+        <span class="s"><select id="skuSel" style="background:var(--campo);color:var(--txt);border:1px solid var(--linha);border-radius:6px;font-size:12px;padding:3px 6px"></select> · últimos 14 lotes</span></div>
+      <div id="indChart">
+        <div style="padding:20px;font-size:11px;color:var(--txt3)">Carregando indicadores…</div>
       </div>
       <div class="leg" style="margin-top:6px">
         <span><i class="pt-l" style="background:#16351f"></i>faixa de especificação</span>
@@ -134,13 +187,6 @@
 
   <!-- ================= COLUNA 2 ================= -->
   <div class="col">
-
-    <div class="pn">
-      <div class="pn-cab"><span class="t" id="recTitulo">🔧 Recravação</span>
-        <span class="s" id="recSub">—</span></div>
-      <div id="recrava"></div>
-      <div class="leg"><span>1 medição por lote — altura, espessura e transpasse da mesma lata</span></div>
-    </div>
 
     <div class="pn">
       <div class="pn-cab"><span class="t">📋 Lotes do mês</span>
@@ -174,60 +220,23 @@
 
 <script>
 // ---------------------------------------------------------------------------
-// Dados de demonstração — em produção vêm de GET /api/qualidade/mes/:aaaa-mm
-// (agregado mensal no R2, ver fase2-painel-e-anexo.md §2)
+// Painel de Qualidade — dados reais do worker (API key + senha do site)
+// Fontes: /api/qualidade/mes/:aaaamm (fichas do mês + NCs) · /api/qualidade/fichas (OPs)
+//         /api/qualidade/ficha/:op (recravação da última ficha)
 // ---------------------------------------------------------------------------
-const DADOS = {
-  mes: '2026-08',
-  mesNome: 'Agosto de 2026',
-  atualizadoEm: '08:14',
-  indiceColeta: { pH: 1.00, brix: 1.00, carbonatacao: 0.92, recravacao: 0.25, abv: 0.42 },
-  lotes: {
-    total: 12, conformes: 10, naoConformes: 2, semDado: 1,
-    lista: [
-      { op: '#527', sigla: 'KFV', status: 'nc', txt: '12/08 · transpasse 0,78 abaixo do mínimo' },
-      { op: '#518', sigla: 'KABX/3', status: 'sd', txt: '11/08 · análise não registrada' },
-      { op: '#517', sigla: 'RFV2K', status: 'ok', txt: '13/08 · pH 3,42 · Brix 5,0' },
-      { op: '#512', sigla: 'RLSSAMS2K', status: 'ok', txt: '10/08 · pH 3,35 · Brix 4,8' },
-      { op: '#500', sigla: 'KMÇ', status: 'ok', txt: '10/08 · pH 3,38 · Brix 5,9' }
-    ]
-  },
-  ocorrencias: [
-    { op: '#527', sigla: 'KFV', data: '12/08', txt: 'Transpasse fora de especificação — 0,78 mm' },
-    { op: '#505', sigla: 'RGA2K', data: '06/08', txt: 'Lata oxidada' },
-    { op: '#498', sigla: 'KPL', data: '03/08', txt: 'Coloração fraca e pouco doce' }
-  ],
-  analisesVencidas: { total: 4, lista: [
-    { op: '#471', sigla: 'CML', dias: '30 dias', txt: 'vencida há 4 dias · lote de 09/07', cor: 'e' },
-    { op: '#477', sigla: 'CVP', dias: '30 dias', txt: 'vencida há 2 dias · lote de 10/07', cor: 'e' },
-    { op: '#517', sigla: 'RFV2K', dias: '7 dias', txt: 'vence amanhã', cor: 'a' },
-    { op: '#448', sigla: 'KMIR', dias: '6 meses', txt: 'em 17/01/2027', cor: 'ok' }
-  ] },
-  fermentacao: [
-    { tanque: 'T5', nome: 'Frutas Vermelhas', dia: 'dia 6', txt: 'pH 3,1 → 2,9 · Brix 6,0 → 4,2 · 28 °C', cor: '' },
-    { tanque: 'T3', nome: 'Abacaxi', dia: 'dia 11', txt: 'pH 3,3 → 3,1 · lento · 22 °C', cor: 'a' },
-    { tanque: 'T1', nome: 'Pink Lemonade', dia: 'dia 3', txt: 'pH 3,6 → 3,4 · Brix 6,8 → 6,0 · 30 °C', cor: '' }
-  ],
-  recravacao: {
-    op: '#527', sigla: 'KFV', data: '12/08',
-    medidas: [
-      { nome: 'Altura',     valor: 2.58, un: 'mm', spec: { min: 2.50, alvo: 2.60, max: 2.65 } },
-      { nome: 'Espessura',  valor: 1.08, un: 'mm', spec: { min: 1.00, alvo: 1.05, max: 1.10 } },
-      { nome: 'Transpasse', valor: 0.78, un: 'mm', spec: { min: 0.80, alvo: 0.85, max: 0.90 } }
-    ]
-  },
-  // Série real da aba Estatísticas Indicadores Kombuc — coleta média mensal (pH·Brix·ABV)
-  evolucao: [
-    ['Jan/25', 75], ['Fev/25', 51], ['Mar/25', 100], ['Abr/25', 100], ['Mai/25', 75],
-    ['Jun/25', 100], ['Jul/25', 100], ['Ago/25', 92], ['Set/25', 66], ['Out/25', 50],
-    ['Nov/25', 78], ['Dez/25', 36], ['Jan/26', 100], ['Fev/26', 100], ['Mar/26', 100],
-    ['Abr/26', 100], ['Mai/26', 100], ['Jun/26', 83], ['Jul/26', 100]
-  ]
+const WORKER_URL = "https://devi-dashboard-worker.almadalucas.workers.dev";
+const API_KEY = "fbbc2d53ae08bbfdbe3cf4e4439b91eda790d0f67a0c347c";
+const _fetchOrig = window.fetch.bind(window);
+window.fetch = (u, o) => {
+  if (typeof u === 'string' && u.indexOf(WORKER_URL) === 0) {
+    o = o || {};
+    o.headers = Object.assign({ 'X-API-Key': API_KEY }, o.headers || {});
+  }
+  return _fetchOrig(u, o);
 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
-// ---------------------------------------------------------------------------
-// Limiar de coleta (fase 2 §3.3): ≥95% neutro · 90–95% âmbar · <90% vermelho
-// ---------------------------------------------------------------------------
+// Limiar de coleta: ≥95% neutro · 90–95% âmbar · <90% vermelho
 const fmtPct = p => Math.round(p * 100) + '%';
 function corColeta(p){
   if(p === null || p === undefined) return 'var(--txt3)';
@@ -235,131 +244,473 @@ function corColeta(p){
   if(p >= 0.90) return '#fbbf24';
   return '#f87171';
 }
-
 const el = id => document.getElementById(id);
+const abreviaOp = s => { const d = String(s || '').replace(/\D/g, ''); return d.slice(-3) || s; };
+const fmtDataBR = iso => { const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso||''); };
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+let DADOS = null;
+
+// ---------------------------------------------------------------------------
 function renderKpis(){
   const ic = DADOS.indiceColeta;
-  const vals = Object.values(ic);
+  Object.keys(ic).forEach(k => { if (ic[k] === undefined) ic[k] = null; });
+  const vals = Object.values(ic).filter(v => v !== null);
   const media = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   const nc = DADOS.ocorrencias.length;
+  const L = DADOS.lotes;
   el('kpis').innerHTML = `
     <div class="kpi"><div class="r">COLETA DO MÊS</div>
-      <div class="v" style="color:${corColeta(media)}">${fmtPct(media)}</div>
-      <div class="d">média dos 5 indicadores</div></div>
-    <div class="kpi"><div class="r">LOTES CONFORMES</div>
-      <div class="v" style="color:var(--ok2)">${DADOS.lotes.conformes}/${DADOS.lotes.total}</div>
-      <div class="d">${fmtPct(DADOS.lotes.conformes / DADOS.lotes.total)} no mês</div></div>
+      <div class="v" style="color:${corColeta(media)}">${media === null ? '—' : fmtPct(media)}</div>
+      <div class="d">média dos ${vals.length} indicadores</div></div>
+    <div class="kpi"><div class="r">BASE PRODUZIDA</div>
+      <div class="v" style="color:var(--ok2)">${DADOS.volumeBaseL || 0} L</div>
+      <div class="d">base FX000 no mês</div></div>
     <div class="kpi"><div class="r">NÃO-CONFORMIDADES</div>
       <div class="v" style="color:var(--er2)">${nc}</div>
       <div class="d">${nc ? 'ver "Ocorrências"' : 'nenhuma no mês'}</div></div>
     <div class="kpi"><div class="r">ANÁLISES VENCIDAS</div>
-      <div class="v" style="color:var(--al2)">${DADOS.analisesVencidas.total}</div>
+      <div class="v" style="color:${DADOS.analisesVencidas.total ? 'var(--al2)' : 'var(--ok2)'}">${DADOS.analisesVencidas.total}</div>
       <div class="d">vida de prateleira</div></div>`;
 }
 
+// Card de indicadores do SKU (A3): faixa de spec + tooltip por ponto + último ponto em destaque.
+// Mapa dos 17 SKUs: sku → {nome, fam, plan (nome na planilha), spec por indicador}.
+const MAPA_SKU = {"CH001":{"nome":"Chá Verde Pêssego","fam":"cha","plan":"Pêssego","spec":{"pH":{"min":3.20,"max":3.31},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.70}}},
+"CH002":{"nome":"Chá Hibisco Morango","fam":"cha","plan":"Hibiscos","spec":{"pH":{"min":3.0,"max":3.30},"brix":{"min":6.50,"max":7.00},"carbonatacao":{"min":1.50,"max":2.00}}},
+"CH003":{"nome":"Chá Camomila Maracujá","fam":"cha","plan":"Chá Camomila Maracujá","spec":{"pH":{"min":2.80,"max":3.10},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.70}}},
+"CH004":{"nome":"Chá Mate Limão","fam":"cha","plan":"Mate","spec":{"pH":{"min":3.70,"max":3.90},"brix":{"min":2.0,"max":2.50},"carbonatacao":{"min":1.50,"max":1.50}}},
+"FX001":{"nome":"Komb Frutas Vermelhas","fam":"kombucha","plan":"Frutas Vermelhas","spec":{"pH":{"min":3.25,"max":3.50},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.40},"abv":{"min":0.10,"max":1.82}}},
+"FX002":{"nome":"Komb Abacaxi Gengibre","fam":"kombucha","plan":"Abacaxi","spec":{"pH":{"min":3.40,"max":3.65},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.18,"max":1.20}}},
+"FX003":{"nome":"Komb Maçã Gengibre","fam":"kombucha","plan":"Maçã","spec":{"pH":{"min":3.40,"max":3.65},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.12,"max":0.58}}},
+"FX006":{"nome":"Komb Mirtilo Morango","fam":"kombucha","plan":"Mirtilo","spec":{"pH":{"min":3.35,"max":3.55},"brix":{"min":3.50,"max":4.00},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.20,"max":0.75}}},
+"FX007":{"nome":"Komb Pink Lemonade","fam":"kombucha","plan":"Pink L","spec":{"pH":{"min":3.0,"max":3.30},"brix":{"min":3.0,"max":3.50},"carbonatacao":{"min":1.50,"max":2.20},"abv":{"min":0.10,"max":1.75}}},
+"RF001":{"nome":"Refri Limão Siciliano","fam":"refri","plan":"Limão","spec":{"pH":{"min":3.25,"max":3.50},"brix":{"min":4.0,"max":4.50},"carbonatacao":{"min":1.50,"max":2.00}}},
+"RF002":{"nome":"Refri Frutas Vermelhas","fam":"refri","plan":"Frutas Vermelhas","spec":{"pH":{"min":3.30,"max":3.55},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":2.00}}},
+"RF003":{"nome":"Refri Guaraná Açaí","fam":"refri","plan":"Guaraná","spec":{"pH":{"min":3.50,"max":3.80},"brix":{"min":4.0,"max":4.50},"carbonatacao":{"min":1.50,"max":2.20}}},
+"RF004":{"nome":"Refri Uva","fam":"refri","plan":"Uva","spec":{"pH":{"min":3.40,"max":3.60},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RF005":{"nome":"Refri Laranja","fam":"refri","plan":"Laranja","spec":{"pH":{"min":3.70,"max":3.90},"brix":{"min":4.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RTM001":{"nome":"Refri Limão Mônica","fam":"refri","plan":"TM Limão","spec":{"pH":{"min":3.36,"max":3.39},"brix":{"min":3.50,"max":5.00},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RTM002":{"nome":"Refri Uva Mônica","fam":"refri","plan":"TM Uva","spec":{"pH":{"min":3.20,"max":3.53},"brix":{"min":4.0,"max":5.0},"carbonatacao":{"min":1.50,"max":1.50}}},
+"RTM003":{"nome":"Refri Laranja Mônica","fam":"refri","plan":"TM Laranja","spec":{"pH":{"min":3.76,"max":3.94},"brix":{"min":4.0,"max":4.50},"carbonatacao":{"min":1.50,"max":1.50}}}};
+
+// preenche o select com os 17 SKUs (padrão: FX001)
+function preencherSelect(){
+  const sel = document.getElementById('skuSel');
+  if (!sel) return;
+  sel.innerHTML = Object.keys(MAPA_SKU).map(s => {
+    const m = MAPA_SKU[s];
+    return `<option value="${s}"${s === 'FX001' ? ' selected' : ''}>${m.nome} (${s})</option>`;
+  }).join('');
+  sel.addEventListener('change', renderIndicadores);
+}
+
+async function renderIndicadores(){
+  const el = document.getElementById('indChart');
+  if (!el) return;
+  const sel = document.getElementById('skuSel');
+  const sku = sel && sel.value ? sel.value : 'FX001';
+  const m = MAPA_SKU[sku] || MAPA_SKU['FX001'];
+  try {
+    const r = await fetch(WORKER_URL + '/api/qualidade/hist/indicadores?produto=' + encodeURIComponent(m.plan) + '&familia=' + encodeURIComponent(m.fam) + '&n=14', { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const pts = (d.pontos || []);
+    if (pts.length < 2) {
+      el.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--txt3)">Sem histórico para este SKU.</div>';
+      return;
+    }
+    // Tabela dos últimos lotes (opção B): Data | Lote | pH | Brix | Carb | ABV%
+    const IND_COLS = [
+      ['pH', 'pH'], ['brix', 'Brix'], ['carbonatacao', 'Carb'], ['abv', 'ABV%']
+    ];
+    const cols = IND_COLS.filter(([k]) => m.spec && m.spec[k] && m.spec[k].min != null && m.spec[k].max != null);
+    // formata número pt-BR
+    const fnum = v => (v == null || isNaN(v)) ? '' : String(v).replace('.', ',');
+    // classe/cor de uma célula conforme a faixa
+    const cel = (k, v) => {
+      if (v == null || isNaN(v)) return { txt: '', cls: '' };
+      const sp = m.spec[k];
+      if (!sp) return { txt: fnum(v), cls: '' };
+      const fora = v < sp.min || v > sp.max;
+      return { txt: fnum(v), cls: fora ? 'tb-er' : 'tb-ok' };
+    };
+    const th = cols.map(c => `<th>${c[1]}</th>`).join('');
+    const rows = [...pts].reverse().map(p => {
+      const tds = cols.map(([k]) => {
+        const c = cel(k, p[k]);
+        return `<td class="${c.cls}">${c.txt}</td>`;
+      }).join('');
+      return `<tr><td class="tb-data">${esc(p.data)}</td><td class="tb-lote">L${esc(p.lote || '')}</td>${tds}</tr>`;
+    }).join('');
+    el.innerHTML = `<table class="tbl"><thead><tr><th>Data</th><th>Lote</th>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+  } catch (e) {
+    el.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--er2)">falha ao carregar indicadores</div>';
+  }
+}
+
 function renderColeta(){
-  const nomes = { pH: 'pH', brix: 'Brix', carbonatacao: 'Carbonatação', recravacao: 'Recravação', abv: 'ABV' };
+  const nomes = { pH: 'pH', brix: 'Brix', abv: 'ABV', carbonatacao: 'Carbonatação', recravacao: 'Recravação', estoque: 'Estoque' };
   el('coletaSub').textContent = `${DADOS.lotes.total} lotes no mês`;
   el('coleta').innerHTML = Object.entries(nomes).map(([k, nome]) => {
     const p = DADOS.indiceColeta[k];
     const cor = corColeta(p);
+    const exib = p === null ? '—' : fmtPct(p);
     return `<div class="col-lin">
-      <div class="col-l1"><span>${nome}</span><b style="color:${cor}">${fmtPct(p)}</b></div>
-      <div class="tr"><i style="width:${Math.round(p * 100)}%;background:${cor}"></i></div></div>`;
+      <div class="col-l1"><span>${nome}</span><b style="color:${cor}">${exib}</b></div>
+      <div class="tr"><i style="width:${p === null ? 0 : Math.round(p * 100)}%;background:${cor}"></i></div></div>`;
   }).join('');
 }
 
 function renderEvol(){
+  if(!DADOS.evolucao || !DADOS.evolucao.length){
+    el('evol').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Sem histórico mensal ainda (os meses anteriores não têm fichas salvas).</div>';
+    return;
+  }
   el('evol').innerHTML = '<div style="display:flex;align-items:flex-end;gap:3px;height:52px">' +
     DADOS.evolucao.map(([mes, v]) => {
       const cor = v >= 95 ? '#cfe0ee' : v >= 90 ? '#fbbf24' : '#f87171';
       return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"
         title="${mes} · ${v}%">
         <div style="width:100%;background:${cor};height:${Math.max(2, v / 100 * 40)}px;border-radius:2px;opacity:.9"></div>
-        <span style="font-size:7.5px;color:var(--txt3)">${mes}</span></div>`;
+        <span style="font-size:7.5px;color:var(--txt3)">${esc(mes)}</span></div>`;
     }).join('') + '</div>';
-}
-
-function renderRecravacao(){
-  const r = DADOS.recravacao;
-  el('recTitulo').textContent = `🔧 Recravação · OP ${r.op}`;
-  el('recSub').textContent = `1 lata · ${r.data}`;
-  el('recrava').innerHTML = r.medidas.map(m => {
-    const { min, alvo, max } = m.spec;
-    const pos = v => Math.max(0, Math.min(100, (v - min) / (max - min) * 100));
-    const cor = (m.valor >= min && m.valor <= max) ? 'var(--ok2)' : 'var(--er2)';
-    return `<div class="rec">
-      <div class="rec-l1"><span class="nm">${m.nome}</span>
-        <span class="vl" style="color:${cor}">${String(m.valor).replace('.', ',')} <span style="font-size:10px;color:var(--txt3)">${m.un}</span></span></div>
-      <div class="faixa">
-        <div class="zona" style="left:${pos(min)}%;right:${100 - pos(max)}%"></div>
-        <div class="alvo" style="left:${pos(alvo)}%"></div>
-        <div class="pt" style="left:${pos(m.valor)}%;background:${cor}"></div>
-      </div>
-      <div class="faixa-esc"><span>${String(min).replace('.', ',')}</span><span>alvo ${String(alvo).replace('.', ',')}</span><span>${String(max).replace('.', ',')}</span></div>
-    </div>`;
-  }).join('');
 }
 
 function renderLotes(){
   const L = DADOS.lotes;
   el('lotesSub').textContent = `${L.conformes} de ${L.total} conformes`;
   const status = {
-    ok: ['ok', 'conforme', 'var(--ok2)'],
-    nc: ['e', 'não conforme', 'var(--er2)'],
-    sd: ['a', 'sem recravação', 'var(--al2)']
+    ok:  ['',   'conforme'],
+    nc:  ['c',  'não conforme'],
+    sd:  ['b',  'incompleta']
   };
+  // largura da barra por estado: conforme/NC cheia; incompleta ~metade (ânbar)
+  const BARRA = { ok:['ok','100%'], nc:['er','100%'], sd:['al','50%'] };
   el('lotes').innerHTML = L.lista.map(x => {
-    const [cls, label, cor] = status[x.status] || status.ok;
-    return `<div class="it ${cls}">
-      <div class="it-l1"><a href="ficha-qualidade-com-insumos.html?op=${x.op.replace('#','')}" style="color:inherit;text-decoration:none;flex:1;min-width:0"><span class="it-nm">${x.op} · ${x.sigla}</span></a>
-        <span class="it-v" style="font-size:12px;color:${cor}">${label}</span></div>
-      <div class="it-l2">${x.txt}</div></div>`;
+    const [cls, label] = status[x.status] || status.ok;
+    const [bcor, blarg] = BARRA[x.status] || BARRA.ok;
+    return `<div class="cart ${cls}">
+      <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}">
+        <div class="cart-l1"><span class="cart-op">${esc(x.op)}</span><span class="cart-nm">${esc(x.produto)}</span></div>
+        <div class="cart-barra"><i style="width:${blarg};background:var(--${bcor})"></i></div>
+        <div class="cart-foot"><span>${esc(x.txt)}</span><b>${esc(label)}</b></div>
+      </a></div>`;
   }).join('');
+  if(!L.lista.length) el('lotes').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha salva no mês.</div>';
   const leg = el('lotes').parentElement.querySelector('.leg');
   if(leg) leg.innerHTML = '<span>toque no lote para abrir a ficha de qualidade</span>';
 }
 
 function renderOcorrencias(){
   el('occSub').textContent = `${DADOS.ocorrencias.length} no mês`;
+  if(!DADOS.ocorrencias.length){
+    el('ocorrencias').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma não-conformidade no mês.</div>';
+    return;
+  }
   el('ocorrencias').innerHTML = DADOS.ocorrencias.map((o, i) => `
     <div class="it ${i === 0 ? 'e' : 'a'}">
-      <div class="it-l1"><span class="it-nm">${o.op} · ${o.sigla}</span>
-        <span class="it-v" style="font-size:12px;color:${i === 0 ? 'var(--er2)' : 'var(--al2)'}">${o.data}</span></div>
-      <div class="it-l2">${o.txt}</div></div>`).join('');
+      <div class="it-l1"><span class="it-nm">${esc(o.op)} · ${esc(o.produto)}</span><span style="font-size:10px;color:var(--txt3)">(${esc(o.sku)})</span>
+        <span class="it-v" style="font-size:12px;color:${i === 0 ? 'var(--er2)' : 'var(--al2)'}">${esc(o.data)}</span></div>
+      <div class="it-l2">${esc(o.txt)}</div></div>`).join('');
 }
 
 function renderVida(){
   const V = DADOS.analisesVencidas;
   el('vidaSub').textContent = `${V.total} vencidas`;
+  if(!V.lista.length){
+    el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma análise vencida.</div>';
+    return;
+  }
   const cor = { e: 'var(--er2)', a: 'var(--al2)', ok: 'var(--ok2)' };
   el('vida').innerHTML = V.lista.map(x => `
     <div class="it ${x.cor === 'ok' ? '' : x.cor}">
-      <div class="it-l1"><span class="it-nm">${x.op} · ${x.sigla}</span>
-        <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${x.dias}</span></div>
-      <div class="it-l2">${x.txt}</div></div>`).join('');
+      <div class="it-l1"><span class="it-nm">${esc(x.op)} · ${esc(x.produto)}</span><span style="font-size:10px;color:var(--txt3)">(${esc(x.sku)})</span>
+        <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${esc(x.dias)}</span></div>
+      <div class="it-l2">${esc(x.txt)}</div></div>`).join('');
 }
+
+// ---------------------------------------------------------------------------
+// Fermentação ativa — opção C (barra de dias + estado do POP 17)
+// ---------------------------------------------------------------------------
+// Metas do POP 17 (ponto de colheita): pH < 3,20 e ABV < 0,5 %.
+// §5.1: ler de pops/pops.json; fallback provisório aqui está marcado como tal.
+const FERM_META = { pH: { max: 3.20 }, abv: { max: 0.50 } };
+let FERM_META_REAL = null;           // preenchido de pops.json quando disponível
+const ESCALA_MAX_DIAS = 20;          // barra chega a 100 % neste nº de dias
+// Faixa típica de fermentação (provisória — recalcular do histórico, percentil 10-90)
+const FAIXA_DAYS = { min: 7, max: 12 };
+function metaFerm(){ return FERM_META_REAL || FERM_META; }
+function corBarraFerm(dias){
+  const f = FAIXA_DAYS;
+  if (dias > f.max) return 'linear-gradient(90deg,#3f5163,#ef4444)';
+  if (dias >= f.min) return 'var(--ok)';
+  return 'var(--az)';
+}
+// Estado derivado do POP 17: fermentação no ponto quando atingiu o pH-alvo e ABV.
+// Limite tratado como inclusivo (pH ≤ 3,20 e ABV ≤ 0,50 = colheita pronta).
+function estadoFerm(t){
+  const m = metaFerm();
+  if (t == null || t.pH == null || t.abv == null) return 'sem_medicao';
+  const pHok = !(m.pH && t.pH > m.pH.max);
+  const abvok = !(m.abv && t.abv > m.abv.max);
+  return (pHok && abvok) ? 'no_ponto' : 'em_curso';
+}
+const FERM_ESTADO_LABEL = { no_ponto:['no ponto','ferm-e-ok','ok'], em_curso:['em curso','ferm-e-al','al'], sem_medicao:['sem medição','ferm-e-off','off'] };
 
 function renderFerm(){
   el('fermSub').textContent = `${DADOS.fermentacao.length} tanques`;
-  el('fermentacao').innerHTML = DADOS.fermentacao.map(f => `
-    <div class="it ${f.cor}">
-      <div class="it-l1"><span class="it-nm">${f.tanque} · ${f.nome}</span>
-        <span class="it-v" style="font-size:14px;${f.cor ? 'color:var(--al2)' : ''}">${f.dia}</span></div>
-      <div class="it-l2">${f.txt}</div></div>`).join('');
+  const sem = DADOS.fermentacao.filter(t => estadoFerm(t.ultima) === 'sem_medicao').length;
+  if(!DADOS.fermentacao.length){
+    el('fermentacao').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma base em fermentação.</div>';
+    return;
+  }
+  const itens = [...DADOS.fermentacao].sort((a, b) => (b.diasNum||0) - (a.diasNum||0));
+  const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
+  const fmd = v => String(v).replace('.', ',');
+  const itensHtml = itens.map(t => {
+    const est = estadoFerm(t.ultima);
+    const [label, eCls, itemCls] = FERM_ESTADO_LABEL[est];
+    const tanque = (t.tanque || '').trim() || 'sem tanque';
+    const opShort = t.op ? '#' + abreviaOp(t.op) : '#' + abreviaOp(t.hrefOp || '');
+    const sub = [opShort, t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
+    const dias = t.diasNum != null ? t.diasNum : null;
+    // Barra é exclusivamente de dias (spec §4) — mas destaca em VERDE quando o
+    // tanque atingiu o ponto de colheita (no_ponto, POP 17), mantendo a largura
+    // proporcional aos dias.
+    const pct = dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100);
+    const fLeft  = (FAIXA_DAYS.min / ESCALA_MAX_DIAS) * 100;
+    const fWidth = ((FAIXA_DAYS.max - FAIXA_DAYS.min) / ESCALA_MAX_DIAS) * 100;
+    const cor = (est === 'no_ponto') ? 'var(--ok)' : corBarraFerm(dias == null ? 0 : dias);
+    // linha de medições (só quando há alguma)
+    const u = t.ultima;
+    const hasMed = u && (u.pH != null || u.brix != null || u.abv != null);
+    let mini = '';
+    if (hasMed) {
+      const ehOk = p => (u[p] != null && metaFerm()[p] && u[p] <= metaFerm()[p].max);
+      const m = x => (u[x] != null ? `<span>${x === 'abv' ? 'ABV' : x === 'pH' ? 'pH' : 'Brix'} <b class="${ehOk(x) ? 'm-ok' : ''}">${esc(fmd(u[x]))}</b></span>` : '');
+      mini = `<div class="ferm-mini">${m('pH')}${m('brix')}${m('abv')}</div>`;
+    }
+    const labDias = dias == null ? 'dia ?' : `dia ${dias}`;
+    return `<div class="ferm-item ${itemCls}">
+      <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(t.hrefOp || t.op)}">
+        <div class="ferm-l1"><span class="ferm-tq">${esc(tanque)}</span>
+          <span class="ferm-sub">${esc(sub)}</span>
+          <span class="ferm-estado ${eCls}">${label}</span></div>
+        <div class="ferm-barra">
+          <i style="width:${pct}%;background:${cor}"></i>
+          <span class="ferm-faixa" style="left:${fLeft}%;width:${fWidth}%"></span>
+          <span class="ferm-lab">${esc(labDias)}</span>
+        </div>
+        ${mini}
+      </a></div>`;
+  }).join('');
+  el('fermentacao').innerHTML = `<div>${itensHtml}</div>`;
+  el('fermSub').textContent = `${DADOS.fermentacao.length} tanques · ${sem} sem medição`;
+  el('fermentacao').insertAdjacentHTML('beforeend',
+    `<div class="ferm-rodape">toque no tanque para abrir a ficha · ▒ faixa típica ${FAIXA_DAYS.min}–${FAIXA_DAYS.max} dias</div>`);
 }
 
-el('sub').textContent = `${DADOS.mesNome} · ${DADOS.lotes.total} lotes produzidos`;
-el('rel').textContent = DADOS.atualizadoEm;
-renderKpis();
-renderColeta();
-renderEvol();
-renderRecravacao();
-renderLotes();
-renderOcorrencias();
-renderVida();
-renderFerm();
+// ---------------------------------------------------------------------------
+// Cálculos a partir dos dados reais
+// ---------------------------------------------------------------------------
+// indicador → bloco da ficha (o rodapé/barra das OPs mostra o preenchimento destes blocos)
+const IND_BLOCO = { pH: 'preenvase', brix: 'preenvase', carbonatacao: 'carbonatacao', recravacao: 'recravacao', abv: 'fermentacao', estoque: 'estoque' };
+// D1 pode entregar JSON como string — normaliza
+const parseJson = (v) => { if (v == null) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch(e) { return null; } };
+// Família do SKU — mesma regra do formulário (FX000=base; FX*=kombucha; CH/RF/RTM=refri-chá)
+function familiaDe(sku){
+  const s = String(sku || '');
+  if (s === 'FX000' || s === 'BAS') return 'base';
+  if (s.startsWith('FX')) return 'kombucha';
+  return 'refri'; // CH*/RF*/RTM* (e demais)
+}
+// Em que OPs um indicador se aplica (por família) — carbono/recravação/estoque não valem p/ base; ABV só base
+function indicadorAplicavel(ind, sku){
+  const fam = familiaDe(sku);
+  if (ind === 'estoque' || ind === 'carbonatacao' || ind === 'recravacao') return fam !== 'base';
+  if (ind === 'abv') return fam === 'base';
+  return true; // pH / brix aplicam-se a todas
+}
+// coleta pelo preenchimento REAL dos blocos (blocos_status no D1 — o mesmo dos rodapés das OPs).
+// Denominador = as OPs em que o indicador se aplica na família — não só as que já salvaram o bloco.
+// Assim OP sem o bloco (ou com bloco vazio) abaixa a %, em vez de ser ignorada/inflar.
+function coletaPorBlocos(fichas){
+  const r = {};
+  for (const [ind, bloco] of Object.entries(IND_BLOCO)) {
+    let f = 0, t = 0;
+    for (const ficha of fichas) {
+      if (!indicadorAplicavel(ind, ficha.sku)) continue; // família sem esse indicador
+      const bs = parseJson(ficha.blocos_status) || {};
+      // chaves do D1 vêm do form (ex.: preEnvase) — normaliza para minúsculas no LOOKUP
+      const alvo = bloco.toLowerCase();
+      const b = bs[bloco] || bs[alvo] || bs[Object.keys(bs).find(k => k.toLowerCase() === alvo)] || null;
+      if (b && Number(b.t) > 0) { f += Number(b.f) || 0; t += Number(b.t) || 0; }
+      else if (b !== undefined) {
+        // bloco aplicável mas zerado (nada coletado ainda) — conta como pendência 0/1
+        // para a OP não inflar a coleta (senão OP sem medição pareceria completa)
+        t += 1;
+      }
+    }
+    r[ind] = t ? f / t : null;
+  }
+  return r;
+}
+// fallback: fichas antigas sem blocos_status usam o indice salvo
+function coletaPorIndicador(fichas){
+  const IND = ['pH','brix','carbonatacao','recravacao','abv'];
+  const r = {};
+  for (const k of IND) {
+    const aplicaveis = fichas.filter(f => { const ind = parseJson(f.indice); return ind && ind[k] !== undefined && ind[k] !== null; });
+    const coletados = aplicaveis.filter(f => { const ind = parseJson(f.indice); return ind[k] === true; });
+    r[k] = aplicaveis.length ? coletados.length / aplicaveis.length : null;
+  }
+  return r;
+}
+function coletaDe(fichas){
+  const porBlocos = coletaPorBlocos(fichas);
+  return Object.values(porBlocos).some(v => v !== null) ? porBlocos : coletaPorIndicador(fichas);
+}
+const somaMeses = (iso, n) => { const d = new Date(String(iso).slice(0,10) + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d; };
+async function carregar(){
+  const agora = new Date();
+  const mes = agora.toISOString().slice(0, 7);
+  try {
+    const [rm, rf] = await Promise.all([
+      fetch(WORKER_URL + '/api/qualidade/mes/' + mes, { cache: 'no-store' }),
+      fetch(WORKER_URL + '/api/qualidade/fichas', { cache: 'no-store' }),
+    ]);
+    const fichas = (await rm.json()).fichas || [];
+    const opsAbertas = (await rf.json()).fichas || [];
+
+    // indicador de coleta
+    const indiceColeta = coletaDe(fichas);
+
+    // lotes
+    // exclui bases (FX000) do card Lotes do mês (e das contagens)
+    const fichasNaoBase = fichas.filter(f => f.sku !== 'FX000');
+    const total = fichasNaoBase.length;
+    const conformes = fichasNaoBase.filter(f => f.status === 'completa' && !(f.nc_count > 0)).length;
+    const naoConformes = fichasNaoBase.filter(f => f.nc_count > 0).length;
+    const semDado = fichasNaoBase.filter(f => f.status !== 'completa' && !(f.nc_count > 0)).length;
+
+    const lista = fichasNaoBase.map(f => {
+      const status = f.nc_count > 0 ? 'nc' : (f.status === 'completa' ? 'ok' : 'sd');
+      let txt = fmtDataBR(f.data_producao);
+      if (f.ncs && f.ncs.length) txt += ' · ' + f.ncs[0].campo + ' ' + f.ncs[0].valor + ' fora de spec';
+      else if (status === 'ok') txt += ' · conforme';
+      else txt += ' · análise incompleta';
+      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', produto: f.produto || f.sku || '', status, txt };
+    });
+
+    // ocorrências (NCs detalhadas)
+    const ocorrencias = [];
+    for (const f of fichas) {
+      for (const nc of f.ncs || []) {
+        ocorrencias.push({
+          op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '',
+          data: fmtDataBR(f.data_producao),
+          txt: `${nc.campo} ${nc.valor} fora de spec (${nc.min}–${nc.max}) · ${nc.bloco || ''}`
+        });
+      }
+    }
+
+    // análises vencidas (validade = fabricação + 8 meses)
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const vencidas = [];
+    for (const f of fichas) {
+      const val = somaMeses(f.data_producao, 8);
+      const dias = Math.round((val - hoje) / 864e5);
+      if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
+      else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
+    }
+
+    // fermentação: bases (FX000) abertas, com a última leitura (pH/brix/ABV) da ficha salva
+    const bases = (opsAbertas || []).filter(o => o.sku === 'FX000' && o.data);
+    const fermentacao = await Promise.all(bases.map(async (o) => {
+      const m = String(o.data).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      let dias = null;
+      if (m) { const ini = new Date(+m[3], +m[2]-1, +m[1]); dias = Math.round((hoje - ini) / 864e5); }
+      // mesma ficha salva da base: última leitura de fermentação + dados do starter (tanque/volume)
+      let ultima = null, starter = null;
+      try {
+        const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(o.nCodOP || o.op), { cache: 'no-store' });
+        const j = await fr.json();
+        const blocos = j.ficha && j.ficha.blocos;
+        const fer = blocos && blocos.fermentacao;
+        if (Array.isArray(fer) && fer.length) ultima = fer[fer.length - 1];
+        starter = (blocos && blocos.starter) || null;
+      } catch (e) { /* sem ficha salva */ }
+      return {
+        op: o.op || '', hrefOp: o.op || o.nCodOP || '',
+        tanque: (starter && starter.tanque) || o.tanque || '',
+        volTanque: (starter && starter.volumeTanque) || null,
+        nome: o.produto || 'Base Kombucha',
+        dia: dias == null ? '—' : `dia ${dias}`, diasNum: dias, txt: `fab ${o.data}`,
+        cor: (dias != null && dias >= 11) ? 'e' : (dias != null && dias >= 7 ? 'a' : ''),
+        ultima,
+      };
+    }));
+
+    // evolução: coleta média dos últimos 6 meses
+    const evolucao = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(agora); d.setUTCMonth(d.getUTCMonth() - i);
+      const mm = d.toISOString().slice(0,7);
+      try {
+        const r = await fetch(WORKER_URL + '/api/qualidade/mes/' + mm, { cache: 'no-store' });
+        const fs = (await r.json()).fichas || [];
+        const ic = coletaDe(fs);
+        const vals = Object.values(ic).filter(v => v !== null);
+        const media = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100) : null;
+        if (media !== null) evolucao.push([mm.slice(2).replace('-','/'), media]);
+      } catch(e) {}
+    }
+
+    DADOS = {
+      mes,
+      mesNome: MESES[agora.getUTCMonth()] + ' de ' + agora.getUTCFullYear(),
+      atualizadoEm: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      indiceColeta,
+      lotes: { total, conformes, naoConformes, semDado, lista },
+      // volume de base (FX000) produzido no mês, em litros.
+      // Soma o qtd de cada lote + 50 L fixos por lote (regra do KPI).
+      volumeBaseL: fichas
+        .filter(f => f.sku === 'FX000')
+        .reduce((s, f) => s + (Number(f.qtd) || 0) + 50, 0),
+      ocorrencias,
+      analisesVencidas: { total: vencidas.length, lista: vencidas },
+      fermentacao,
+      evolucao,
+    };
+
+    el('sub').textContent = `${DADOS.mesNome} · ${total} ${total === 1 ? 'lote produzido' : 'lotes produzidos'}`;
+    el('rel').textContent = DADOS.atualizadoEm;
+    renderKpis(); renderColeta(); renderEvol();
+    renderLotes(); renderOcorrencias(); renderVida(); renderFerm(); preencherSelect(); renderIndicadores();
+  } catch(e) {
+    el('sub').textContent = 'Erro ao carregar os dados: ' + e.message;
+  }
+}
+
+// Carrega as metas do POP 17 de pops.json (§5.1). Fallback provisório se falhar.
+async function carregarMetaFerm(){
+  try {
+    const r = await fetch('pops/pops.json', { cache: 'no-store' });
+    if (r.ok) {
+      const data = await r.json();
+      const p17 = (data.pops || []).find(p => p.codigo === 'POP17');
+      if (p17 && p17.metasProcesso) {
+        FERM_META_REAL = p17.metasProcesso;
+        // re-render com as metas reais (pode ter chegado depois do primeiro renderFerm)
+        if (typeof renderFerm === 'function') renderFerm();
+      }
+    }
+  } catch (e) { /* fallback provisório */ }
+}
+
+carregar();
+carregarMetaFerm();
 </script>
 </body>
 </html>

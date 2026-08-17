@@ -258,9 +258,45 @@ export async function lerFichaSalvaPorNcod(env, nCodOP) {
 /** Fichas salvas no mês (D1) — alimenta o painel/lista */
 export async function fichasDoMes(env, aaaamm) {
   const r = await env.QUALIDADE_DB.prepare(
-    "SELECT op, sku, produto, data_producao, status, nc_count, indice FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
+    "SELECT op, sku, produto, data_producao, status, nc_count, indice, blocos_status, qtd, un, n_cod_op FROM fichas WHERE data_producao LIKE ?1 || '%' ORDER BY op"
   ).bind(aaaamm).all();
-  return r.results || [];
+  const fichas = (r.results || []).map((f) => ({
+    ...f,
+    // D1 guarda JSON como texto — devolve parseado (consistente com /api/qualidade/fichas)
+    blocos_status: typeof f.blocos_status === 'string' ? (() => { try { return JSON.parse(f.blocos_status); } catch(e) { return null; } })() : f.blocos_status,
+    indice: typeof f.indice === 'string' ? (() => { try { return JSON.parse(f.indice); } catch(e) { return null; } })() : f.indice,
+  }));
+  // NCs detalhadas por OP (tabela ncs) — alimenta as "Ocorrências" do painel
+  try {
+    const ops = fichas.map((f) => f.op).filter(Boolean);
+    if (ops.length) {
+      const ph = ops.map(() => "?").join(",");
+      const rn = await env.QUALIDADE_DB.prepare(
+        `SELECT op, bloco, campo, leitura, valor, min, max FROM ncs WHERE op IN (${ph})`
+      ).bind(...ops).all();
+      const porOp = new Map();
+      for (const nc of rn.results || []) {
+        const arr = porOp.get(nc.op) || [];
+        arr.push(nc);
+        porOp.set(nc.op, arr);
+      }
+      for (const f of fichas) f.ncs = porOp.get(f.op) || [];
+    }
+  } catch (e) { console.error(`[qualidade] ncs do mes: ${e.message}`); }
+  // Bases (FX000) podem ter qtd/un nulos se gravadas antes de o form enviar esses campos.
+  // Backfill via fichaDaOp (cache do worker) para que o KPI "volume de base" no painel funcione.
+  try {
+    const precisam = fichas.filter(f => f.sku === 'FX000' && (f.qtd == null || f.un == null));
+    for (const f of precisam) {
+      try {
+        const op = f.n_cod_op ?? f.op;
+        const dados = await fichaDaOp(env, op, false, false);
+        if (dados.qtd != null) f.qtd = dados.qtd;
+        if (dados.un != null) f.un = dados.un;
+      } catch (e) { /* mantém null */ }
+    }
+  } catch (e) { console.error(`[qualidade] backfill base: ${e.message}`); }
+  return fichas;
 }
 
 /** Fichas salvas (arquivo) — todas, mais recentes primeiro */
@@ -656,8 +692,14 @@ async function saldoDo(env, codigo, cacheProduto) {
 /** Ficha de uma OP — itens reais (itensDetalhes) + saldo (opcional). */
 export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   const n = parseInt(op, 10);
-  const consulta = Number.isInteger(n) && String(n) === String(op)
-    ? { nCodOP: n } : { cCodIntOP: op };
+  let consulta;
+  if (Number.isInteger(n) && String(n) === String(op)) {
+    consulta = { nCodOP: n };
+  } else {
+    // formato <ano>/<numero> (ex.: 2026/00520) ou código — via código de integração,
+    // pois cNumOP não é aceito pelo ConsultarOrdemProducao do Omie
+    consulta = { cCodIntOP: op };
+  }
 
   const r = await chamarOmie(env, "/produtos/op/", "ConsultarOrdemProducao", consulta);
   if (raw) return { op, nCodOP: n, raw: r };
