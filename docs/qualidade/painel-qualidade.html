@@ -616,7 +616,7 @@ async function carregar(){
     const ordem = [...fichas].sort((a,b) => String(b.data_producao||'').localeCompare(String(a.data_producao||'')));
     for (const f of ordem) {
       try {
-        const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(f.op), { cache: 'no-store' });
+        const fr = await fetch(WORKER_URL + '/api/qualidade/ficha/' + encodeURIComponent(f.n_cod_op || f.op), { cache: 'no-store' });
         const j = await fr.json();
         const rec = j.ficha && j.ficha.blocos && j.ficha.blocos.recravacao;
         if (rec && rec.length) {

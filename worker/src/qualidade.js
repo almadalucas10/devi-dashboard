@@ -693,12 +693,11 @@ async function saldoDo(env, codigo, cacheProduto) {
 export async function fichaDaOp(env, op, comSaldo = true, raw = false) {
   const n = parseInt(op, 10);
   let consulta;
-  if (/^\d{4}\/\d+$/.test(String(op))) {
-    // formato <ano>/<numero> (ex.: 2026/00520) → previsão/comando da Ordre de Produção
-    consulta = { cNumOP: op };
-  } else if (Number.isInteger(n) && String(n) === String(op)) {
+  if (Number.isInteger(n) && String(n) === String(op)) {
     consulta = { nCodOP: n };
   } else {
+    // formato <ano>/<numero> (ex.: 2026/00520) ou código — via código de integração,
+    // pois cNumOP não é aceito pelo ConsultarOrdemProducao do Omie
     consulta = { cCodIntOP: op };
   }
 
