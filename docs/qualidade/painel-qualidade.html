@@ -88,13 +88,13 @@
   .carta svg{width:100%; height:100%; display:block}
 
   /* ---- card Indicadores (A3): 4 mini-gráficos + tooltip ---- */
-  .ind-ga{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:4px}
-  .ind-g{background:var(--cell); border-radius:8px; padding:7px 9px; position:relative}
-  .ind-k{font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
-  .ind-atual{font-size:17px; font-weight:700; line-height:1.15}
-  .ind-svg{position:relative; height:64px; margin-top:6px}
+  .ind-ga{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
+  .ind-g{background:var(--cell); border-radius:8px; padding:8px 10px; position:relative}
+  .ind-k{font-size:10px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
+  .ind-atual{font-size:24px; font-weight:700; line-height:1.15}
+  .ind-svg{position:relative; height:120px; margin-top:8px}
   .ind-svg svg{width:100%; height:100%; display:block; overflow:visible}
-  .ind-m{font-size:9px; color:var(--txt3); margin-top:4px}
+  .ind-m{font-size:10px; color:var(--txt3); margin-top:5px}
   .ind-tip{position:absolute; display:none; background:#0b111a; border:1px solid var(--linha);
     border-radius:5px; padding:3px 7px; font-size:10px; color:var(--txt2);
     pointer-events:none; white-space:nowrap; z-index:5}
@@ -311,7 +311,7 @@ function minigrafoInd(k, pts, spec, cor){
   const dataSpan = (max - min) || 0.5;
   const lo = sp ? Math.max(0, Math.min(sp.min, min) - dataSpan * 0.25) : min - dataSpan * 0.25;
   const hi = sp ? Math.max(sp.max, max) + dataSpan * 0.25 : max + dataSpan * 0.25;
-  const W = 100, H = 64, pad = 7; // viewBox interno; 64 = altura do .ind-svg
+  const W = 100, H = 120, pad = 8; // viewBox interno; altura ~ .ind-svg (120px)
   const X = i => pad + (i / (pts.length - 1)) * (W - pad * 2);
   const Y = v => pad + (1 - (v - lo) / (hi - lo)) * (H - pad * 2);
   let faixa = '';
