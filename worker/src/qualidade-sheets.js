@@ -95,7 +95,10 @@ export function montarLinhaRefriCha(f) {
   const pre = b.preEnvase || {};
   const rec = primeiro(b.recravacao) || {};
   const es = b.estoque || [];
-  const ult = ultimo(es) || {};
+  // entregas de estoque SOMADAS → um único número na planilha (Volume Produto)
+  const totalEstoque = es.length
+    ? es.reduce((soma, e) => soma + (Number(e && e.quantidade) || 0), 0)
+    : null;
   const fam = String(f.familia || "").toLowerCase();
   const tipo = f.tipoProduto || (fam === "cha" ? "Chá" : fam === "kombucha" ? "Kombucha" : "Refri");
   return [
@@ -111,7 +114,7 @@ export function montarLinhaRefriCha(f) {
     num(rec.altura),                            // 10 Largura ← altura física (planilha inverte nomenclatura)
     num(rec.espessura),                         // 11 Altura ← espessura física
     num(rec.transpasse),                        // 12 Transpasse
-    num(ult.quantidade),                        // 13 Volume Produto (qtd do último envio)
+    num(totalEstoque),                          // 13 Volume Produto (soma das entregas de estoque)
     num(b.observacoes ?? ""),                   // 14 Observação
   ];
 }
