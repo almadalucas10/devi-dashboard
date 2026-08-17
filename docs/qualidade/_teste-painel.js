@@ -67,6 +67,11 @@ setTimeout(() => {
 
   const lotes = $('#lotes').textContent;
   ok(lotes.includes('#528') && lotes.includes('Chá Camomila'), 'Lista de lotes com OP 528');
+  // ordenação por data de fabricação (mais recente primeiro): a 528 (14/08) deve vir antes da 517 (13/08)
+  const order = [...document.querySelectorAll('#lotes .cart')].map(x => x.textContent);
+  const i528 = order.findIndex(t => t.includes('#528'));
+  const i517 = order.findIndex(t => t.includes('#517'));
+  ok(i528 !== -1 && i517 !== -1 && i528 < i517, 'Lotes ordenados por data de fab (528=14/08 antes de 517=13/08)');
   ok(lotes.includes('transpasse 0.78'), 'Lote NC mostra a ocorrência');
 
   const occ = $('#ocorrencias').textContent;
