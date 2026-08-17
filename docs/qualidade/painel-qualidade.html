@@ -92,8 +92,8 @@
   .ind-g{background:var(--cell); border-radius:8px; padding:7px 9px; position:relative}
   .ind-k{font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
   .ind-atual{font-size:17px; font-weight:700; line-height:1.15}
-  .ind-svg{position:relative; height:56px; margin-top:4px}
-  .ind-svg svg{width:100%; height:100%; display:block}
+  .ind-svg{position:relative; height:64px; margin-top:6px}
+  .ind-svg svg{width:100%; height:100%; display:block; overflow:visible}
   .ind-m{font-size:9px; color:var(--txt3); margin-top:4px}
   .ind-tip{position:absolute; display:none; background:#0b111a; border:1px solid var(--linha);
     border-radius:5px; padding:3px 7px; font-size:10px; color:var(--txt2);
@@ -307,22 +307,24 @@ function minigrafoInd(k, pts, spec, cor){
   if (vals.length < 2) return null;
   const min = Math.min(...vals), max = Math.max(...vals);
   const sp = spec && spec[k];
-  const lo = sp ? Math.max(0, sp.min - (max - min) * 0.15) : min - (max - min) * 0.15;
-  const hi = sp ? sp.max + (max - min) * 0.15 : max + (max - min) * 0.15;
-  const W = 100, H = 56, pad = 4;
+  // folga além dos dados E da faixa, para nada ser cortado nas bordas
+  const dataSpan = (max - min) || 0.5;
+  const lo = sp ? Math.max(0, Math.min(sp.min, min) - dataSpan * 0.25) : min - dataSpan * 0.25;
+  const hi = sp ? Math.max(sp.max, max) + dataSpan * 0.25 : max + dataSpan * 0.25;
+  const W = 100, H = 64, pad = 7; // viewBox interno; 64 = altura do .ind-svg
   const X = i => pad + (i / (pts.length - 1)) * (W - pad * 2);
   const Y = v => pad + (1 - (v - lo) / (hi - lo)) * (H - pad * 2);
   let faixa = '';
   if (sp) {
-    const y1 = Y(sp.min), y2 = Y(sp.max);
-    faixa = `<rect x="0" y="${y1.toFixed(1)}" width="${W}" height="${(y2 - y1).toFixed(1)}" fill="#16351f" opacity=".45"/>`;
+    const yTop = Math.min(Y(sp.min), Y(sp.max)), yBot = Math.max(Y(sp.min), Y(sp.max));
+    faixa = `<rect x="${pad}" y="${yTop.toFixed(1)}" width="${(W - pad * 2).toFixed(1)}" height="${(yBot - yTop).toFixed(1)}" fill="#16351f" opacity=".45"/>`;
   }
   const poly = pts.map((p, i) => {
     const v = p[k];
     if (v == null || isNaN(v)) return '';
     return `${X(i).toFixed(1)},${Y(v).toFixed(1)}`;
   }).filter(Boolean).join(' ');
-  // pontos com cabaz de tooltip; último em destaque (anel)
+  // pontos com tooltip; último em destaque (anel) — com folga para o anel não cortar
   const circs = pts.map((p, i) => {
     const v = p[k];
     if (v == null || isNaN(v)) return '';
@@ -330,7 +332,7 @@ function minigrafoInd(k, pts, spec, cor){
     const fora = sp && (v < sp.min || v > sp.max);
     const ult = i === pts.length - 1;
     const corP = fora ? '#f87171' : cor;
-    const r = ult ? 3.4 : 2.6;
+    const r = ult ? 3 : 2.4;
     const lbl = `${p.data} · L${p.lote} · ${k} ${String(v).replace('.', ',')}`;
     const anel = ult ? `<circle cx="${x}" cy="${y}" r="${(r + 2.2).toFixed(1)}" fill="none" stroke="${corP}" opacity=".5"/>` : '';
     return `<circle cx="${x}" cy="${y}" r="${r}" fill="${corP}" data-tip="${esc(lbl)}"/>${anel}`;
@@ -340,7 +342,7 @@ function minigrafoInd(k, pts, spec, cor){
     k, cor, atual: String(vals[vals.length - 1]).replace('.', ','),
     media: media.toFixed(2).replace('.', ','),
     faixaTxt: sp ? `${sp.min}–${sp.max}` : 'sem faixa',
-    svg: `<div class="ind-svg"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${faixa}
+    svg: `<div class="ind-svg"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${faixa}
       <polyline fill="none" stroke="${cor}" stroke-width="2" points="${poly}"/>
       <g>${circs}</g></svg><div class="ind-tip"></div></div>`
   };
