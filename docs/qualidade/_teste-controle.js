@@ -228,6 +228,11 @@ setTimeout(() => {
               phT.dispatchEvent(new window.Event('input'));
               setTimeout(() => {
                 ok($('input[data-c="pH"]').value === '2.2', 'digitação real não é sobrescrita pelo servidor (2.2)');
+
+          // ---- NÃO VAZAR: rascunho digitado nesta OP não vaza para outra ----
+          const chaves = Object.keys(window.localStorage).filter(k => k.startsWith('ficha_rascunho_'));
+          ok(chaves.length === 1 && chaves[0] === 'ficha_rascunho_2026/00528',
+            'rascunho gravado apenas sob a chave da OP atual (' + chaves.join(', ') + ')');
                 console.log(`\n${pass} passaram, ${fail} falharam`);
                 process.exit(fail ? 1 : 0);
               }, 80);
