@@ -411,10 +411,15 @@ function renderFerm(){
     const tanque = (t.tanque || '').trim() || 'sem tanque';
     const sub = [t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
     const dias = t.diasNum != null ? t.diasNum : null;
-    const pct = dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100);
+    // Barra avança com as leituras também: "no ponto" (atingiu POP 17) → 100 %,
+    // pois a colheita está pronta. Caso contrário, usa os dias na escala 0-20.
+    const pct = (est === 'no_ponto') ? 100
+      : (dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100));
     const fLeft  = (FAIXA_DAYS.min / ESCALA_MAX_DIAS) * 100;
     const fWidth = ((FAIXA_DAYS.max - FAIXA_DAYS.min) / ESCALA_MAX_DIAS) * 100;
-    const cor = corBarraFerm(dias == null ? 0 : dias);
+    const cor = (est === 'no_ponto')
+      ? 'linear-gradient(90deg,#3f5163,#22c55e)'
+      : corBarraFerm(dias == null ? 0 : dias);
     // linha de medições (só quando há alguma)
     const u = t.ultima;
     const hasMed = u && (u.pH != null || u.brix != null || u.abv != null);
