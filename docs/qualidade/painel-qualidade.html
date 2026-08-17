@@ -151,24 +151,11 @@
       <div class="pn-cab"><span class="t">📉 pH · Komb Frutas Vermelhas</span>
         <span class="s">últimos 14 lotes</span></div>
 
-      <div class="carta">
-        <svg viewBox="0 0 400 96" preserveAspectRatio="none">
-          <rect x="0" y="24" width="400" height="46" fill="#16351f" opacity=".4"/>
-          <line x1="0" y1="47" x2="400" y2="47" stroke="#ffffff30" stroke-width="1" stroke-dasharray="4 4"/>
-          <polyline fill="none" stroke="#60a5fa" stroke-width="2"
-            points="12,40 40,52 68,34 96,60 124,44 152,38 180,64 208,50 236,42 264,58 292,30 320,46 348,78 376,54"/>
-          <g fill="#60a5fa">
-            <circle cx="12" cy="40" r="3"/><circle cx="40" cy="52" r="3"/><circle cx="68" cy="34" r="3"/>
-            <circle cx="96" cy="60" r="3"/><circle cx="124" cy="44" r="3"/><circle cx="152" cy="38" r="3"/>
-            <circle cx="180" cy="64" r="3"/><circle cx="208" cy="50" r="3"/><circle cx="236" cy="42" r="3"/>
-            <circle cx="264" cy="58" r="3"/><circle cx="292" cy="30" r="3"/><circle cx="320" cy="46" r="3"/>
-            <circle cx="376" cy="54" r="3"/>
-          </g>
-          <circle cx="348" cy="78" r="4.5" fill="#f87171"/>
-        </svg>
+      <div class="carta" id="phChart">
+        <div style="padding:20px;font-size:11px;color:var(--txt3)">Carregando pH…</div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt3)">
-        <span>#448</span><span>média 3,23 · dp 0,21</span><span>#527</span>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt3)" id="phMeta">
+        <span>últimos 14 lotes</span>
       </div>
       <div class="leg" style="margin-top:6px">
         <span><i class="pt-l" style="background:#16351f"></i>faixa de especificação</span>
@@ -272,6 +259,51 @@ function renderKpis(){
     <div class="kpi"><div class="r">ANÁLISES VENCIDAS</div>
       <div class="v" style="color:${DADOS.analisesVencidas.total ? 'var(--al2)' : 'var(--ok2)'}">${DADOS.analisesVencidas.total}</div>
       <div class="d">vida de prateleira</div></div>`;
+}
+
+// Card pH · Komb Frutas Vermelhas — desenha o SVG com os últimos lotes reais (planilha)
+async function renderPh(){
+  const chart = document.getElementById('phChart');
+  const meta = document.getElementById('phMeta');
+  if (!chart) return;
+  try {
+    const r = await fetch(WORKER_URL + '/api/qualidade/hist/pH?produto=' + encodeURIComponent('Frutas Vermelhas') + '&n=14', { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const pts = (d.pontos || []).filter(p => !isNaN(p.pH));
+    if (pts.length < 2) {
+      chart.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--txt3)">Sem histórico de pH.</div>';
+      return;
+    }
+    const W = 400, H = 96, padX = 14, padY = 10;
+    const pHs = pts.map(p => p.pH);
+    const min = Math.min(...pHs), max = Math.max(...pHs);
+    const lo = Math.max(2.4, Math.floor((min - 0.1) * 2) / 2);   // piso de escala
+    const hi = Math.min(4.6, Math.ceil((max + 0.1) * 2) / 2);    // teto de escala
+    // zona de spec do produto (pH) — aproximação da planilha; ajustável
+    const SPEC = { min: 3.00, max: 3.60 };
+    const X = i => padX + (i / (pts.length - 1)) * (W - padX * 2);
+    const Y = v => padY + (1 - (v - lo) / (hi - lo)) * (H - padY * 2);
+    const ySpecMin = Y(SPEC.min), ySpecMax = Y(SPEC.max);
+    const poly = pts.map((p, i) => `${X(i).toFixed(1)},${Y(p.pH).toFixed(1)}`).join(' ');
+    const circs = pts.map((p, i) => {
+      const x = X(i).toFixed(1), y = Y(p.pH).toFixed(1);
+      const fora = p.pH < SPEC.min || p.pH > SPEC.max;
+      return `<circle cx="${x}" cy="${y}" r="${fora ? 4.5 : 3}" fill="${fora ? '#f87171' : '#60a5fa'}"/>`;
+    }).join('');
+    const media = (pHs.reduce((a, b) => a + b, 0) / pHs.length);
+    const dp = Math.sqrt(pHs.reduce((a, b) => a + (b - media) * (b - media), 0) / pHs.length);
+    const meioY = ((ySpecMin + ySpecMax) / 2).toFixed(1);
+    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;width:100%;height:100%">
+      <rect x="0" y="${ySpecMin}" width="${W}" height="${ySpecMax - ySpecMin}" fill="#16351f" opacity=".4"/>
+      <line x1="0" y1="${meioY}" x2="${W}" y2="${meioY}" stroke="#ffffff30" stroke-width="1" stroke-dasharray="4 4"/>
+      <polyline fill="none" stroke="#60a5fa" stroke-width="2" points="${poly}"/>
+      <g fill="#60a5fa">${circs}</g>
+    </svg>`;
+    meta.innerHTML = `<span>${pts.length} lotes</span><span>média ${media.toFixed(2).replace('.', ',')} · dp ${dp.toFixed(2).replace('.', ',')}</span><span>${pts[pts.length - 1].data}</span>`;
+  } catch (e) {
+    chart.innerHTML = '<div style="padding:20px;font-size:11px;color:var(--er2)">falha ao carregar o pH</div>';
+  }
 }
 
 function renderColeta(){
@@ -667,7 +699,7 @@ async function carregar(){
     el('sub').textContent = `${DADOS.mesNome} · ${total} ${total === 1 ? 'lote produzido' : 'lotes produzidos'}`;
     el('rel').textContent = DADOS.atualizadoEm;
     renderKpis(); renderColeta(); renderEvol(); renderRecravacao();
-    renderLotes(); renderOcorrencias(); renderVida(); renderFerm();
+    renderLotes(); renderOcorrencias(); renderVida(); renderFerm(); renderPh();
   } catch(e) {
     el('sub').textContent = 'Erro ao carregar os dados: ' + e.message;
   }

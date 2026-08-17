@@ -566,6 +566,28 @@ async function handle(request, env, ctx) {
     }
     // Debug — mostra a linha que seria gravada na planilha de indicadores (sem escrever)
     // GET /api/qualidade/debug/sheets-mapping?op=<op ou nCodOP>
+    // Histórico de pH de um produto (da planilha de indicadores — aba Indicadores Kombucha)
+    // GET /api/qualidade/hist/pH?produto=Frutas%20Vermelhas&n=14
+    if (url.pathname === "/api/qualidade/hist/pH") {
+      try {
+        const { getAccessToken, getValues } = await import("./sheets.js");
+        const id = env.INDICADORES_SPREADSHEET_ID;
+        if (!id) return json({ erro: "INDICADORES_SPREADSHEET_ID não configurado" }, 503);
+        const produto = url.searchParams.get("produto") || "Frutas Vermelhas";
+        const n = Math.min(50, Math.max(2, parseInt(url.searchParams.get("n") || "14", 10) || 14));
+        const token = await getAccessToken(env);
+        const rows = await getValues(env, token, "Indicadores Kombucha!A2:F2000", id);
+        // colunas: 0 Data, 3 Produto, 4 Lote, 5 pH Produto
+        const filtrados = [];
+        for (const r of rows) {
+          if ((r[3] || "").trim() === produto && r[5] != null && r[5] !== "") {
+            filtrados.push({ data: r[0] || "", lote: r[4] || "", pH: parseFloat(String(r[5]).replace(",", ".")) });
+          }
+        }
+        const ultimos = filtrados.slice(-n).filter(p => !isNaN(p.pH));
+        return json({ produto, n, total: filtrados.length, pontos: ultimos });
+      } catch(e) { return json({ erro: e.message.slice(0, 300) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/debug/sheets-mapping") {
       try {
         const { lerFichaSalva } = await import("./qualidade.js");
