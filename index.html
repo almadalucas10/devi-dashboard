@@ -1176,13 +1176,13 @@ function renderFila(fila){
     return out;
   })();
 
-  // Cabeçalho: mobile = total ("17 pedidos · 8.244 un"); TV = o que coube
+  // Cabeçalho: total de unidades sempre visível; mobile = contagem de pedidos, TV = o que coube
   if (fc) {
+    const totalUn = ordenado.reduce(function(s,p){ return s + (p.totalUnidades||0); }, 0);
     if (MOBILE) {
-      const totalUn = ordenado.reduce(function(s,p){ return s + (p.totalUnidades||0); }, 0);
       fc.textContent = ordenado.length + ' pedido' + (ordenado.length > 1 ? 's' : '') + ' · ' + fmt(totalUn) + ' un';
     } else {
-      fc.textContent = escolhidos.length + ' de ' + fila.length;
+      fc.textContent = escolhidos.length + ' de ' + fila.length + ' · ' + fmt(totalUn) + ' un';
     }
   }
 
