@@ -35,6 +35,15 @@ async function runLightSync(env) {
   // Dashboard (planilha)
   try {
     const dashData = await buildDashboardCache(env);
+    // Se a leitura da planilha falhou (calGrid null) e já existe um dashboard bom,
+    // preserva o calGrid anterior em vez de zerar (evita "Calendário indisponível").
+    if (!dashData.calGrid) {
+      const anterior = await readJson(env, R2_KEYS.dashboard);
+      if (anterior && anterior.calGrid) {
+        console.warn(`[light] ⚠️ Dashboard sem calGrid — mantém calendário anterior (${anterior.calGrid.weeksData?.length ?? '?'} semanas)`);
+        dashData.calGrid = anterior.calGrid;
+      }
+    }
     await writeJson(env, R2_KEYS.dashboard, dashData);
     console.log(`[light] ✅ Dashboard: ${dashData.mesLabel || "?"} | Planejado: ${dashData.planejado}`);
   } catch (e) {
