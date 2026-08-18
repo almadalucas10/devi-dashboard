@@ -65,7 +65,14 @@ let pass = 0, fail = 0;
 const ok = (c, n) => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL') + ' · ' + n); };
 
 ok(jsErrors.length === 0, `sem erros de runtime no parse (${jsErrors.join('; ') || 'nenhum'})`);
-ok(!$('.sec[data-sec="controleEnvase"]'), 'card da coluna removido');
+  ok(!$('.sec[data-sec="controleEnvase"]'), 'card da coluna removido');
+  // ficha COMPLETA não entra na lista "Fichas do dia" (fica só no Arquivo de fichas) —
+  // o preencherOPS ignora op com status 'completa'
+  const antes = document.body.textContent;
+  window.preencherOPS([{ op: '2026/00500', sku: 'FX000', status: 'completa' }]);
+  window.renderLista();
+  const listaCompleta = $('#opLista').textContent;
+  ok(!listaCompleta.includes('00500'), 'OP completa NÃO aparece em "Fichas do dia" (só no Arquivo)');
 ok(typeof window.injetarLinksPOP === 'function', 'função injetarLinksPOP existe');
 const btnNav = [...document.querySelectorAll('.nav .btnNav')].find(b => b.textContent.includes('Envase'));
 ok(!!btnNav, 'botão 📑 Envase no cabeçalho da ficha');

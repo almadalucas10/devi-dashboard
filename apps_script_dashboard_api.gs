@@ -2438,3 +2438,129 @@ function atualizarCacheOmieAutomatico() {
   cacheSheet.getRange("A1").setValue(JSON.stringify(data));
   Logger.log("Gravação concluída às " + new Date().toLocaleTimeString());
 }
+
+// ============================================================================
+// SINCRONIZA A "PRODUÇÃO POR LOTE" COM A ABA MENSAL DO CALENDÁRIO (Opção A)
+// ============================================================================
+// A "Produção por Lote" é a fonte que o dashboard (Worker/TV) lê para montar
+// o calendário. Esta função garante que ela reflita os lotes programados nas
+// abas mensais (ex.: "Agosto"), de forma ADITIVA e SEGURA:
+//   - lê os dias com sigla+sufixo na aba mensal;
+//   - ACRESCENTA na "Produção por Lote" apenas as linhas que ainda não existem
+//     (casamento por Data + Sigla);
+//   - NÃO toca nas linhas existentes → preserva Nº do Lote (F) e Produzido (H).
+//
+// COMO USAR:
+//   1. No editor do Apps Script, rode a função "sincronizarLotes" (▶).
+//   2. (Opcional) Crie um trigger de tempo (⏰ → a cada X minutos) para que ela
+//      rode sozinha e mantenha a "Produção por Lote" sempre em dia.
+//
+// Para o mês/ano usar o "mês selecionado" e "ano de referência" da aba
+// "Dashboard" (iguais aos do calendário). Se não achar, usa o mês atual.
+// ============================================================================
+function sincronizarLotes() {
+  var ss = getSpreadsheet();
+  var loteSheet = ss.getSheetByName(LOTE_SHEET_NAME);
+  if (!loteSheet) throw new Error("Aba '" + LOTE_SHEET_NAME + "' não encontrada.");
+
+  // --- Descobre o mês (aba "Dashboard" → "mês selecionado"; fallback mês atual) ---
+  var monthNum, ano;
+  var dash = ss.getSheetByName(SHEET_NAME);
+  if (dash) {
+    var mv = dash.getRange(1, 1, Math.min(60, dash.getMaxRows()), Math.min(20, dash.getMaxColumns())).getValues();
+    var mesSel = findLabelValue(mv, "mês selecionado");
+    var anoRef = findLabelValue(mv, "ano de referência");
+    monthNum = mesSel ? MONTH_MAP[String(mesSel).trim().toLowerCase()] : null;
+    ano = toNumber(anoRef) || (new Date()).getFullYear();
+  }
+  if (!monthNum) { var agora = new Date(); monthNum = agora.getMonth() + 1; }
+  var tab = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][monthNum - 1];
+  var tabSheet = ss.getSheetByName(tab);
+  if (!tabSheet) throw new Error("Aba mensal '" + tab + "' não encontrada.");
+
+  // --- Legenda de Sufixos: quantidade por sufixo ---
+  var qtdSufixo = { "(sem sufixo)": 0 };
+  var sufixos = [];
+  var leg = ss.getSheetByName("Legenda de Sufixos");
+  if (leg) {
+    var lv = leg.getRange(3, 1, 18, 3).getValues();
+    lv.forEach(function(r) {
+      var s = String(r[0] || "").trim();
+      var q = toNumber(r[2]);
+      if (!s || q === null) return;
+      qtdSufixo[s] = q;
+      if (s !== "(sem sufixo)") sufixos.push(s);
+    });
+  }
+  sufixos.sort(function(a, b) { return b.length - a.length; });
+
+  // --- Cadastro de SKUs: sigla → { produto, familia } ---
+  var skus = {};
+  var sk = ss.getSheetByName("Cadastro de SKUs");
+  if (sk) {
+    var sv = sk.getRange(4, 1, 200, 4).getValues();
+    sv.forEach(function(r) {
+      var sig = String(r[2] || "").trim();
+      if (sig) skus[sig] = { produto: String(r[1]||"").trim(), familia: String(r[0]||"").trim() };
+    });
+  }
+
+  // --- Lê a aba mensal: linhas 5..11 = Segunda..Domingo, colunas B..M ---
+  var grid = tabSheet.getRange("B5:M11").getValues();
+
+  // --- Monta os lotes programados (key: data|siglaCompleta) ---
+  var programados = {};
+  for (var d = 0; d < 7; d++) {
+    var row = grid[d];
+    for (var w = 0; w < 6; w++) {
+      var colData = 2 + 2 * w;   // D, F, H, J, L
+      var colSigla = 3 + 2 * w;  // E, G, I, K, M
+      var dataVal = row[colData];
+      var siglaVal = row[colSigla];
+      if (!dataVal || !siglaVal) continue;
+      var data = (Object.prototype.toString.call(dataVal) === "[object Date]") ? dataVal : parseDataBr_(String(dataVal));
+      if (!data || isNaN(data.getTime())) continue;
+      var sc = String(siglaVal).trim();
+      if (!sc) continue;
+      if (/MANUTEN|FERIADO|INVENTÁRIO/i.test(sc)) continue; // não vira lote
+      var siglaBase = sc, sufixo = "(sem sufixo)";
+      for (var x = 0; x < sufixos.length; x++) {
+        var s = sufixos[x];
+        if (sc.length > s.length && sc.slice(-s.length) === s) { siglaBase = sc.slice(0, -s.length); sufixo = s; break; }
+      }
+      var qtd = (qtdSufixo[sufixo] != null) ? qtdSufixo[sufixo] : (qtdSufixo["(sem sufixo)"] || 0);
+      var ds = ("0" + data.getDate()).slice(-2) + "/" + ("0" + (data.getMonth()+1)).slice(-2) + "/" + data.getFullYear();
+      var skuInfo = skus[siglaBase] || {};
+      programados[ds + "|" + sc] = [ds, siglaBase, sufixo, skuInfo.produto || "", skuInfo.familia || "", "", qtd];
+    }
+  }
+  var chaves = Object.keys(programados);
+  if (chaves.length === 0) { Logger.log("✅ SincLotes: nenhum lote programado em " + tab); return; }
+
+  // --- Lê os existentes na "Produção por Lote" (a partir da linha 5) ---
+  var existentes = {};
+  var lastRow = loteSheet.getLastRow();
+  if (lastRow >= 5) {
+    var ex = loteSheet.getRange(5, 1, lastRow - 4, 8).getValues();
+    ex.forEach(function(r) {
+      var dStr = r[0], sig = String(r[1] || "").trim();
+      if (!dStr || !sig) return;
+      var dt = (Object.prototype.toString.call(dStr) === "[object Date]") ? dStr : parseDataBr_(String(dStr));
+      if (!dt || isNaN(dt.getTime())) return;
+      var k = ("0"+dt.getDate()).slice(-2)+"/"+("0"+(dt.getMonth()+1)).slice(-2)+"/"+dt.getFullYear() + "|" + sig;
+      existentes[k] = true;
+    });
+  }
+
+  // --- Só acrescenta o que falta ---
+  var novaLinhas = [];
+  chaves.forEach(function(k) {
+    if (!existentes[k]) novaLinhas.push(programados[k]);
+  });
+  if (novaLinhas.length === 0) { Logger.log("✅ SincLotes: já sincronizado — nenhum lote novo em " + tab); return; }
+
+  novaLinhas.sort(function(a, b) { return a[0].localeCompare(b[0]); });
+  var firstRow = loteSheet.getLastRow() + 1;
+  loteSheet.getRange(firstRow, 1, novaLinhas.length, novaLinhas[0].length).setValues(novaLinhas);
+  Logger.log("✅ SincLotes: +" + novaLinhas.length + " lotes em " + tab + " (linhas " + firstRow + "+)");
+}

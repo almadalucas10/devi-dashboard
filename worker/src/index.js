@@ -841,6 +841,17 @@ async function handle(request, env, ctx) {
         return json({ mes: aaaamm, fichas: await fichasDoMes(env, aaaamm) });
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
+    // Apaga uma ficha salva (R2 + D1) — limpeza do banco de fichas
+    if (url.pathname.startsWith("/api/qualidade/ficha/") && request.method === "DELETE") {
+      try {
+        const { apagarFichaSalva } = await import("./qualidade.js");
+        // aceita ?op=2026/00519 (completo) ou o último segmento da URL como fallback
+        const op = url.searchParams.get("op") || decodeURIComponent(url.pathname.split("/").pop());
+        const r = await apagarFichaSalva(env, op);
+        if (!r.removidoR2 && !r.removidoD1) return json({ ...r, atencao: "nada removido — op não encontrada?" }, 200);
+        return json(r);
+      } catch(e) { return json({ erro: e.message.slice(0, 1000) }, 500); }
+    }
     if (url.pathname === "/api/qualidade/fichas") {
       try {
         const { listarFichasDoDia, anexarEstadoFichas } = await import("./qualidade.js");
