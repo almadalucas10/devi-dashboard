@@ -827,7 +827,7 @@ async function carregar(){
         .filter(f => f.sku === 'FX000')
         .reduce((s, f) => s + (Number(f.qtd) || 0) + 50, 0),
       ocorrencias,
-      analisesVencidas: { total: vencidas.length, lista: vencidas },
+      analisesVencidas: { total: vencidas.filter(v => v.cor === 'e').length, lista: vencidas },
       fermentacao,
       evolucao,
     };
