@@ -25,9 +25,9 @@
   body > *{ position:relative; z-index:1; }
 
   .topo{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px}
-  .topo h1{font-size:19px; font-weight:700; margin:0; letter-spacing:-.4px}
-  .topo .sub{font-size:12px; color:var(--txt3)}
-  .rel{font-size:13px; color:var(--txt2)}
+  .topo h1{font-size:clamp(24px,2.2vw,34px); font-weight:700; margin:0; letter-spacing:-.4px}
+  .topo .sub{font-size:clamp(14px,1.1vw,18px); color:var(--txt3)}
+  .rel{font-size:clamp(15px,1.1vw,19px); color:var(--txt2)}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:5px}
 
   .grade{display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:11px; align-items:stretch}
@@ -38,18 +38,18 @@
 
   .pn{background:var(--painel); border:1px solid var(--linha); border-radius:11px; padding:11px 13px}
   .pn-cab{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:10px}
-  .pn-cab .t{font-size:14px; font-weight:600}
-  .pn-cab .s{font-size:11px; color:var(--txt3); white-space:nowrap}
+  .pn-cab .t{font-size:clamp(16px,1.3vw,21px); font-weight:600}
+  .pn-cab .s{font-size:clamp(13px,1vw,16px); color:var(--txt3); white-space:nowrap}
 
   .kpis{display:grid; grid-template-columns:1fr 1fr; gap:9px}
   .kpi{background:var(--painel); border:1px solid var(--linha); border-radius:10px; padding:9px 11px}
-  .kpi .r{font-size:9px; color:var(--txt3); letter-spacing:.5px}
-  .kpi .v{font-size:25px; font-weight:700; letter-spacing:-.8px; line-height:1.2}
-  .kpi .d{font-size:10px; color:var(--txt3)}
+  .kpi .r{font-size:clamp(11px,0.85vw,14px); color:var(--txt3); letter-spacing:.5px}
+  .kpi .v{font-size:clamp(30px,2.6vw,46px); font-weight:700; letter-spacing:-.8px; line-height:1.2}
+  .kpi .d{font-size:clamp(12px,0.9vw,15px); color:var(--txt3)}
 
   .col-lin{margin-bottom:9px}
-  .col-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px}
-  .col-l1 b{font-size:15px; font-weight:700}
+  .col-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:clamp(14px,1.1vw,18px)}
+  .col-l1 b{font-size:clamp(17px,1.3vw,22px); font-weight:700}
   .tr{height:7px; background:var(--trilho); border-radius:4px; overflow:hidden; margin-top:4px}
   .tr i{display:block; height:100%}
 
@@ -58,9 +58,9 @@
   .it.a{border-left-color:var(--al)} .it.e{border-left-color:var(--er)}
   .it:last-child{margin-bottom:0}
   .it-l1{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
-  .it-nm{font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .it-v{font-size:15px; font-weight:700; white-space:nowrap}
-  .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
+  .it-nm{font-size:clamp(15px,1.15vw,19px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .it-v{font-size:clamp(17px,1.35vw,22px); font-weight:700; white-space:nowrap}
+  .it-l2{font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:2px}
 
   /* ---- Vida de prateleira: tabela de marcos de lote reserva (3M/6M/8M) ---- */
   .tbl-vida{width:100%; border-collapse:collapse; font-size:14px}
@@ -83,9 +83,9 @@
   .ferm-item.off{border-left-color:#39434f; opacity:.7}
   .ferm-item a{display:block; text-decoration:none; color:inherit}
   .ferm-l1{display:flex; align-items:baseline; gap:8px}
-  .ferm-tq{font-size:17px; font-weight:700; min-width:30px; text-transform:uppercase}
-  .ferm-sub{font-size:12px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
-  .ferm-estado{margin-left:auto; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap}
+  .ferm-tq{font-size:clamp(19px,1.5vw,24px); font-weight:700; min-width:30px; text-transform:uppercase}
+  .ferm-sub{font-size:clamp(14px,1.05vw,18px); color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  .ferm-estado{margin-left:auto; font-size:clamp(13px,1vw,16px); font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap}
   .ferm-e-ok{background:#12241a; color:var(--ok2)}
   .ferm-e-al{background:#2a2412; color:var(--al2)}
   .ferm-e-off{background:#1c2733; color:var(--txt3)}
@@ -94,13 +94,13 @@
   .ferm-barra i{display:block; height:100%; border-radius:5px}
   .ferm-barra .ferm-faixa{position:absolute; top:0; bottom:0; background:#ffffff12;
     border-left:1px dashed #ffffff33; border-right:1px dashed #ffffff33}
-  .ferm-barra .ferm-lab{position:absolute; left:8px; top:3px; font-size:12px; font-weight:700; color:#fff}
+  .ferm-barra .ferm-lab{position:absolute; left:8px; top:3px; font-size:clamp(14px,1.05vw,18px); font-weight:700; color:#fff}
 
-  .ferm-mini{display:flex; gap:12px; margin-top:6px; font-size:11px; color:var(--txt3); flex-wrap:wrap}
-  .ferm-mini b{color:var(--txt2); font-size:13px; font-weight:700}
+  .ferm-mini{display:flex; gap:12px; margin-top:6px; font-size:clamp(13px,1vw,16px); color:var(--txt3); flex-wrap:wrap}
+  .ferm-mini b{color:var(--txt2); font-size:clamp(15px,1.15vw,19px); font-weight:700}
   .ferm-mini .m-ok{color:var(--ok2)}
 
-  .ferm-rodape{font-size:10px; color:var(--txt3); margin-top:8px; padding-top:6px; border-top:1px solid var(--linha)}
+  .ferm-rodape{font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:8px; padding-top:6px; border-top:1px solid var(--linha)}
 
   .carta{height:96px; margin:4px 0}
   .carta svg{width:100%; height:100%; display:block}
@@ -108,19 +108,19 @@
   /* ---- card Indicadores (opção B): tabela dos últimos lotes ---- */
   .ind-ga{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
   .ind-g{background:var(--cell); border-radius:8px; padding:8px 10px; position:relative}
-  .ind-k{font-size:10px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
-  .ind-atual{font-size:24px; font-weight:700; line-height:1.15}
+  .ind-k{font-size:clamp(12px,0.9vw,15px); color:var(--txt3); text-transform:uppercase; letter-spacing:.4px}
+  .ind-atual{font-size:clamp(28px,2.4vw,40px); font-weight:700; line-height:1.15}
   .ind-svg{position:relative; height:120px; margin-top:8px}
   .ind-svg svg{width:100%; height:100%; display:block; overflow:visible}
-  .ind-m{font-size:10px; color:var(--txt3); margin-top:5px}
+  .ind-m{font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:5px}
   .ind-tip{position:absolute; display:none; background:#0b111a; border:1px solid var(--linha);
-    border-radius:5px; padding:3px 7px; font-size:10px; color:var(--txt2);
+    border-radius:5px; padding:4px 9px; font-size:clamp(12px,0.9vw,15px); color:var(--txt2);
     pointer-events:none; white-space:nowrap; z-index:5}
   .ind-tip b{color:var(--txt)}
 
   /* tabela de lotes (opção B) */
-  .tbl{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px}
-  .tbl th{font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:.4px;
+  .tbl{width:100%; border-collapse:collapse; font-size:clamp(14px,1.1vw,18px); margin-top:6px}
+  .tbl th{font-size:clamp(11px,0.85vw,14px); color:var(--txt3); text-transform:uppercase; letter-spacing:.4px;
     text-align:left; padding:4px 6px; border-bottom:1px solid var(--linha)}
   .tbl td{padding:5px 6px; border-bottom:1px solid var(--linha)}
   .tbl tr:last-child td{border-bottom:none}
@@ -130,16 +130,16 @@
   .tbl .tb-er{color:var(--er2); font-weight:700}
 
   .rec{margin-bottom:10px}
-  .rec-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:4px}
+  .rec-l1{display:flex; justify-content:space-between; align-items:baseline; font-size:clamp(14px,1.1vw,18px); margin-bottom:4px}
   .rec-l1 .nm{color:var(--txt2)}
-  .rec-l1 .vl{font-size:15px; font-weight:700}
+  .rec-l1 .vl{font-size:clamp(17px,1.35vw,22px); font-weight:700}
   .faixa{position:relative; height:20px; background:var(--trilho); border-radius:4px}
   .faixa .zona{position:absolute; top:0; bottom:0; background:#16351f; border-radius:4px}
   .faixa .alvo{position:absolute; top:-3px; bottom:-3px; width:2px; background:#ffffff66}
   .faixa .pt{position:absolute; top:3px; width:9px; height:14px; border-radius:3px; margin-left:-4px}
-  .faixa-esc{display:flex; justify-content:space-between; font-size:9px; color:#5f6d7c; margin-top:3px}
+  .faixa-esc{display:flex; justify-content:space-between; font-size:clamp(11px,0.85vw,14px); color:#5f6d7c; margin-top:3px}
 
-  .leg{display:flex; gap:11px; font-size:10px; color:var(--txt3); margin-top:8px; flex-wrap:wrap}
+  .leg{display:flex; gap:11px; font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:8px; flex-wrap:wrap}
   .leg span{display:flex; align-items:center; gap:4px}
   .pt-l{width:8px;height:8px;border-radius:2px}
 
@@ -148,11 +148,11 @@
   .cart.b{border-left-color:var(--al)} .cart.c{border-left-color:var(--er)}
   .cart a{display:block; text-decoration:none; color:inherit}
   .cart-l1{display:flex; align-items:baseline; gap:9px}
-  .cart-op{font-size:18px; font-weight:700; letter-spacing:-.4px}
-  .cart-nm{font-size:12px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  .cart-op{font-size:clamp(20px,1.6vw,26px); font-weight:700; letter-spacing:-.4px}
+  .cart-nm{font-size:clamp(14px,1.05vw,18px); color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
   .cart-barra{height:5px; background:var(--trilho); border-radius:3px; overflow:hidden; margin-top:8px}
   .cart-barra i{display:block; height:100%; border-radius:3px}
-  .cart-foot{display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--txt3); margin-top:5px}
+  .cart-foot{display:flex; justify-content:space-between; align-items:center; font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:5px}
   .cart-foot b{color:var(--txt2); font-weight:700}
 
   @media (max-width:900px){ .grade{grid-template-columns:1fr} }
