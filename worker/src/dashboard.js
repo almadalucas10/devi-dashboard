@@ -108,6 +108,118 @@ async function buildCalendarFromPlanilha(env, ano, mes) {
 }
 
 // ============================================================================
+// Sincroniza a "Produção por Lote" com a aba mensal do calendário — ADITIVA.
+// Lê os lotes programados na aba mensal (ex.: "Agosto"), separa sigla+sufixo,
+// e ANEXA na "Produção por Lote" apenas as linhas que ainda não existem
+// (casamento por Data + Sigla). Preserva as linhas existentes — e portanto o
+// Nº do Lote (col F) e Qtd. Produzida (col H), que vêm do Omie, ficam intactos.
+// Retorna o mapa { "YYYY-M-D": linhaReal } para o preencherLotesRealizado usar.
+// ============================================================================
+export async function sincronizarProducaoPorLote(env, ano, mes) {
+  const token = await getAccessToken(env);
+  const tabNomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const tab = tabNomes[mes - 1];
+
+  // 1. Quantidade por sufixo (Legenda de Sufixos)
+  const qtdPorSufixo = { "(sem sufixo)": 0 };
+  const sufixos = [];
+  try {
+    const legRows = await getValues(env, token, "'Legenda de Sufixos'!A3:C20");
+    for (let i = 1; i < legRows.length; i++) {
+      const r = legRows[i];
+      const s = String(r[0] || "").trim();
+      const q = parseNum(r[2]);
+      if (!s || q === null) continue;
+      qtdPorSufixo[s] = q;
+      if (s !== "(sem sufixo)") sufixos.push(s);
+    }
+  } catch (e) { console.warn(`⚠️ SincProd legenda: ${e.message}`); }
+  sufixos.sort((a, b) => b.length - a.length);
+
+  // 2. Cadastro de SKUs → produto/família
+  const skus = {};
+  try {
+    const skuRows = await getValues(env, token, "'Cadastro de SKUs'!A4:D200");
+    for (const r of skuRows) {
+      const sig = String(r[2] || "").trim();
+      if (sig) skus[sig] = { produto: String(r[1] || "").trim(), familia: String(r[0] || "").trim() };
+    }
+  } catch (e) { console.warn(`⚠️ SincProd skus: ${e.message}`); }
+
+  // 3. Lê a aba mensal: linhas 5..11 = Seg..Dom; Semana 1 começa na col D (rel. B=0: D=2, sigla=3)
+  const rows = await getValues(env, token, `'${tab}'!B5:M11`);
+
+  // 4. Monta os lotes programados (key = "DD/MM/AAAA|siglaCompleta")
+  const programados = {};
+  for (let d = 0; d < 7; d++) {
+    const row = rows[d] || [];
+    for (let w = 0; w < 6; w++) {
+      const colData = 2 + 2 * w;   // D, F, H, J, L
+      const colSigla = 3 + 2 * w;  // E, G, I, K, M
+      const dataStr = row[colData];
+      const siglaRaw = row[colSigla];
+      if (!dataStr || !String(dataStr).includes("/")) continue;
+      const data = parseDataBr(String(dataStr));
+      if (!data) continue;
+      if (siglaRaw === undefined || siglaRaw === null || String(siglaRaw).trim() === "") continue;
+      const sc = String(siglaRaw).trim();
+      if (/MANUTEN|FERIADO|INVENTÁRIO/i.test(sc)) continue;
+      let siglaBase = sc, sufixo = "(sem sufixo)";
+      for (const s of sufixos) {
+        if (sc.length > s.length && sc.endsWith(s)) { siglaBase = sc.slice(0, -s.length); sufixo = s; break; }
+      }
+      const qtd = (qtdPorSufixo[sufixo] ?? qtdPorSufixo["(sem sufixo)"] ?? 0);
+      const ds = `${String(data.getDate()).padStart(2,"0")}/${String(data.getMonth()+1).padStart(2,"0")}/${data.getFullYear()}`;
+      const sku = skus[siglaBase] || {};
+      programados[`${ds}|${sc}`] = [ds, siglaBase, sufixo, sku.produto || "", sku.familia || "", "", qtd];
+    }
+  }
+  const chaves = Object.keys(programados);
+  if (chaves.length === 0) return { mapa: {} };
+
+  // 5. Lê as linhas já existentes (a partir da linha 5) — para casar por Data+Sigla
+  const existentes = new Map(); // key → linha
+  const loteRows = await getValues(env, token, "'Produção por Lote'!A5:H2000");
+  loteRows.forEach((r, i) => {
+    const ds = String(r[0] || "").trim();
+    const sig = String(r[1] || "").trim();
+    if (ds && sig) existentes.set(`${ds}|${sig}`, 5 + i);
+  });
+
+  // 6. Apenas as que faltam
+  const novaLinhas = [];
+  chaves.forEach(k => { if (!existentes.has(k)) novaLinhas.push(programados[k]); });
+  let primeiraNova = 0;
+  if (novaLinhas.length > 0) {
+    await appendValues(env, token, env.SPREADSHEET_ID, "Produção por Lote", novaLinhas);
+    // Re-lê para saber a linha de cada nova (append no fim)
+    const atual = await getValues(env, token, "'Produção por Lote'!A5:H2000");
+    for (let i = 0; i < atual.length; i++) {
+      const r = atual[i];
+      const ds = String(r[0] || "").trim();
+      const sig = String(r[1] || "").trim();
+      if (ds && sig) existentes.set(`${ds}|${sig}`, 5 + i);
+    }
+    primeiraNova = 5 + loteRows.length;
+    console.log(`✅ SincProd: +${novaLinhas.length} lotes na Produção por Lote (${tab})`);
+  } else {
+    console.log(`✅ SincProd: já sincronizado (${tab})`);
+  }
+
+  // 7. Mapa "YYYY-M-D" → linha (para o preencherLotesRealizado)
+  const mapa = {};
+  for (const [k, linha] of existentes) {
+    const [ds] = k.split("|");
+    const p = ds.split("/");
+    if (p.length === 3) {
+      const chaveM = `${p[2]}-${parseInt(p[1],10)}-${parseInt(p[0],10)}`;
+      mapa[chaveM] = linha;
+    }
+  }
+  return { mapa };
+}
+
+// ============================================================================
 // Preenche Nº do Lote (col F) e Qtd. Produzida (col H) na aba
 // "Produção por Lote", a partir da execução já calculada no calendário.
 // Chama 1x por sync (leve/pesado) — valores idempotentes.
@@ -410,6 +522,16 @@ export async function buildDashboardCache(env) {
     calGrid: null,
   };
 
+  // 0. Sincroniza a "Produção por Lote" com a aba mensal (aditiva, preserva F/H).
+  //    Guarda o mapa dia→linha para o preenchimento do realizado (Omie) abaixo.
+  let mapaLinhasLote = {};
+  try {
+    const sinc = await sincronizarProducaoPorLote(env, ano, mes);
+    if (sinc && sinc.mapa) mapaLinhasLote = sinc.mapa;
+  } catch (e) {
+    console.warn(`⚠️ Sinc Produção por Lote: ${e.message}`);
+  }
+
   // 1. Plano: aba "Produção por Lote" via Sheets API
   try {
     data.calGrid = await buildCalendarFromPlanilha(env, ano, mes);
@@ -464,6 +586,9 @@ export async function buildDashboardCache(env) {
     console.log(`✅ Plano: ${_celdas} células`);
 
     console.log(`✅ Execução: ${resultado._lotesComExec} matches, ${resultado._lotesCount} lotes`);
+
+    // Garante o mapa dia→linha (das linhas sincronizadas no passo 0) para gravar F/H
+    data.calGrid.mapLinhas = { ...(data.calGrid.mapLinhas || {}), ...mapaLinhasLote };
 
     // Preenche Nº do Lote + Qtd. Produzida na aba "Produção por Lote"
     await preencherLotesRealizado(env, data.calGrid, ano, mes);
