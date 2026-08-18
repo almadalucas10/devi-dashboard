@@ -797,20 +797,29 @@ async function abrirArquivo(){
       el.innerHTML = '<div class="sub" style="padding:12px">Nenhuma ficha salva ainda.</div>';
       return;
     }
-    el.innerHTML = fs.map(f => {
-      const st = f.status === 'completa' ? 'completa' : (f.status || 'salva');
-      const stCls = st === 'completa' ? 'st completa' : (st === 'nc' ? 'st nc' : 'st parcial');
-      const link = `/api/qualidade/ficha/${encodeURIComponent(f.op)}/arquivo?nCodOP=${f.n_cod_op || ''}`;
-      return `<div class="arqItem">
-        <div>
-          <div class="l1">OP <span>#${abreviaOp(f.op)}</span>${f.sigla ? ' · ' + f.sigla : ''}</div>
-          <div class="l2">${f.produto || f.sku || ''}${f.data_producao ? ' · Fab: ' + fmtDataBR(f.data_producao) : ''}</div>
-        </div>
-        <div class="r">
-          <span class="st ${stCls}">${st}</span>
-          <a class="btn btnNav" target="_blank" rel="noopener" href="${link}">📄 abrir</a>
-        </div></div>`;
-    }).join('');
+    el.innerHTML = (function(){
+      // separa bases (FX000) dos demais SKUs, como na página principal
+      const base   = fs.filter(f => f.sku === 'FX000');
+      const outros = fs.filter(f => f.sku !== 'FX000');
+      const item = f => {
+        const st = f.status === 'completa' ? 'completa' : (f.status || 'salva');
+        const stCls = st === 'completa' ? 'st completa' : (st === 'nc' ? 'st nc' : 'st parcial');
+        const link = `/api/qualidade/ficha/${encodeURIComponent(f.op)}/arquivo?nCodOP=${f.n_cod_op || ''}`;
+        return `<div class="arqItem">
+          <div>
+            <div class="l1">OP <span>#${abreviaOp(f.op)}</span>${f.sigla ? ' · ' + f.sigla : ''}</div>
+            <div class="l2">${f.produto || f.sku || ''}${f.data_producao ? ' · Fab: ' + fmtDataBR(f.data_producao) : ''}</div>
+          </div>
+          <div class="r">
+            <span class="st ${stCls}">${st}</span>
+            <a class="btn btnNav" target="_blank" rel="noopener" href="${link}">📄 abrir</a>
+          </div></div>`;
+      };
+      const grupos = [];
+      if (outros.length) grupos.push(`<div class="grupo">Produtos acabados (${outros.length})</div>` + outros.map(item).join(''));
+      if (base.length)   grupos.push(`<div class="grupo">Base Kombucha (${base.length})</div>` + base.map(item).join(''));
+      return grupos.join('');
+    })();
   }catch(e){
     el.innerHTML = `<div class="sub" style="padding:12px;color:var(--er2)">Erro ao carregar o arquivo: ${e.message}</div>`;
   }
