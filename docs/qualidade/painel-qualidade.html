@@ -62,6 +62,26 @@
   .it-v{font-size:15px; font-weight:700; white-space:nowrap}
   .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
 
+  /* ---- Vida de prateleira: cards de lote reserva (3M/6M/8M) ---- */
+  .grid-vida{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:8px}
+  .lote-card{background:var(--cell); border-left:4px solid var(--ok); border-radius:8px; padding:9px 11px}
+  .lote-card.atencao{border-left-color:var(--al)}
+  .lote-card.urgente{border-left-color:var(--er)}
+  .lc-top{display:flex; align-items:center; gap:8px}
+  .lc-op{font-weight:700; font-size:13px}
+  .lc-sku{font-size:10px; color:var(--txt3)}
+  .lc-val{margin-left:auto; font-size:12px; font-weight:700; white-space:nowrap}
+  .lc-prod{font-size:11px; color:var(--txt2); margin:2px 0 7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .marcos{display:flex; flex-direction:column; gap:4px}
+  .vm{display:flex; align-items:center; gap:7px; font-size:11px}
+  .vm-m{width:22px; flex-shrink:0; color:var(--txt3); font-weight:600}
+  .vm-bar{flex:1; height:6px; border-radius:3px; background:var(--trilho); overflow:hidden}
+  .vm-bar i{display:block; height:100%; min-width:2px}
+  .vm-lbl{min-width:44px; text-align:right; font-size:10px; color:var(--txt3); white-space:nowrap}
+  .vm.al .vm-lbl{color:var(--al2); font-weight:700}
+  .vm.ok .vm-lbl{color:var(--ok2)}
+  .lc-foot{font-size:9px; color:var(--txt3); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
   /* ---- card Fermentação ativa: destaque extra ---- */
   .ferm-item{background:var(--cell); border-left:3px solid var(--ok); border-radius:7px; padding:9px 11px; margin-bottom:7px; position:relative}
   .ferm-item.al{border-left-color:var(--al)} .ferm-item.er{border-left-color:var(--er)}
@@ -420,17 +440,51 @@ function renderOcorrencias(){
 
 function renderVida(){
   const V = DADOS.analisesVencidas;
-  el('vidaSub').textContent = `${V.total} vencidas`;
+  const vencidas = V.lista.filter(x => x.cor === 'e').length;
+  const pendentes = V.lista.filter(x =>
+    x.reserva && Object.values(x.reserva).some(m => m.st === 'alarme')
+  ).length;
+  el('vidaSub').textContent = `${V.lista.length} fichas · ${vencidas} vencidas · ${pendentes} p/ teste`;
   if(!V.lista.length){
-    el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma análise vencida.</div>';
+    el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha fechada ainda.</div>';
     return;
   }
-  const cor = { e: 'var(--er2)', a: 'var(--al2)', ok: 'var(--ok2)' };
-  el('vida').innerHTML = V.lista.map(x => `
-    <div class="it ${x.cor === 'ok' ? '' : x.cor}">
-      <div class="it-l1"><span class="it-nm">${esc(x.op)} · ${esc(x.produto)}</span><span style="font-size:10px;color:var(--txt3)">(${esc(x.sku)})</span>
-        <span class="it-v" style="font-size:13px;color:${cor[x.cor]}">${esc(x.dias)}</span></div>
-      <div class="it-l2">${esc(x.txt)}</div></div>`).join('');
+  // Ideia 3 — cards compactos por lote, com os 3 marcos de teste reserva (3M/6M/8M)
+  const pctMarco = (fab, meses) => {
+    // % da idade do lote até o marco (para a mini-barra)
+    const ini = new Date(String(fab).slice(0,10)+'T12:00:00Z');
+    const alvo = new Date(ini); alvo.setUTCMonth(alvo.getUTCMonth()+meses);
+    const agora = new Date();
+    const total = (alvo - ini)/864e5;
+    if (total <= 0) return 100;
+    const decorrido = (agora - ini)/864e5;
+    return Math.min(100, Math.max(0, Math.round(decorrido/total*100)));
+  };
+  // borda do card: segue o teste de reserva mais urgente (alarme>ok; vencida marca er)
+  const cardPrioridade = x => {
+    if (x.cor === 'e') return 'urgente';
+    if (x.reserva && Object.values(x.reserva).some(m => m.st === 'alarme')) return 'atencao';
+    return '';
+  };
+  el('vida').innerHTML = `<div class="grid-vida">` + V.lista.map(x => {
+    const marcos = [3,6,8].map(m => {
+      const r = (x.reserva && x.reserva[m]) || { st:'ok', dias:'—' };
+      const cls = r.st === 'feito' ? 'ok' : (r.st === 'alarme' ? 'al' : '');
+      const pct = (x.fab) ? pctMarco(x.fab, m) : (r.st === 'feito' ? 100 : 5);
+      return `<div class="vm ${cls}">
+        <span class="vm-m">${m}M</span>
+        <div class="vm-bar"><i style="width:${pct}%;background:${r.st==='alarme'?'var(--al)':r.st==='feito'?'var(--ok)':'var(--trilho)'}"></i></div>
+        <span class="vm-lbl">${r.st==='alarme'?'≤'+esc(r.dias):r.st==='feito'?'feito':esc(r.dias)}</span></div>`;
+    }).join('');
+    // urgencia da validade total (8m) — linha de contexto
+    const totCls = { e:'var(--er2)', a:'var(--al2)', ok:'var(--ok2)' }[x.cor];
+    return `<div class="lote-card ${cardPrioridade(x)}">
+      <div class="lc-top"><span class="lc-op">${esc(x.op)}</span><span class="lc-sku">${esc(x.sku)}</span>
+        <span class="lc-val" style="color:${totCls}">${esc(x.dias)}</span></div>
+      <div class="lc-prod">${esc(x.produto)}</div>
+      <div class="marcos">${marcos}</div>
+      <div class="lc-foot">${esc(x.txt)}</div></div>`;
+  }).join('') + `</div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -579,12 +633,16 @@ async function carregar(){
   const agora = new Date();
   const mes = agora.toISOString().slice(0, 7);
   try {
-    const [rm, rf] = await Promise.all([
+    const [rm, rf, ra] = await Promise.all([
       fetch(WORKER_URL + '/api/qualidade/mes/' + mes, { cache: 'no-store' }),
       fetch(WORKER_URL + '/api/qualidade/fichas', { cache: 'no-store' }),
+      fetch(WORKER_URL + '/api/qualidade/arquivo?limite=500', { cache: 'no-store' }),
     ]);
     const fichas = (await rm.json()).fichas || [];
     const opsAbertas = (await rf.json()).fichas || [];
+    // todas as fichas FECHADAS (histórico, de qualquer mês) — fonte da vida de prateleira
+    const fichasArquivadas = (await ra.json()).fichas || [];
+    const fichasCompletas = fichasArquivadas.filter(f => f.status === 'completa');
 
     // indicador de coleta
     const indiceColeta = coletaDe(fichas);
@@ -620,15 +678,44 @@ async function carregar(){
       }
     }
 
-    // análises vencidas (validade = fabricação + 8 meses)
+    // vida de prateleira — TODAS as OPs fechadas (de qualquer mês), com dias restantes
+    // e destaque de cor por proximidade: vermelho = vencida · âmbar = ≤30 dias · normal = ok
     const hoje = new Date(); hoje.setHours(0,0,0,0);
-    const vencidas = [];
-    for (const f of fichas) {
+    // Marco de teste de lote reserva: define o estado de cada teste (3M/6M/8M)
+    // st: 'feito' (já passou de 30d sem alerta) · 'vencido' (a data do teste já passou)
+    //     'alarme' (faltam ≤30d) · 'ok' (ainda distante) · '—' (sem data p/ calibrar)
+    const MARCO_RESERVA = [3,6,8];
+    const estadoMarco = (fab, meses) => {
+      const m = somaMeses(fab, meses);
+      const d = Math.round((m - hoje) / 864e5);
+      if (d < 0) return { st: 'feito', dias: `${-d}d atrás` };      // data do teste passou (>30d): assume feito
+      if (d <= 30) return { st: 'alarme', dias: `${d} dias` };       // faltam ≤30d
+      return { st: 'ok', dias: `${d}d` };                            // distante
+    };
+    const vencidas = fichasCompletas.map(f => {
       const val = somaMeses(f.data_producao, 8);
       const dias = Math.round((val - hoje) / 864e5);
-      if (dias < 0) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${-dias} dias`, txt: `vencida há ${-dias} dias · lote de ${fmtDataBR(f.data_producao)}`, cor: 'e' });
-      else if (dias <= 30) vencidas.push({ op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '', dias: `${dias} dias`, txt: `vence em ${fmtDataBR(val.toISOString().slice(0,10))}`, cor: 'a' });
-    }
+      let cor, diasTxt, txt;
+      if (dias < 0) {
+        cor = 'e'; diasTxt = `${-dias} dias vencida`;
+        txt = `vencida há ${-dias} dias · validade ${fmtDataBR(val.toISOString().slice(0,10))}`;
+      } else if (dias <= 30) {
+        cor = 'a'; diasTxt = `${dias} dias`;
+        txt = `vence em ${fmtDataBR(val.toISOString().slice(0,10))} · fabricado ${fmtDataBR(f.data_producao)}`;
+      } else {
+        cor = 'ok'; diasTxt = `${dias} dias`;
+        txt = `validade ${fmtDataBR(val.toISOString().slice(0,10))} · fabricado ${fmtDataBR(f.data_producao)}`;
+      }
+      // marcos de teste de lote reserva (3M/6M/8M) a partir da data de fabricação
+      const reserva = {};
+      if (f.data_producao) {
+        MARCO_RESERVA.forEach(m => {
+          reserva[m] = estadoMarco(f.data_producao, m);
+        });
+      }
+      return { op: '#' + abreviaOp(f.op), sku: f.sku || '—', produto: f.produto || f.sku || '',
+               dias: diasTxt, txt, cor, fab: f.data_producao, reserva };
+    }).sort((a, b) => parseInt(a.dias) - parseInt(b.dias)); // vencidas/urgentes primeiro
 
     // fermentação: bases (FX000) abertas, com a última leitura (pH/brix/ABV) da ficha salva
     const bases = (opsAbertas || []).filter(o => o.sku === 'FX000' && o.data);
