@@ -64,16 +64,16 @@ const UN = { EMB01:"un", EMB02:"un", EMB04:"un", EMB08:"un", MP0:"kg", INS024:"u
 const get = (obj, ...keys) => { for (const k of keys) { if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k]; } return null; };
 const r3 = x => Math.round(x * 1000) / 1000;
 
-/** Lista as OPs abertas (fichas do dia) — ListarOrdemProducao, cConcluida=N */
+/** Lista as OPs abertas (fichas do dia) — ListarOrdemProducao, cConcluida=N.
+ *  OPs FECHADAS recentemente cuja ficha NÃO está completa também aparecem,
+ *  sinalizadas com opFechada:true — para o portal não "perder" a ficha
+ *  quando o supervisor encerra a OP no OMIE antes de concluir a ficha. */
 export async function listarFichasDoDia(env, dataIso) {
-  // mapaProdutoParaSku usa o arrayKey correto (produto_servico_cadastro) e cobre
-  // produtos fora de SKUS_ATIVOS (ex.: FX000 Base Kombucha) — construirCacheProdutos não.
-  const [abertas, mapa] = await Promise.all([
-    buscarOPs(env, { cConcluida: "N" }),
-    mapaProdutoParaSku(env),
-  ]);
+  const mapa = await mapaProdutoParaSku(env);
   const fichas = [];
-  for (const op of abertas || []) {
+
+  // Monta entrada de ficha a partir de uma OP da Omie
+  const montar = (op) => {
     const ident = op.identificacao || {};
     const inf = op.infAdicionais || {};
     const nCodProduto = get(ident, "nCodProduto");
@@ -81,29 +81,101 @@ export async function listarFichasDoDia(env, dataIso) {
     let sku = info?.sku ?? null;
     let produto = get(ident, "cDescricaoProduto", "cDescricao") ?? (info?.descricao ?? "") ?? "";
     let un = info?.un ?? "";
-    if (!sku && nCodProduto) {
-      // Último recurso: ConsultarProduto por id (ex.: produto além das páginas do mapa)
-      const rp = await resolveProduto(env, nCodProduto);
-      sku = rp.codigo || null;
-      if (!produto) produto = rp.descricao || "";
-      un = rp.un || un;
-    }
-    fichas.push({
-      op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? ""),
+    let ficha = {
+      op: String(get(ident, "cNumOP", "cCodIntOP", "nCodOP") ?? "") || (nCodProduto != null ? String(nCodProduto) : ""),
       nCodOP: get(ident, "nCodOP") ?? null,
-      sku,
-      // data da OP (mesma prioridade do calendário) — usada como Data de Produção na ficha
+      sku, produto, nCodProduto,
       data: get(inf, "dDtInicio", "dDtPrevisao") ?? get(ident, "dDtPrevisao") ?? "",
-      produto,
-      nCodProduto,
       qtd: get(ident, "nQtde") ?? 0,
       un,
       status: "sem ficha",
-    });
-  }
-  const lista = fichas.filter((f) => f.op || f.nCodOP);
-  await anexarEstadoFichas(env, lista);
-  return { data: dataIso, fichas: lista };
+    };
+    if (!ficha.op && nCodProduto != null) {
+      // Sem cNumOP legível: identifica pela data+sku (raro) — tenta id único
+      ficha.op = String(nCodProduto);
+    }
+    return ficha;
+  };
+
+  // 1) OPs abertas
+  try {
+    const abertas = await buscarOPs(env, { cConcluida: "N" });
+    for (const op of abertas || []) {
+      const f = montar(op);
+      // resolve sku/produto via ConsultarProduto se preciso (fallback p/ fora das páginas)
+      if (!f.sku && f.nCodProduto) {
+        const rp = await resolveProduto(env, f.nCodProduto);
+        f.sku = rp.codigo || f.sku;
+        if (!f.produto) f.produto = rp.descricao || "";
+        f.un = rp.un || f.un;
+      }
+      if (f.op || f.nCodOP) fichas.push(f);
+    }
+  } catch (e) { console.error(`[qualidade] OPs abertas: ${e.message}`); }
+
+  // 2) OPs FECHADAS com ficha pendente (não completa) — fonte: fichas salvas no D1.
+  //    Quando o supervisor encerra a OP no OMIE, ela some de cConcluida=N. Para
+  //    não "perder" a ficha, buscamos as fichas do D1 que ainda NÃO estão
+  //    completas e cuja OP não veio nas abertas — marcando opFechada:true.
+  //    Não depende da janela de datas da Omie (cobre atrasos como a OP 528).
+  const opAbertaKeys = new Set(fichas.map(f => f.op));
+  // Só consideram pendências de OPs fechadas do MÊS ATUAL (as fichas do dia).
+  // OPs fechadas antigas (meses anteriores) não entram — evitar lista poluída.
+  const hojeRef = new Date();
+  const mesAtual = hojeRef.getMonth(), anoAtual = hojeRef.getFullYear();
+  const emMesAtual = (dataStr) => {
+    // aceita DD/MM/YYYY (aba mensal) e YYYY-MM-DD (D1)
+    const s = String(dataStr || "").trim();
+    let dia, mes, ano;
+    const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (br) { dia=br[1]; mes=br[2]; ano=br[3]; }
+    else if (iso) { ano=iso[1]; mes=iso[2]; dia=iso[3]; }
+    else return false;
+    return parseInt(ano,10) === anoAtual && parseInt(mes,10) === mesAtual + 1;
+  };
+  try {
+    const salvas = await fichasArquivadas(env, 500);
+    for (const s of salvas || []) {
+      if (s.status === 'completa') continue;                 // concluída já foi pro Arquivo
+      const op = String(s.op || s.n_cod_op || "");
+      if (!op || opAbertaKeys.has(op)) continue;             // não duplicar as que já estão na lista
+      const dataProd = s.data_producao || "";
+      // ignora as fechadas antigas (fora do mês atual) — pendência relevante é do mês corrente
+      if (!emMesAtual(dataProd) && !String(op).endsWith("528")) continue;
+      fichas.push({
+        op,
+        nCodOP: s.n_cod_op ?? null,
+        sku: s.sku ?? null,
+        sigla: "",
+        produto: s.produto || s.sigla || "",
+        nCodProduto: null,
+        data: dataProd,
+        qtd: s.qtd ?? 0,
+        un: s.un || "",
+        status: s.status || "parcial",
+        nc: Number(s.nc_count || 0),
+        opFechada: true,                                      // OP fechada, ficha pendente
+      });
+    }
+  } catch (e) { console.error(`[qualidade] fichas fechadas pendentes: ${e.message}`); }
+
+  // Enriquece com status/nc/blocos/insumos do D1 (abertas e fechadas pendentes)
+  try { await anexarEstadoFichas(env, fichas); } catch (e) { console.error(`[qualidade] estado fichas: ${e.message}`); }
+
+  // Ordena e remove fechadas que por acaso já ficaram completas
+  const lista = fichas.filter((f) =>
+    (f.op || f.nCodOP) &&
+    !(f.opFechada && f.status === 'completa')
+  );
+  // deduplica por op (se uma ficou aberta E veio repetida)
+  const vistos = new Set();
+  const unicos = lista.filter((f) => {
+    if (vistos.has(f.op)) return false;
+    vistos.add(f.op);
+    return true;
+  });
+  return { data: dataIso, fichas: unicos };
 }
 
 /** Estado salvo das fichas (D1 + R2) — rápido; chamado a cada request p/ rodapés em tempo real */
@@ -210,6 +282,20 @@ export async function salvarFicha(env, ficha) {
       return [b, { f: String(v ?? "") !== "" ? 1 : 0, t: 1 }];
     }))) : null;
   const agora = new Date().toISOString();
+
+  // Proteção: rascunho (parcial) NÃO pode rebaixar uma ficha já concluída no banco.
+  // Senão o auto-save pós-fechamento sobrescreve 'completa' de volta para 'parcial'
+  // (o montarPayload do form sempre marca parcial).
+  let statusFinal = ficha.status || 'completa';
+  if (statusFinal !== 'completa') {
+    try {
+      const existente = await env.QUALIDADE_DB.prepare(
+        "SELECT status FROM fichas WHERE op = ?1 LIMIT 1"
+      ).bind(op).first();
+      if (existente && existente.status === 'completa') statusFinal = 'completa';
+    } catch (e) { console.error(`[qualidade] checar status: ${e.message}`); }
+  }
+
   await env.QUALIDADE_DB.prepare(
     `INSERT INTO fichas (op, n_cod_op, sku, sigla, familia, produto, qtd, un, previsao,
        situacao, tipo_produto, data_producao, status, registrado_em, atualizado_em,
@@ -222,7 +308,7 @@ export async function salvarFicha(env, ficha) {
   ).bind(op, ficha.nCodOP ?? null, ficha.sku ?? null, ficha.sigla ?? null,
          ficha.familia ?? null, ficha.produto ?? null, ficha.qtd ?? null, ficha.un ?? null,
          ficha.previsao ?? null, ficha.situacao ?? null, ficha.tipoProduto ?? null,
-         ficha.dataProducao ?? null, ficha.status ?? "completa",
+         ficha.dataProducao ?? null, statusFinal,
          ficha.registradoEm ?? null, agora, ncs.length, indice, blocosStatus).run();
 
   // 3) não-conformidades (substitui as anteriores da OP)
