@@ -453,7 +453,10 @@ function renderLotes(){
   el('lotes').innerHTML = L.lista.map(x => {
     const fam = famDeSku(x.sku);
     const blocos = BLOCO_FAM[fam] || BLOCO_FAM.kombucha;
-    const etapas = blocos.map(b => blocoFeito(x.blocos_status, x.indice, b));
+    // ficha concluída (ok/nc) → todos os blocos da trilha ficam verdes (etapas completas),
+    // mesmo que o blocos_status não tenha cada bloco marcado individualmente.
+    const completa = x.status === 'ok' || x.status === 'nc';
+    const etapas = blocos.map(b => completa ? true : blocoFeito(x.blocos_status, x.indice, b));
     const feitos = etapas.filter(Boolean).length;
     // contador do lote
     let cont, contCls = '';
