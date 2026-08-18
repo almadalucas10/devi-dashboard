@@ -62,25 +62,20 @@
   .it-v{font-size:15px; font-weight:700; white-space:nowrap}
   .it-l2{font-size:10px; color:var(--txt3); margin-top:2px}
 
-  /* ---- Vida de prateleira: cards de lote reserva (3M/6M/8M) ---- */
-  .grid-vida{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:8px}
-  .lote-card{background:var(--cell); border-left:4px solid var(--ok); border-radius:8px; padding:9px 11px}
-  .lote-card.atencao{border-left-color:var(--al)}
-  .lote-card.urgente{border-left-color:var(--er)}
-  .lc-top{display:flex; align-items:center; gap:8px}
-  .lc-op{font-weight:700; font-size:13px}
-  .lc-sku{font-size:10px; color:var(--txt3)}
-  .lc-val{margin-left:auto; font-size:12px; font-weight:700; white-space:nowrap}
-  .lc-prod{font-size:11px; color:var(--txt2); margin:2px 0 7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .marcos{display:flex; flex-direction:column; gap:4px}
-  .vm{display:flex; align-items:center; gap:7px; font-size:11px}
-  .vm-m{width:22px; flex-shrink:0; color:var(--txt3); font-weight:600}
-  .vm-bar{flex:1; height:6px; border-radius:3px; background:var(--trilho); overflow:hidden}
-  .vm-bar i{display:block; height:100%; min-width:2px}
-  .vm-lbl{min-width:44px; text-align:right; font-size:10px; color:var(--txt3); white-space:nowrap}
-  .vm.al .vm-lbl{color:var(--al2); font-weight:700}
-  .vm.ok .vm-lbl{color:var(--ok2)}
-  .lc-foot{font-size:9px; color:var(--txt3); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* ---- Vida de prateleira: tabela de marcos de lote reserva (3M/6M/8M) ---- */
+  .tbl-vida{width:100%; border-collapse:collapse; font-size:11px}
+  .tbl-vida th{text-align:left; color:var(--txt3); font-weight:600; font-size:10px; padding:3px 7px; border-bottom:1px solid var(--trilho); white-space:nowrap}
+  .tbl-vida td{padding:5px 7px; border-bottom:1px solid #1a2430; white-space:nowrap; vertical-align:middle}
+  .tbl-vida tr.er td:first-child{border-left:3px solid var(--er)}
+  .tbl-vida tr.al td:first-child{border-left:3px solid var(--al)}
+  .tbl-vida .op{font-weight:700; color:var(--txt2)}
+  .tbl-vida .sku,.tbl-vida .fab{color:var(--txt3); font-size:10px}
+  .tbl-vida .chip{display:inline-block; padding:1px 7px; border-radius:8px; font-size:10px; font-weight:700; background:var(--trilho); color:var(--txt3)}
+  .tbl-vida .chip.f{background:rgba(34,197,94,.18); color:var(--ok2)}
+  .tbl-vida .chip.a{background:rgba(234,179,8,.18); color:var(--al2)}
+  .tbl-vida .chip.e{background:rgba(239,68,68,.18); color:var(--er2)}
+  .tbl-vida .val{font-weight:700}
+  .tbl-vida .val.e{color:var(--er2)} .tbl-vida .val.a{color:var(--al2)} .tbl-vida .val.ok{color:var(--ok2)}
 
   /* ---- card Fermentação ativa: destaque extra ---- */
   .ferm-item{background:var(--cell); border-left:3px solid var(--ok); border-radius:7px; padding:9px 11px; margin-bottom:7px; position:relative}
@@ -449,42 +444,31 @@ function renderVida(){
     el('vida').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha fechada ainda.</div>';
     return;
   }
-  // Ideia 3 — cards compactos por lote, com os 3 marcos de teste reserva (3M/6M/8M)
-  const pctMarco = (fab, meses) => {
-    // % da idade do lote até o marco (para a mini-barra)
-    const ini = new Date(String(fab).slice(0,10)+'T12:00:00Z');
-    const alvo = new Date(ini); alvo.setUTCMonth(alvo.getUTCMonth()+meses);
-    const agora = new Date();
-    const total = (alvo - ini)/864e5;
-    if (total <= 0) return 100;
-    const decorrido = (agora - ini)/864e5;
-    return Math.min(100, Math.max(0, Math.round(decorrido/total*100)));
+  // Ideia B — tabela de marcos: uma linha por lote, colunas por teste de reserva (3M/6M/8M)
+  const chipMarco = (x, m) => {
+    const r = (x.reserva && x.reserva[m]) || { st:'ok', dias:'—' };
+    const st = r.st;
+    const lbl = st === 'feito' ? 'feito'
+      : st === 'alarme' ? '≤' + esc(r.dias) + 'd'
+      : esc(r.dias);
+    const cls = st === 'feito' ? 'f' : (st === 'alarme' ? 'a' : '');
+    return `<span class="chip ${cls}">${lbl}</span>`;
   };
-  // borda do card: segue o teste de reserva mais urgente (alarme>ok; vencida marca er)
-  const cardPrioridade = x => {
-    if (x.cor === 'e') return 'urgente';
-    if (x.reserva && Object.values(x.reserva).some(m => m.st === 'alarme')) return 'atencao';
-    return '';
-  };
-  el('vida').innerHTML = `<div class="grid-vida">` + V.lista.map(x => {
-    const marcos = [3,6,8].map(m => {
-      const r = (x.reserva && x.reserva[m]) || { st:'ok', dias:'—' };
-      const cls = r.st === 'feito' ? 'ok' : (r.st === 'alarme' ? 'al' : '');
-      const pct = (x.fab) ? pctMarco(x.fab, m) : (r.st === 'feito' ? 100 : 5);
-      return `<div class="vm ${cls}">
-        <span class="vm-m">${m}M</span>
-        <div class="vm-bar"><i style="width:${pct}%;background:${r.st==='alarme'?'var(--al)':r.st==='feito'?'var(--ok)':'var(--trilho)'}"></i></div>
-        <span class="vm-lbl">${r.st==='alarme'?'≤'+esc(r.dias):r.st==='feito'?'feito':esc(r.dias)}</span></div>`;
-    }).join('');
-    // urgencia da validade total (8m) — linha de contexto
-    const totCls = { e:'var(--er2)', a:'var(--al2)', ok:'var(--ok2)' }[x.cor];
-    return `<div class="lote-card ${cardPrioridade(x)}">
-      <div class="lc-top"><span class="lc-op">${esc(x.op)}</span><span class="lc-sku">${esc(x.sku)}</span>
-        <span class="lc-val" style="color:${totCls}">${esc(x.dias)}</span></div>
-      <div class="lc-prod">${esc(x.produto)}</div>
-      <div class="marcos">${marcos}</div>
-      <div class="lc-foot">${esc(x.txt)}</div></div>`;
-  }).join('') + `</div>`;
+  const linCls = x => x.cor === 'e' ? 'er'
+    : (x.reserva && Object.values(x.reserva).some(m => m.st === 'alarme') ? 'al' : '');
+  const valCls = x => ({ e:'e', a:'a', ok:'ok' }[x.cor] || '');
+  el('vida').innerHTML = `<table class="tbl-vida"><thead><tr>
+      <th>OP</th><th>SKU</th><th>Fab.</th><th>3M</th><th>6M</th><th>8M</th><th>Validade</th>
+    </tr></thead><tbody>` + V.lista.map(x => `
+    <tr class="${linCls(x)}">
+      <td class="op">${esc(x.op)}</td>
+      <td class="sku">${esc(x.sku)}</td>
+      <td class="fab">${esc(x.fab || '—')}</td>
+      <td>${chipMarco(x, 3)}</td>
+      <td>${chipMarco(x, 6)}</td>
+      <td>${chipMarco(x, 8)}</td>
+      <td class="val ${valCls(x)}">${esc(x.dias)}</td>
+    </tr>`).join('') + `</tbody></table>`;
 }
 
 // ---------------------------------------------------------------------------
