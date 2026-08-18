@@ -151,8 +151,10 @@
   .cart-l1{display:flex; align-items:baseline; gap:9px}
   .cart-op{font-size:clamp(20px,1.6vw,26px); font-weight:700; letter-spacing:-.4px}
   .cart-nm{font-size:clamp(14px,1.05vw,18px); color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
-  .cart-barra{height:5px; background:var(--trilho); border-radius:3px; overflow:hidden; margin-top:8px}
-  .cart-barra i{display:block; height:100%; border-radius:3px}
+  .cart-bbadges{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px}
+  .cart-bbadges .bq{font-size:clamp(10px,0.78vw,12px); padding:2px 8px; border-radius:20px; background:var(--trilho); color:var(--txt3); white-space:nowrap}
+  .cart-bbadges .bq.on{background:#12241a; color:var(--ok2)}
+  .cart-bbadges .bq.parc{background:#2a2412; color:var(--al2)}
   .cart-foot{display:flex; justify-content:space-between; align-items:center; font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:5px}
   .cart-foot b{color:var(--txt2); font-weight:700}
 
@@ -406,13 +408,41 @@ function renderLotes(){
   };
   // largura da barra por estado: conforme/NC cheia; incompleta ~metade (ânbar)
   const BARRA = { ok:['ok','100%'], nc:['er','100%'], sd:['al','50%'] };
+  // blocos por família — mesmos do portal de fichas (para os badges de andamento)
+  const BLOCO_FAM = {
+    base: ['starter','fermentacao','filtracao','produtoAcabado','observacoes'],
+    kombucha: ['carbonatacao','preenvase','recravacao','estoque'],
+    refri: ['carbonatacao','preenvase','recravacao','estoque'],
+    cha: ['carbonatacao','preenvase','recravacao','estoque'],
+    barril: ['preenvase','estoque'],
+  };
+  const BLOCO_NOME = { starter:'Starter', fermentacao:'Fermentação', filtracao:'Filtração',
+    produtoAcabado:'P. Acabado', observacoes:'Obs', carbonatacao:'Carbonatação',
+    preenvase:'Pré-envase', recravacao:'Recravação', estoque:'Estoque' };
+  const famDeSku = s => { const p = MAPA_SKU[s]; return (p && p.fam) || (s === 'FX000' ? 'base' : (s || '').startsWith('RTM') ? 'refri' : 'kombucha'); };
+  const badgeBloco = (bs, ind, fam, bloco) => {
+    let cls = '';
+    const v = bs ? bs[bloco.toLowerCase()] || bs[bloco] : undefined;
+    if (v && typeof v === 'object') {
+      const f = v.f || 0, t = v.t || 0;
+      if (t > 0 && f >= t) cls = 'on';
+      else if (f > 0) cls = 'parc';
+    } else if (v === 'ok' || (typeof v === 'number' && v > 0) || (typeof v === 'string' && v !== '')) {
+      cls = 'on';
+    } else if (ind && ind[bloco]) {
+      cls = 'on';
+    }
+    return `<span class="bq ${cls}">${BLOCO_NOME[bloco] || bloco}</span>`;
+  };
   el('lotes').innerHTML = L.lista.map(x => {
     const [cls, label] = status[x.status] || status.ok;
-    const [bcor, blarg] = BARRA[x.status] || BARRA.ok;
+    const fam = famDeSku(x.sku);
+    const blocos = BLOCO_FAM[fam] || BLOCO_FAM.kombucha;
+    const chips = blocos.map(b => badgeBloco(x.blocos_status, x.indice, fam, b)).join('');
     return `<div class="cart ${cls}">
       <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}">
-        <div class="cart-l1"><span class="cart-op">${esc(x.op)}</span><span class="cart-nm">${esc(x.produto)}</span></div>
-        <div class="cart-barra"><i style="width:${blarg};background:var(--${bcor})"></i></div>
+        <div class="cart-l1"><span class="cart-op">${esc(x.op)}</span><span class="cart-nm">${esc(x.produto)}</span>
+          <span class="cart-bbadges">${chips}</span></div>
         <div class="cart-foot"><span>${esc(x.txt)}</span><b>${esc(label)}</b></div>
       </a></div>`;
   }).join('');
@@ -658,7 +688,7 @@ async function carregar(){
       if (f.ncs && f.ncs.length) txt += ' · ' + f.ncs[0].campo + ' ' + f.ncs[0].valor + ' fora de spec';
       else if (status === 'ok') txt += ' · conforme';
       else txt += ' · análise incompleta';
-      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', produto: f.produto || f.sku || '', status, txt, date: f.data_producao || '' };
+      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', produto: f.produto || f.sku || '', status, txt, date: f.data_producao || '', blocos_status: parseJson(f.blocos_status) || null, indice: parseJson(f.indice) || null };
     });
     // organiza por data de fabricação (mais recente primeiro; empates pela OP)
     lista.sort((a, b) => (b.date || '').localeCompare(a.date || '') || abreviaOp(a.hrefOp).localeCompare(abreviaOp(b.hrefOp)));
