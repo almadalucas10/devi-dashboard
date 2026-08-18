@@ -516,13 +516,18 @@ function renderFerm(){
     const opShort = t.op ? '#' + abreviaOp(t.op) : '#' + abreviaOp(t.hrefOp || '');
     const sub = [opShort, t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
     const dias = t.diasNum != null ? t.diasNum : null;
-    // Barra é exclusivamente de dias (spec §4) — mas destaca em VERDE quando o
-    // tanque atingiu o ponto de colheita (no_ponto, POP 17), mantendo a largura
-    // proporcional aos dias.
+    // Barra é exclusivamente de dias (spec §4). Cor:
+    //  - dias acima da faixa (> FAIXA_DAYS.max) → VERMELHO (fermentação estourou o prazo),
+    //    independente do estado de medição — nunca passa despercebido;
+    //  - dentro da faixa e no ponto → verde; senão segue corBarraFerm.
     const pct = dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100);
     const fLeft  = (FAIXA_DAYS.min / ESCALA_MAX_DIAS) * 100;
     const fWidth = ((FAIXA_DAYS.max - FAIXA_DAYS.min) / ESCALA_MAX_DIAS) * 100;
-    const cor = (est === 'no_ponto') ? 'var(--ok)' : corBarraFerm(dias == null ? 0 : dias);
+    const dNum = (dias == null ? 0 : dias);
+    const estourou = (dNum > FAIXA_DAYS.max);
+    const cor = estourou ? 'var(--er)'
+      : (est === 'no_ponto') ? 'var(--ok)'
+      : corBarraFerm(dNum);
     // linha de medições (só quando há alguma)
     const u = t.ultima;
     const hasMed = u && (u.pH != null || u.brix != null || u.abv != null);
