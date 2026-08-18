@@ -755,12 +755,16 @@ function renderLista(){
     // badge de status: "parcial" não aparece mais embaixo da quantidade (ruído;
     // o andamento real fica nos chips de blocos do rodapé do card)
     const badge = cls === 'parcial' ? '' : `<span class="st ${cls}">${label}</span>`;
+    // OP fechada no OMIE mas ficha ainda NÃO concluída → destaque de pendência
+    const pend = o.opFechada
+      ? `<span class="st pendencia" style="background:#7a2e12;color:#ffd2a6">⏳ OP fechada — concluir ficha</span>`
+      : '';
     return `<div class="opc${o.nc ? ' nc-flag' : ''}" onclick="abrirOp('${o.op}')">
       <div><div class="l1">OP <span>#${esc(o.op)}</span> · ${esc(o.sigla)}</div>
         <div class="l2">${esc(p.nome || o.sku)}</div>
         ${info}${blocosTxt}</div>
       <div class="r"><div class="q">${o.qtd.toLocaleString('pt-BR')} ${o.un || 'un'}${sufixoL(o.qtd, o.un)}</div>
-        ${badge}</div></div>`;
+        ${pend}${badge}</div></div>`;
   };
   // separa as bases (FX000) dos demais SKUs
   const base   = OPS.filter(o => o.sku === 'FX000');
@@ -1122,13 +1126,18 @@ window.fetch = (u, o) => {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 function preencherOPS(fichas){
   OPS.length = 0;
-  fichas.forEach(f => OPS.push({
-    op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
-    nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
-    data: f.data || '', status: f.status || '', nc: f.nc || 0,
-    blocos_status: f.blocos_status || null,
-    insumos_conferidos: f.insumos_conferidos || 0, insumos_total: f.insumos_total || 0
-  }));
+  fichas.forEach(f => {
+    // ficha já COMPLETA sai da lista "Fichas do dia" — fica só no Arquivo de fichas (badge concluída)
+    if (f.status === 'completa') return;
+    OPS.push({
+      op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
+      nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
+      data: f.data || '', status: f.status || '', nc: f.nc || 0,
+      opFechada: f.opFechada || false,
+      blocos_status: f.blocos_status || null,
+      insumos_conferidos: f.insumos_conferidos || 0, insumos_total: f.insumos_total || 0
+    });
+  });
   OPS.sort((a, b) => String(a.op).localeCompare(String(b.op)));
   // deep-link: se veio ?op=, abre assim que o OPS do server estiver disponível
   if (_pendingOp) {
