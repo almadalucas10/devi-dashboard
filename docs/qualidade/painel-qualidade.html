@@ -158,6 +158,26 @@
   .cart-foot{display:flex; justify-content:space-between; align-items:center; font-size:clamp(12px,0.9vw,15px); color:var(--txt3); margin-top:5px}
   .cart-foot b{color:var(--txt2); font-weight:700}
 
+  /* ---- Lotes do mês: trilha de etapas (ordem do processo) ---- */
+  .lote{display:block; text-decoration:none; color:inherit; background:var(--cell);
+    border-left:3px solid var(--al); border-radius:7px; padding:9px 11px; margin-bottom:6px}
+  .lote.ok{border-left-color:var(--ok)}
+  .lote.er{border-left-color:var(--er)}
+  .lote-l1{display:flex; align-items:baseline; gap:7px}
+  .lote-op{font-size:clamp(16px,1.2vw,20px); font-weight:700; letter-spacing:-.4px}
+  .lote-nome{font-size:clamp(12px,0.95vw,15px); color:var(--txt2); flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lote-cont{font-size:clamp(12px,0.9vw,14px); font-weight:700; white-space:nowrap}
+  .trilha{display:flex; gap:3px; margin-top:8px; align-items:center}
+  .etapa{flex:1; height:5px; border-radius:3px; background:#2b3846}
+  .etapa.ok{background:var(--ok)}
+  .trilha-lab{display:flex; gap:3px; margin-top:4px}
+  .trilha-lab span{flex:1; font-size:clamp(9px,0.7vw,11px); color:#5f6d7c; text-align:center;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .trilha-lab span.ok{color:var(--ok2)}
+  .lote-l3{display:flex; justify-content:space-between; margin-top:6px;
+    font-size:clamp(10px,0.75vw,12px); color:var(--txt3)}
+
   @media (max-width:900px){ .grade{grid-template-columns:1fr} }
 </style>
 </head>
@@ -400,51 +420,57 @@ function renderEvol(){
 
 function renderLotes(){
   const L = DADOS.lotes;
-  el('lotesSub').textContent = `${L.conformes} de ${L.total} conformes`;
-  const status = {
-    ok:  ['',   'conforme'],
-    nc:  ['c',  'não conforme'],
-    sd:  ['b',  'incompleta']
-  };
-  // largura da barra por estado: conforme/NC cheia; incompleta ~metade (ânbar)
-  const BARRA = { ok:['ok','100%'], nc:['er','100%'], sd:['al','50%'] };
-  // blocos por família — mesmos do portal de fichas (para os badges de andamento)
+  el('lotesSub').textContent = `${L.conformes} conformes · ${L.semDado} pendentes · ${L.naoConformes} não conformes`;
+  // blocos por família — ordem do processo (insumos fica fora da trilha)
   const BLOCO_FAM = {
-    base: ['starter','fermentacao','filtracao','produtoAcabado','observacoes'],
+    base: ['starter','fermentacao','filtracao','produtoAcabado'],
     kombucha: ['carbonatacao','preenvase','recravacao','estoque'],
     refri: ['carbonatacao','preenvase','recravacao','estoque'],
     cha: ['carbonatacao','preenvase','recravacao','estoque'],
     barril: ['preenvase','estoque'],
   };
-  const BLOCO_NOME = { starter:'Starter', fermentacao:'Fermentação', filtracao:'Filtração',
-    produtoAcabado:'P. Acabado', observacoes:'Obs', carbonatacao:'Carbonatação',
-    preenvase:'Pré-envase', recravacao:'Recravação', estoque:'Estoque' };
+  const BLOCO_ABREV = { starter:'Starter', fermentacao:'Ferm.', filtracao:'Filtr.',
+    produtoAcabado:'P. Acab.', carbonatacao:'Carb.', preenvase:'Pré-env.',
+    recravacao:'Recrav.', estoque:'Estoque' };
   const famDeSku = s => { const p = MAPA_SKU[s]; return (p && p.fam) || (s === 'FX000' ? 'base' : (s || '').startsWith('RTM') ? 'refri' : 'kombucha'); };
-  const badgeBloco = (bs, ind, fam, bloco) => {
-    let cls = '';
+  // true se o bloco está preenchido/completo (blocos_status do D1; fallback índice legado)
+  const blocoFeito = (bs, ind, bloco) => {
     const v = bs ? bs[bloco.toLowerCase()] || bs[bloco] : undefined;
     if (v && typeof v === 'object') {
       const f = v.f || 0, t = v.t || 0;
-      if (t > 0 && f >= t) cls = 'on';
-      else if (f > 0) cls = 'parc';
-    } else if (v === 'ok' || (typeof v === 'number' && v > 0) || (typeof v === 'string' && v !== '')) {
-      cls = 'on';
-    } else if (ind && ind[bloco]) {
-      cls = 'on';
+      if (t > 0 && f >= t) return true;
+      return false;
     }
-    return `<span class="bq ${cls}">${BLOCO_NOME[bloco] || bloco}</span>`;
+    if (v === 'ok' || (typeof v === 'number' && v > 0) || (typeof v === 'string' && v !== '')) return true;
+    if (ind && ind[bloco]) return true;
+    return false;
+  };
+  // etapa pulada: há um bloco feito depois de um pendente (na ordem do processo)
+  const temLacuna = etapas => {
+    const i = etapas.lastIndexOf(true);
+    return i > 0 && etapas.slice(0, i).includes(false);
   };
   el('lotes').innerHTML = L.lista.map(x => {
-    const [cls, label] = status[x.status] || status.ok;
     const fam = famDeSku(x.sku);
     const blocos = BLOCO_FAM[fam] || BLOCO_FAM.kombucha;
-    const chips = blocos.map(b => badgeBloco(x.blocos_status, x.indice, fam, b)).join('');
-    return `<div class="cart ${cls}">
-      <a href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}">
-        <div class="cart-l1"><span class="cart-op">${esc(x.op)}</span><span class="cart-nm">${esc(x.produto)}</span>
-          <span class="cart-bbadges">${chips}</span></div>
-        <div class="cart-foot"><span>${esc(x.txt)}</span><b>${esc(label)}</b></div>
-      </a></div>`;
+    const etapas = blocos.map(b => blocoFeito(x.blocos_status, x.indice, b));
+    const feitos = etapas.filter(Boolean).length;
+    // contador do lote
+    let cont, contCls = '';
+    if (x.status === 'nc') { cont = 'não conforme'; contCls = 'color:var(--er2)'; }
+    else if (feitos === blocos.length) { cont = 'conforme'; contCls = 'color:var(--ok2)'; }
+    else { cont = `${feitos} de ${blocos.length}` + (temLacuna(etapas) ? ' ⚠' : ''); contCls = 'color:var(--al2)'; }
+    const linCls = x.status === 'nc' ? 'er' : (feitos === blocos.length ? 'ok' : '');
+    const trilha = blocos.map((b, i) => `<i class="etapa ${etapas[i] ? 'ok' : ''}"></i>`).join('');
+    const labs = blocos.map((b, i) => `<span class="${etapas[i] ? 'ok' : ''}">${BLOCO_ABREV[b] || b}</span>`).join('');
+    return `<a class="lote ${linCls}" href="ficha-qualidade-com-insumos.html?op=${encodeURIComponent(x.hrefOp)}">
+      <div class="lote-l1"><span class="lote-op">${esc(x.op)}</span>
+        <span class="lote-nome">${esc(x.produto)}</span>
+        <span class="lote-cont" style="${contCls}">${cont}</span></div>
+      <div class="trilha">${trilha}</div>
+      <div class="trilha-lab">${labs}</div>
+      <div class="lote-l3"><span>${esc(x.sku)}</span><span>${esc(x.txt)}</span></div>
+    </a>`;
   }).join('');
   if(!L.lista.length) el('lotes').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha salva no mês.</div>';
   const leg = el('lotes').parentElement.querySelector('.leg');
