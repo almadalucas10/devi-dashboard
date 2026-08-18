@@ -523,7 +523,7 @@ function renderVida(){
     <tr class="${linCls(x)}">
       <td class="op">${esc(x.op)}</td>
       <td class="sku">${esc(x.sku)}</td>
-      <td class="fab">${esc(x.fab || '—')}</td>
+      <td class="fab">${esc(x.fab ? fmtDataBR(x.fab) : '—')}</td>
       <td>${chipMarco(x, 3)}</td>
       <td>${chipMarco(x, 6)}</td>
       <td>${chipMarco(x, 8)}</td>
