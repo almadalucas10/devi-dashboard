@@ -89,6 +89,7 @@
   .ferm-e-ok{background:#12241a; color:var(--ok2)}
   .ferm-e-al{background:#2a2412; color:var(--al2)}
   .ferm-e-off{background:#1c2733; color:var(--txt3)}
+  .ferm-e-starter{background:#2a1212; color:var(--er2)}
 
   .ferm-barra{position:relative; height:22px; background:var(--trilho); border-radius:5px; margin-top:7px; overflow:hidden}
   .ferm-barra i{display:block; height:100%; border-radius:5px}
@@ -479,29 +480,43 @@ function renderVida(){
 const FERM_META = { pH: { max: 3.20 }, abv: { max: 0.50 } };
 let FERM_META_REAL = null;           // preenchido de pops.json quando disponível
 const ESCALA_MAX_DIAS = 20;          // barra chega a 100 % neste nº de dias
-// Faixa típica de fermentação (provisória — recalcular do histórico, percentil 10-90)
+// Faixa de fermentação por dias de idade da base:
+//   1–6  → amarelo (fermentando) · 7–12 → verde (no ponto) · 13+ → vermelho (starter)
 const FAIXA_DAYS = { min: 7, max: 12 };
+const COR_MARCO_DIAS = { antes:'var(--al)', no_ponto:'var(--ok)', starter:'var(--er)' };
 function metaFerm(){ return FERM_META_REAL || FERM_META; }
 function corBarraFerm(dias){
-  const f = FAIXA_DAYS;
-  if (dias > f.max) return 'linear-gradient(90deg,#3f5163,#ef4444)';
-  if (dias >= f.min) return 'var(--ok)';
-  return 'var(--az)';
+  const d = (dias == null ? 0 : dias);
+  if (d >= 13) return COR_MARCO_DIAS.starter;   // virou starter, passou do ponto
+  if (d >= 7)  return COR_MARCO_DIAS.no_ponto;  // no ponto
+  return COR_MARCO_DIAS.antes;                  // fermentando (1–6)
 }
-// Estado derivado do POP 17: fermentação no ponto quando atingiu o pH-alvo e ABV.
-// Limite tratado como inclusivo (pH ≤ 3,20 e ABV ≤ 0,50 = colheita pronta).
-function estadoFerm(t){
-  const m = metaFerm();
-  if (t == null || t.pH == null || t.abv == null) return 'sem_medicao';
-  const pHok = !(m.pH && t.pH > m.pH.max);
-  const abvok = !(m.abv && t.abv > m.abv.max);
-  return (pHok && abvok) ? 'no_ponto' : 'em_curso';
+// Estado derivado do POP 17 + contagem de dias:
+//   13+  → 'starter' (passou do ponto) · 7–12 → 'no_ponto' (colheita) · 1–6 → 'fermentando'
+// A medição (pH/ABV) só refina dentro de 7–12 (no_ponto só se bater o alvo).
+function estadoFerm(t, dias){
+  const d = (dias == null ? null : dias);
+  if (d != null && d >= 13) return 'starter';
+  if (d != null && d >= 7) {
+    const m = metaFerm();
+    if (t == null || t.pH == null || t.abv == null) return 'no_ponto'; // dias ok, sem medição → considera no ponto pela faixa
+    const pHok = !(m.pH && t.pH > m.pH.max);
+    const abvok = !(m.abv && t.abv > m.abv.max);
+    return (pHok && abvok) ? 'no_ponto' : 'em_curso';
+  }
+  return 'fermentando';
 }
-const FERM_ESTADO_LABEL = { no_ponto:['no ponto','ferm-e-ok','ok'], em_curso:['em curso','ferm-e-al','al'], sem_medicao:['sem medição','ferm-e-off','off'] };
+const FERM_ESTADO_LABEL = {
+  no_ponto:['no ponto','ferm-e-ok','ok'],
+  fermentando:['fermentando','ferm-e-al','al'],
+  starter:['starter','ferm-e-starter','er'],
+  em_curso:['em curso','ferm-e-al','al'],
+  sem_medicao:['sem medição','ferm-e-off','off'],
+};
 
 function renderFerm(){
   el('fermSub').textContent = `${DADOS.fermentacao.length} tanques`;
-  const sem = DADOS.fermentacao.filter(t => estadoFerm(t.ultima) === 'sem_medicao').length;
+  const sem = DADOS.fermentacao.filter(t => !t.ultima || (t.ultima.pH == null && t.ultima.abv == null)).length;
   if(!DADOS.fermentacao.length){
     el('fermentacao').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma base em fermentação.</div>';
     return;
@@ -510,24 +525,17 @@ function renderFerm(){
   const fmt = v => (v === null || v === undefined || v === '') ? '—' : v;
   const fmd = v => String(v).replace('.', ',');
   const itensHtml = itens.map(t => {
-    const est = estadoFerm(t.ultima);
-    const [label, eCls, itemCls] = FERM_ESTADO_LABEL[est];
+    const dias = t.diasNum != null ? t.diasNum : null;
+    const est = estadoFerm(t.ultima, dias);
+    const [label, eCls, itemCls] = FERM_ESTADO_LABEL[est] || FERM_ESTADO_LABEL.sem_medicao;
     const tanque = (t.tanque || '').trim() || 'sem tanque';
     const opShort = t.op ? '#' + abreviaOp(t.op) : '#' + abreviaOp(t.hrefOp || '');
     const sub = [opShort, t.nome, (t.volTanque != null && t.volTanque !== '') ? `${fmt(t.volTanque)} L` : ''].filter(Boolean).join(' · ');
-    const dias = t.diasNum != null ? t.diasNum : null;
-    // Barra é exclusivamente de dias (spec §4). Cor:
-    //  - dias acima da faixa (> FAIXA_DAYS.max) → VERMELHO (fermentação estourou o prazo),
-    //    independente do estado de medição — nunca passa despercebido;
-    //  - dentro da faixa e no ponto → verde; senão segue corBarraFerm.
+    // Barra de dias: 1–6 amarelo (fermentando) · 7–12 verde (no ponto) · 13+ vermelho (starter)
     const pct = dias == null ? 0 : Math.min(100, (dias / ESCALA_MAX_DIAS) * 100);
     const fLeft  = (FAIXA_DAYS.min / ESCALA_MAX_DIAS) * 100;
     const fWidth = ((FAIXA_DAYS.max - FAIXA_DAYS.min) / ESCALA_MAX_DIAS) * 100;
-    const dNum = (dias == null ? 0 : dias);
-    const estourou = (dNum > FAIXA_DAYS.max);
-    const cor = estourou ? 'var(--er)'
-      : (est === 'no_ponto') ? 'var(--ok)'
-      : corBarraFerm(dNum);
+    const cor = corBarraFerm(dias);
     // linha de medições (só quando há alguma)
     const u = t.ultima;
     const hasMed = u && (u.pH != null || u.brix != null || u.abv != null);
