@@ -612,9 +612,15 @@ async function handle(request, env, ctx) {
         const iProd = komb ? 3 : 4, iLote = komb ? 4 : 5, iPh = komb ? 5 : 6,
               iBrix = komb ? 6 : 7, iCarb = komb ? 7 : 8, iAbv = komb ? 9 : null;
         const filtrados = [];
+        const norm = s => String(s || "").trim().toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/^(chá|cha|refri|kombucha|refrigerante|dêvi|devi)[\s-]+/i, "");
+        const alvo = norm(produto);
         for (const r of rows) {
           const nome = (r[iProd] || "").trim();
-          if (nome !== produto) continue;
+          const nomeN = norm(nome);
+          // casa por igualdade OU contém o alvo em qualquer direção (nomes completos vs. plan)
+          if (!(nomeN === alvo || nomeN.includes(alvo) || alvo.includes(nomeN))) continue;
           const p = { data: r[0] || "", lote: r[iLote] || "", pH: num(r[iPh]) };
           if (r[iBrix] != null) p.brix = num(r[iBrix]);
           if (r[iCarb] != null) p.carbonatacao = num(r[iCarb]);
