@@ -664,7 +664,7 @@ export async function pdfDaFicha(ficha) {
   y -= 8;
   t(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
   t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}   ${ficha.tanque ? "  ·  Tanque: " + ficha.tanque : ""}`, { size: 11 });
-  t(`Previsão de Conclusão: ${ficha.previsao || "—"}     Situação: ${ficha.situacao || "Em andamento"}`, { size: 9.5 });
+  t(`Previsão de Conclusão: ${ficha.previsao || "—"}     Situação: ${ficha.status === 'completa' ? "Concluída" : (ficha.situacao || "Em andamento")}`, { size: 9.5 });
   t(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}     Quantidade: ${fmtN(ficha.qtd)} ${ficha.un || ""}     Peso Líquido: ${fmtN(pesoLiquido())} Kg`, { size: 9.5 });
   y -= 4;
   page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1.2, color: AZUL });
