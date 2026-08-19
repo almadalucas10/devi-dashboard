@@ -444,11 +444,14 @@ export async function fichasArquivadas(env, limite = 100) {
 
 /** Link de download do PDF anexado na OP (ObterAnexo → cLinkDownload); null se não houver */
 export async function linkPdfDaOp(env, nCodOP) {
-  const r = await listarAnexos(env, nCodOP, CTABELA_OP);
+  // nCodOP precisa ser um número válido; senão cai direto na geração local (evita nId obrigatório)
+  const id = Number(nCodOP);
+  if (!id || id <= 0) return null;
+  const r = await listarAnexos(env, id, CTABELA_OP);
   const anexos = (r && r.listaAnexos) || [];
   const fichaAnexo = anexos.find((a) => String(a.cNomeArquivo || "").startsWith(PREFIXO_ANEXO));
   if (!fichaAnexo) return null;
-  const det = await obterAnexo(env, fichaAnexo.nIdAnexo, nCodOP);
+  const det = await obterAnexo(env, fichaAnexo.nIdAnexo, id);
   return (det && det.cLinkDownload) || null;
 }
 
@@ -660,7 +663,7 @@ export async function pdfDaFicha(ficha) {
   t("FICHA DE QUALIDADE", { size: 10.5, x: 142 });
   y -= 8;
   t(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
-  t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}   ${ficha.tanque ? "  ·  🫙 Tanque: " + ficha.tanque : ""}`, { size: 11 });
+  t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}   ${ficha.tanque ? "  ·  Tanque: " + ficha.tanque : ""}`, { size: 11 });
   t(`Previsão de Conclusão: ${ficha.previsao || "—"}     Situação: ${ficha.situacao || "Em andamento"}`, { size: 9.5 });
   t(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}     Quantidade: ${fmtN(ficha.qtd)} ${ficha.un || ""}     Peso Líquido: ${fmtN(pesoLiquido())} Kg`, { size: 9.5 });
   y -= 4;
