@@ -37,6 +37,11 @@
   .datas .dl .lbl{display:block; font-size:9.5px; letter-spacing:1.4px; color:var(--txt3);
     text-transform:uppercase; font-weight:700}
   .datas .dl b{display:block; font-size:18px; font-weight:800; color:var(--txt); letter-spacing:.3px}
+  .tank-prod{display:inline-flex; align-items:center; gap:6px; background:var(--campo); border:1.5px solid var(--linha); border-radius:9px; padding:4px 8px; flex-shrink:0; vertical-align:middle}
+  .tank-prod .lbl{font-size:9.5px; letter-spacing:1.4px; color:var(--txt3); text-transform:uppercase}
+  .tanque-cab{width:86px; background:transparent; color:var(--txt); border:none; outline:none;
+    font-size:20px; font-weight:800; letter-spacing:.3px; padding:0; text-align:center}
+  .tanque-cab::placeholder{color:var(--txt3); opacity:.6}
   .meta{font-size:13px; color:var(--txt3); text-align:right; white-space:nowrap}
   .meta b{font-size:18px; font-weight:800; color:var(--txt2); letter-spacing:-.3px}
   .meta span{font-size:12px; color:var(--txt3)}
@@ -364,7 +369,7 @@
         <span id="opSku" class="sku">CH003</span>
         <span class="dl tank-prod" title="Tanque onde o SKU está sendo formulado">
           <span class="lbl">Tanque</span>
-          <input id="opTanque" data-c="opTanque" class="tanque-cab" style="width:60px;background:var(--campo);color:var(--txt2);border:1px solid var(--linha);border-radius:6px;padding:1px 5px;font-size:14px;font-weight:700" placeholder="—">
+          <input id="opTanque" data-c="opTanque" class="tanque-cab" placeholder="—" inputmode="text">
         </span>
       </div>
     </div>

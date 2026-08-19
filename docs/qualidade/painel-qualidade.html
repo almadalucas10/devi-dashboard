@@ -717,7 +717,7 @@ async function carregar(){
       if (f.ncs && f.ncs.length) txt += ' · ' + f.ncs[0].campo + ' ' + f.ncs[0].valor + ' fora de spec';
       else if (status === 'ok') txt += ' · conforme';
       else txt += ' · análise incompleta';
-      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', produto: f.produto || f.sku || '', status, txt, date: f.data_producao || '', blocos_status: parseJson(f.blocos_status) || null, indice: parseJson(f.indice) || null };
+      return { op: '#' + abreviaOp(f.op), hrefOp: f.op, sku: f.sku || '—', produto: f.produto || f.sku || '', status, txt, date: f.data_producao || '', blocos_status: parseJson(f.blocos_status) || null, indice: parseJson(f.indice) || null, tanque: f.tanque || null };
     });
     // organiza por data de fabricação (mais recente primeiro; empates pela OP)
     lista.sort((a, b) => (b.date || '').localeCompare(a.date || '') || abreviaOp(a.hrefOp).localeCompare(abreviaOp(b.hrefOp)));
