@@ -954,12 +954,12 @@ if (url.pathname === "/api/health") {
 
     if (url.pathname === "/api/sync/light" && request.method === "POST") {
       const t0 = Date.now();
-      try {
-        await runLightSync(env);
-        return json({ ok: true, elapsedMs: Date.now() - t0 });
-      } catch (e) {
-        return json({ erro: e.message, elapsedMs: Date.now() - t0 }, 500);
-      }
+      // Roda em background (waitUntil) — o sync com remessas pode passar de 100s,
+      // e executar síncrono estoura o limite de CPU da request.
+      ctx.waitUntil(
+        runLightSync(env).catch((e) => console.error("[light] ❌ " + e.message))
+      );
+      return json({ ok: true, message: "sync leve disparado em background", elapsedMs: Date.now() - t0 });
     }
 
     return new Response("Not found", { status: 404 });

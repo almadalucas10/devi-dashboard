@@ -317,9 +317,13 @@ export async function buscarRemessas(env) {
 // Fila de pedidos + remessas em aberto (a Reposição calcula por cima da fila,
 // então as remessas impactam a necessidade automaticamente).
 export async function buscarFilaComRemessas(env) {
+  const t0 = Date.now();
   const fila = await buscarFilaDePedidos(env);
+  console.log(`⏱️ buscarFilaDePedidos: ${Date.now() - t0}ms (${fila.length})`);
   try {
+    const t1 = Date.now();
     const remessas = await buscarRemessas(env);
+    console.log(`⏱️ buscarRemessas: ${Date.now() - t1}ms (${remessas.length})`);
     if (remessas.length === 0) return fila;
     console.log(`✅ Remessas ativas: ${remessas.length}`);
     return fila.concat(remessas);
