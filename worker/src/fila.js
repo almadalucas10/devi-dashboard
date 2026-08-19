@@ -27,6 +27,23 @@ function previsaoNoMesVigente(dStr) {
   }
 }
 
+// Busca as páginas de remessas em paralelo (o OMIE de remessa é lento por página;
+// paralelizar 3 páginas corta o tempo do sync para ~1× em vez de 3×).
+async function buscarPaginasRemessas(env) {
+  const pagina1 = await chamarOmie(env, "/produtos/remessa/", "ListarRemessas", { nPagina: 1 });
+  const totalPaginas = Math.min(pagina1.nTotalPaginas || 1, 5);
+  const resultados = pagina1.remessas || [];
+  if (totalPaginas > 1) {
+    const resto = await Promise.all(
+      Array.from({ length: totalPaginas - 1 }, (_, k) =>
+        chamarOmie(env, "/produtos/remessa/", "ListarRemessas", { nPagina: k + 2 }).catch(() => ({ remessas: [] }))
+      )
+    );
+    for (const r of resto) resultados.push(...(r.remessas || []));
+  }
+  return resultados;
+}
+
 const REGISTROS_POR_PAGINA = 100;
 const DIAS_PARA_TRAS = 90;
 
@@ -249,13 +266,8 @@ export async function buscarFilaDePedidos(env) {
 // ============================================================================
 
 export async function buscarRemessas(env) {
-  const remessas = await buscarTodasPaginas(
-    env,
-    "/produtos/remessa/",
-    "ListarRemessas",
-    (pagina) => ({ nPagina: pagina }),
-    { arrayKey: "remessas", totalPagesKey: "nTotalPaginas", pageDelay: 400, maxPages: 5 }
-  );
+  // Paginação em paralelo (3 páginas) em vez de sequencial — corta o tempo do sync
+  const remessas = await buscarPaginasRemessas(env);
 
   // Só remessas em aberto (aguardando execução/faturamento)
   const ativas = remessas.filter((r) => {
