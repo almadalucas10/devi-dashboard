@@ -367,6 +367,10 @@
     <div class="datas">
       <span class="dl"><span class="lbl">Fabricação</span><b id="opFab">14/08/2026</b></span>
       <span class="dl"><span class="lbl">Validade</span><b id="opVal">14/04/2027</b></span>
+      <span class="dl" title="Tanque onde o SKU está sendo formulado">
+        <span class="lbl">Tanque</span>
+        <input id="opTanque" class="tanque-cab" style="width:74px;background:var(--campo);color:var(--txt2);border:1px solid var(--linha);border-radius:6px;padding:2px 6px;font-size:15px;font-weight:700" placeholder="—">
+      </span>
     </div>
     <div class="meta" id="opMeta"><b>4.464 latas</b><span> · 1.201 L</span></div>
   </div>
@@ -1094,6 +1098,9 @@ function abrirOp(op){
   opQtd = o.qtd || 4464;
   opUn = o.un || (o.sku === 'FX000' ? 'L' : 'UND');
   opData = o.data || (folhaInfo && folhaInfo.previsao) || '';
+  // tanque do cabeçalho: limpa ao trocar de OP (o aplicarFichaSalva repõe se a ficha tiver salvo)
+  const tnqEl = document.getElementById('opTanque');
+  if (tnqEl) tnqEl.value = '';
   receitaReal = receitasCache[op] || null;
   const sku = o.sku || skuAtual;
   const nome = (PRODUTOS[sku] && PRODUTOS[sku].nome) || o.sigla || sku;
@@ -1249,6 +1256,9 @@ function aplicarFichaSalva(f){
   if(b.produtoAcabado){ setV('prodPA',b.produtoAcabado.produto); setV('brixPA',b.produtoAcabado.brix);
     setV('phPA',b.produtoAcabado.pH); setV('abvPA',b.produtoAcabado.abv); setV('brixSucoPA',b.produtoAcabado.brixSuco); }
   if(b.observacoes != null) setV('obs', b.observacoes);
+  // tanque do cabeçalho (onde o SKU está sendo formulado)
+  const tanqueEl = document.getElementById('opTanque');
+  if (tanqueEl) tanqueEl.value = (f.tanque != null && f.tanque !== '') ? f.tanque : ((b.starter && b.starter.tanque) || '');
   (b.carbonatacao||[]).forEach(r => { const id = addCarb();
     setV(`cb_${id}_h`,r.hora); setV(`cb_${id}_t`,r.temperatura);
     setV(`cb_${id}_pc`,r.pressaoCilindro); setV(`cb_${id}_pt`,r.pressaoTanque); });
@@ -2011,6 +2021,7 @@ function montarPayload(){
   d.status = 'parcial';
   d.registradoEm = new Date().toISOString();
   d.rascunhoEm = new Date().toISOString(); // frescor — decide local vs servidor
+  d.tanque = g('opTanque'); // tanque onde o SKU está sendo formulado (cabeçalho da ficha)
   return d;
 }
 
