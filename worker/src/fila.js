@@ -244,6 +244,9 @@ export async function buscarRemessas(env) {
   const resultado = [];
   for (const rem of ativas) {
     const cab = rem.cabec || {};
+    // Só entra se tiver previsão de entrega (data de previsão preenchida)
+    const dPrevisao = (cab.dPrevisao || "").trim();
+    if (!dPrevisao) continue;
     const itens = (rem.produtos || [])
       .map((pr) => ({ codigo: codParaSku[String(pr.nCodProd)] || null, qtde: pr.nQtde || 0 }))
       .filter((i) => i.codigo);
@@ -252,7 +255,7 @@ export async function buscarRemessas(env) {
       origem: "remessa",
       numero: cab.cNumeroRemessa,
       etapa: "remessa",
-      dataPrevisao: cab.dPrevisao || "",
+      dataPrevisao: dPrevisao,
       valorTotal: cab.nValorTotal || 0,
       totalUnidades,
       quantidadeSkus: itens.length,
