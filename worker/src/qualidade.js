@@ -14,6 +14,9 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export const LOCAL_ALMOXARIFADO = 3125326654; // "ALMOXARIFADO" (mesmo de insumos.js)
 
+// cache em memória do tanque (R2) por OP — evita reler o mesmo documento múltiplas vezes
+let _tanqueCacheR2 = null;
+
 // Itens sem indicador (decisão do dono 14/08/2026) — não aparecem na ficha nem no card
 const EXCLUIR = new Set(['EMB08', 'MP0', 'INS024']);
 const excluido = (cod) => EXCLUIR.has(cod);
@@ -207,6 +210,18 @@ export async function anexarEstadoFichas(env, lista) {
       }
     }
   } catch (e) { console.error(`[qualidade] d1 fichas: ${e.message}`); }
+  // Tanque onde o SKU é formulado — do documento R2 (fonte da verdade), com cache
+  const tanqueCache = _tanqueCacheR2 || (_tanqueCacheR2 = new Map());
+  for (const f of lista) {
+    if (f.tanque) continue;
+    if (tanqueCache.has(f.op)) { f.tanque = tanqueCache.get(f.op); continue; }
+    try {
+      const doc = await lerFichaSalva(env, f.op);
+      const t = (doc && doc.tanque) || (doc && doc.blocos && doc.blocos.starter && doc.blocos.starter.tanque) || null;
+      tanqueCache.set(f.op, t);
+      f.tanque = t;
+    } catch (e) { f.tanque = null; }
+  }
   // Insumos conferidos (do documento R2) — p/ o rodapé do portal
   for (const f of lista) {
     if (!f.status || f.status === 'sem ficha') continue;
@@ -216,6 +231,22 @@ export async function anexarEstadoFichas(env, lista) {
       f.insumos_conferidos = ci.filter((c) => c.conferido).length;
       f.insumos_total = ci.length;
     } catch (e) { /* sem documento ainda */ }
+  }
+  return lista;
+}
+
+/** Anexa o tanque (R2) a uma lista de fichas — reutiliza o cache do módulo */
+export async function anexarTanque(env, lista) {
+  const cache = _tanqueCacheR2 || (_tanqueCacheR2 = new Map());
+  for (const f of lista || []) {
+    if (f.tanque) continue;
+    if (cache.has(f.op)) { f.tanque = cache.get(f.op); continue; }
+    try {
+      const doc = await lerFichaSalva(env, f.op);
+      const t = (doc && doc.tanque) || (doc && doc.blocos && doc.blocos.starter && doc.blocos.starter.tanque) || null;
+      cache.set(f.op, t);
+      f.tanque = t;
+    } catch (e) { f.tanque = null; }
   }
   return lista;
 }
@@ -629,7 +660,7 @@ export async function pdfDaFicha(ficha) {
   t("FICHA DE QUALIDADE", { size: 10.5, x: 142 });
   y -= 8;
   t(`Ordem de Produção Nº ${ficha.op || "—"}`, { bold: true, size: 13 });
-  t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}`, { size: 11 });
+  t(`${ficha.sku || ""} - ${ficha.produto || ficha.sigla || ""}   ${ficha.tanque ? "  ·  🫙 Tanque: " + ficha.tanque : ""}`, { size: 11 });
   t(`Previsão de Conclusão: ${ficha.previsao || "—"}     Situação: ${ficha.situacao || "Em andamento"}`, { size: 9.5 });
   t(`Tipo de Produto: ${ficha.tipoProduto || "04 - Produto Acabado"}     Quantidade: ${fmtN(ficha.qtd)} ${ficha.un || ""}     Peso Líquido: ${fmtN(pesoLiquido())} Kg`, { size: 9.5 });
   y -= 4;
