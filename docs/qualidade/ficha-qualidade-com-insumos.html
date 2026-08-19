@@ -2135,6 +2135,22 @@ async function salvar(){
     s.dataset.sec !== 'observacoes' && !secPreenchida(s));
   const itensFolha = insumosDaOp();
   const folhaIncompleta = itensFolha.length > 0 && conferidos.size < itensFolha.length;
+  // Tanque obrigatório para concluir — onde o SKU está sendo formulado
+  const tanqueEl = document.querySelector('[data-c="opTanque"]');
+  const tanqueVal = (tanqueEl && tanqueEl.value) || '';
+  const semTanque = String(tanqueVal).trim() === '';
+  if(semTanque){
+    if (tanqueEl) { tanqueEl.style.border = '1.5px solid var(--er)'; tanqueEl.focus(); }
+    const res = document.getElementById('resumo');
+    res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>
+      <li><span>Tanque</span><b style="color:var(--er2)">preencha o nº do tanque onde o SKU está sendo formulado</b></li>
+      </ul><div class="nc"><b>Informe o tanque no cabeçalho para concluir a ficha.</b></div>`;
+    res.style.display = 'block';
+    const saida = document.getElementById('saida');
+    if (saida) saida.style.display = 'none';
+    res.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
   if(pendentes.length || folhaIncompleta){
     const res = document.getElementById('resumo');
     res.innerHTML = `<h3>FICHA INCOMPLETA</h3><ul>` +
