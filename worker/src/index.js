@@ -454,19 +454,21 @@ async function handle(request, env, ctx) {
 
     
     if (url.pathname === "/api/debug/remessas") {
-      // Sonda a API de Remessas do OMIE (vendas/remessa) — pra exibir na Fila e impactar Reposição
+      // Sonda a API de Remessas do OMIE (1 chamada leve, página 1) — pra mapear
+      // a estrutura dos itens (nCodProd/nQtde) e exibir remessas na Fila/Reposição.
       try {
         const { chamarOmie } = await import("./omie.js");
-        const tenta = async (ep, mt) => {
-          try {
-            const r = await chamarOmie(env, ep, mt, { pagina: 1, registros_por_pagina: 50, apenas_importado_api: "N" });
-            const lista = Array.isArray(r) ? r : (r.remessas || r.listaRemessas || r.cadastros || r.lista || []);
-            return { ok: true, chaves: Object.keys(r).slice(0, 20), total: r.nTotRegistros || r.total_de_registros || r.total || lista.length, n: lista.length, amostra: lista[0] || null };
-          } catch(e) { return { ok: false, erro: e.message.slice(0, 120) }; }
-        };
-        const r1 = await tenta("/vendas/remessa/", "ListarRemessas");
-        const r2 = await tenta("/vendas/remessa/", "PesquisarRemessas");
-        return json({ ListarRemessas: r1, PesquisarRemessas: r2 });
+        const r = await chamarOmie(env, "/produtos/remessa/", "ListarRemessas", { nPagina: 1 });
+        const itens = r.remessas || [];
+        const prim = itens[0] || null;
+        const arrItens = (prim && (Array.isArray(prim.itens) ? prim.itens : prim.produtos)) || [];
+        return json({
+          nPagina: r.nPagina, nTotalPaginas: r.nTotalPaginas, nTotalRegistros: r.nTotalRegistros,
+          nRemessas: itens.length,
+          primeira: prim,
+          chavesItens: arrItens[0] ? Object.keys(arrItens[0]) : null,
+          amostraItens: arrItens[0] || null,
+        });
       } catch(e) { return json({ erro: e.message.slice(0, 150) }, 500); }
     }
 
