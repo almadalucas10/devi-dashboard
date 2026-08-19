@@ -472,7 +472,7 @@ function renderLotes(){
         <span class="lote-cont" style="${contCls}">${cont}</span></div>
       <div class="trilha">${trilha}</div>
       <div class="trilha-lab">${labs}</div>
-      <div class="lote-l3"><span>${esc(x.sku)}</span><span>${esc(x.txt)}</span></div>
+      <div class="lote-l3"><span>${esc(x.sku)}${x.tanque ? ' · 🫙 ' + esc(x.tanque) : ''}</span><span>${esc(x.txt)}</span></div>
     </a>`;
   }).join('');
   if(!L.lista.length) el('lotes').innerHTML = '<div style="padding:14px;font-size:12px;color:var(--txt3)">Nenhuma ficha salva no mês.</div>';

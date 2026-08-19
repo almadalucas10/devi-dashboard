@@ -362,15 +362,15 @@
         <span id="opSigla" class="sigla">CCM</span>
         <span id="opNome">Chá Camomila Maracujá</span>
         <span id="opSku" class="sku">CH003</span>
+        <span class="dl tank-prod" title="Tanque onde o SKU está sendo formulado">
+          <span class="lbl">Tanque</span>
+          <input id="opTanque" data-c="opTanque" class="tanque-cab" style="width:60px;background:var(--campo);color:var(--txt2);border:1px solid var(--linha);border-radius:6px;padding:1px 5px;font-size:14px;font-weight:700" placeholder="—">
+        </span>
       </div>
     </div>
     <div class="datas">
       <span class="dl"><span class="lbl">Fabricação</span><b id="opFab">14/08/2026</b></span>
       <span class="dl"><span class="lbl">Validade</span><b id="opVal">14/04/2027</b></span>
-      <span class="dl" title="Tanque onde o SKU está sendo formulado">
-        <span class="lbl">Tanque</span>
-        <input id="opTanque" class="tanque-cab" style="width:74px;background:var(--campo);color:var(--txt2);border:1px solid var(--linha);border-radius:6px;padding:2px 6px;font-size:15px;font-weight:700" placeholder="—">
-      </span>
     </div>
     <div class="meta" id="opMeta"><b>4.464 latas</b><span> · 1.201 L</span></div>
   </div>
@@ -727,9 +727,9 @@ function renderLista(){
     const dFer = (ehBase && o.data) ? diasFermentacao(o.data) : null;
     const corFer = dFer == null ? '' : (dFer >= 11 ? ' er' : (dFer >= 7 ? ' al' : ' ok'));
     const info = ehBase
-      ? (o.data ? `<span class="l3">📅 Fab: ${esc(o.data)}</span>` : '') +
+      ? (o.data ? `<span class="l3">📅 Fab: ${esc(o.data)}${o.tanque ? ' · 🫙 ' + esc(o.tanque) : ''}</span>` : '') +
         (o.data ? `<span class="l3 fer${corFer}">⏳ ${dFer ?? '—'} dias de fermentação</span>` : '')
-      : (o.data ? `<span class="l3">📅 Fab: ${esc(o.data)}</span>` : '');
+      : (o.data ? `<span class="l3">📅 Fab: ${esc(o.data)}${o.tanque ? ' · 🫙 ' + esc(o.tanque) : ''}</span>` : '');
     // blocos preenchidos (rodapé do card) — todos os blocos da família, com estado
     let blocosTxt = '';
     if (o.blocos_status && Object.keys(o.blocos_status).length) {
@@ -1149,7 +1149,7 @@ function preencherOPS(fichas){
       op: String(f.op || f.nCodOP), sku: f.sku || null, qtd: f.qtd || 0,
       nCodOP: f.nCodOP || null, sigla: SIGLA[f.sku] || '', un: f.un || '',
       data: f.data || '', status: f.status || '', nc: f.nc || 0,
-      opFechada: f.opFechada || false,
+      opFechada: f.opFechada || false, tanque: f.tanque || null,
       blocos_status: f.blocos_status || null,
       insumos_conferidos: f.insumos_conferidos || 0, insumos_total: f.insumos_total || 0
     });

@@ -773,9 +773,10 @@ async function handle(request, env, ctx) {
     }
     if (url.pathname === "/api/qualidade/arquivo") {
       try {
-        const { fichasArquivadas } = await import("./qualidade.js");
+        const { fichasArquivadas, anexarTanque } = await import("./qualidade.js");
         const limite = Number(url.searchParams.get("limite")) || 100;
-        return json({ fichas: await fichasArquivadas(env, limite) });
+        const fichas = await fichasArquivadas(env, limite);
+        return json({ fichas: await anexarTanque(env, fichas) });
       } catch(e) { return json({ erro: e.message.slice(0, 200) }, 500); }
     }
     if (url.pathname.startsWith("/api/qualidade/ficha/") && url.pathname.endsWith("/arquivo")) {
@@ -842,9 +843,10 @@ async function handle(request, env, ctx) {
     }
     if (url.pathname.startsWith("/api/qualidade/mes/")) {
       try {
-        const { fichasDoMes } = await import("./qualidade.js");
+        const { fichasDoMes, anexarTanque } = await import("./qualidade.js");
         const aaaamm = decodeURIComponent(url.pathname.split("/").pop());
-        return json({ mes: aaaamm, fichas: await fichasDoMes(env, aaaamm) });
+        const fichas = await fichasDoMes(env, aaaamm);
+        return json({ mes: aaaamm, fichas: await anexarTanque(env, fichas) });
       } catch(e) { return json({ erro: e.message.slice(0, 2000) }, 500); }
     }
     // Apaga uma ficha salva (R2 + D1) — limpeza do banco de fichas
