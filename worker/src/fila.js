@@ -221,7 +221,7 @@ export async function buscarRemessas(env) {
     "/produtos/remessa/",
     "ListarRemessas",
     (pagina) => ({ nPagina: pagina }),
-    { arrayKey: "remessas", totalPagesKey: "nTotalPaginas", pageDelay: 400 }
+    { arrayKey: "remessas", totalPagesKey: "nTotalPaginas", pageDelay: 400, maxPages: 5 }
   );
 
   // Só remessas em aberto (aguardando execução/faturamento)
