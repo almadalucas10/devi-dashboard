@@ -30,6 +30,27 @@ function previsaoNoMesVigente(dStr) {
 const REGISTROS_POR_PAGINA = 100;
 const DIAS_PARA_TRAS = 90;
 
+// Cache de produto (código_produto → SKU) em memória, compartilhado entre
+// execuções do mesmo isolate — evita reconstruir o mapa pesado a cada sync.
+let cacheCodParaSku = null;
+
+async function obterCodParaSku(env) {
+  if (cacheCodParaSku && Object.keys(cacheCodParaSku).length > 0) return cacheCodParaSku;
+  try {
+    const cacheProd = await construirCacheProdutos(env);
+    const mapa = {};
+    for (const sku of Object.keys(cacheProd)) {
+      const cp = cacheProd[sku];
+      if (cp && cp.codigo_produto) mapa[String(cp.codigo_produto)] = sku;
+    }
+    cacheCodParaSku = mapa;
+    return mapa;
+  } catch (e) {
+    console.warn(`⚠️ obterCodParaSku: ${e.message}`);
+    return {};
+  }
+}
+
 // Cache de clientes: codigo_cliente → nome (nome_fantasia || razao_social)
 async function construirCacheClientes(env, maxPaginas = 10) {
   const cache = {};
@@ -243,13 +264,8 @@ export async function buscarRemessas(env) {
   });
   if (ativas.length === 0) return [];
 
-  // Mapa numérico (nCodProd) → SKU (CH001…)
-  const cacheProd = await construirCacheProdutos(env);
-  const codParaSku = {};
-  for (const sku of Object.keys(cacheProd)) {
-    const cp = cacheProd[sku];
-    if (cp && cp.codigo_produto) codParaSku[String(cp.codigo_produto)] = sku;
-  }
+  // Mapa numérico (nCodProd) → SKU (CH001…) — cacheado em memória
+  const codParaSku = await obterCodParaSku(env);
 
   const nomesCache = await construirCacheClientes(env, 3);
 
