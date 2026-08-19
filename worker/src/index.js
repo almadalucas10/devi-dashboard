@@ -5,7 +5,7 @@
 // ============================================================================
 import { readJson, writeJson, writeSyncMeta } from "./r2.js";
 import { construirCacheProdutos, calcularIndicadoresOmie } from "./kpis.js";
-import { buscarFilaDePedidos } from "./fila.js";
+import { buscarFilaComRemessas } from "./fila.js";
 import { buscarEstoque } from "./estoque.js";
 import { buscarEstoqueInsumos } from "./insumos.js";
 import { buildDashboardCache, extrairKPIsDoCalendario } from "./dashboard.js";
@@ -58,7 +58,7 @@ async function runLightSync(env) {
     const cacheProd = await construirCacheProdutos(env);
 
     try {
-      partial.filaDePedidos = await buscarFilaDePedidos(env);
+      partial.filaDePedidos = await buscarFilaComRemessas(env);
       console.log(`[light] ✅ Fila: ${partial.filaDePedidos.length} pedidos`);
     } catch (e) {
       partial.filaDePedidos = seguro('Fila', { erro: e.message }, antes.filaDePedidos);
@@ -173,7 +173,7 @@ async function runHeavySync(env) {
 
     // Atualiza fila + estoque também (dados frescos)
     try {
-      data.filaDePedidos = await buscarFilaDePedidos(env);
+      data.filaDePedidos = await buscarFilaComRemessas(env);
       console.log(`[heavy] ✅ Fila: ${data.filaDePedidos.length} pedidos`);
     } catch (e) {
       data.filaDePedidos = seguro('Fila', { erro: e.message }, hAntes.filaDePedidos);

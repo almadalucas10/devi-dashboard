@@ -107,6 +107,7 @@
 
   /* Fila de Pedidos B2 — barra de composição + chips por SKU */
   .ped{ background:#141d27; border:1px solid #34434f; border-left:4px solid #fbbf24; border-radius:7px; padding:1.5px 6px 2px; }
+  .ped.ped-remessa{ border-left-color:#38bdf8; }
   .ped .l1{ display:flex; justify-content:space-between; align-items:baseline; gap:9px; line-height:1.05; }
   .ped .cli{ font-size:clamp(12px,0.85vw,16px); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   .ped .un{ font-size:clamp(13px,0.95vw,18px); font-weight:700; color:#fbbf24; white-space:nowrap; }
@@ -1036,7 +1037,7 @@ setInterval(function(){
   if(el) el.textContent = new Date().toLocaleTimeString('pt-BR');
 }, 1000);
 
-const ETAPA_LABELS = { "00":"Orçamento","10":"Em carteira","20":"Em separação","30":"Em separação","40":"Faturamento parcial","50":"A faturar","60":"Faturado" };
+const ETAPA_LABELS = { "00":"Orçamento","10":"Em carteira","20":"Em separação","30":"Em separação","40":"Faturamento parcial","50":"A faturar","60":"Faturado","remessa":"Remessa" };
 
 // Mapeamento etapa → classe CSS (borda e badge coloridos).
 // As classes correspondentes estão definidas no CSS: etapa-carteira (azul),
@@ -1185,9 +1186,13 @@ function renderFila(fila){
   el.innerHTML = escolhidos.map(function(p){
     const etapaLabel = ETAPA_LABELS[p.etapa] || ("Etapa " + p.etapa);
     const nSkus = agregarItens(p.itens).length;
-    return '<div class="ped">'
-      + '<div class="l1"><span class="cli">' + (p.cliente || ("Pedido #" + p.numero)) + '</span><span class="un">' + fmt(p.totalUnidades) + ' un</span></div>'
-      + '<div class="meta">' + etapaLabel + ' · #' + p.numero + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '') + '</div>'
+    const ehRemessa = p.origem === 'remessa';
+    const metaLinha = ehRemessa
+      ? 'Remessa · #' + p.numero + (p.dataPrevisao ? ' · prev. ' + p.dataPrevisao : '') + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '')
+      : etapaLabel + ' · #' + p.numero + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '');
+    return '<div class="ped' + (ehRemessa ? ' ped-remessa' : '') + '">'
+      + '<div class="l1"><span class="cli">' + (p.cliente || ("Remessa #" + p.numero)) + '</span><span class="un">' + fmt(p.totalUnidades) + ' un</span></div>'
+      + '<div class="meta">' + metaLinha + '</div>'
       + '<div class="ped-seg">' + segHtml(p.itens) + '</div>'
       + '<div class="ped-chips">' + chipsHtml(p.itens) + '</div>'
       + '</div>';
