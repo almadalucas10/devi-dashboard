@@ -15,6 +15,18 @@ function dataParaStr(data) {
   return `${d}/${m}/${data.getFullYear()}`;
 }
 
+// "dd/mm/aaaa" (OMIE) cai no mês/ano vigente?
+function previsaoNoMesVigente(dStr) {
+  try {
+    const [d, m, a] = String(dStr || "").split("/").map((x) => parseInt(x, 10));
+    if (!d || !m || !a) return false;
+    const agora = new Date();
+    return m === agora.getMonth() + 1 && a === agora.getFullYear();
+  } catch {
+    return false;
+  }
+}
+
 const REGISTROS_POR_PAGINA = 100;
 const DIAS_PARA_TRAS = 90;
 
@@ -247,10 +259,14 @@ export async function buscarRemessas(env) {
     // Só entra se tiver previsão de entrega (data de previsão preenchida)
     const dPrevisao = (cab.dPrevisao || "").trim();
     if (!dPrevisao) continue;
+    // Só remessas abertas no mês vigente (previsão cai no mês atual)
+    if (!previsaoNoMesVigente(dPrevisao)) continue;
     const itens = (rem.produtos || [])
       .map((pr) => ({ codigo: codParaSku[String(pr.nCodProd)] || null, qtde: pr.nQtde || 0 }))
       .filter((i) => i.codigo);
     const totalUnidades = itens.reduce((s, i) => s + i.qtde, 0);
+    // Esconde remessas sem itens do catálogo (nenhum SKU conhecido → 0 un)
+    if (itens.length === 0) continue;
     const rec = {
       origem: "remessa",
       numero: cab.cNumeroRemessa,
