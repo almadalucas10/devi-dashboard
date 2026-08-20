@@ -8,7 +8,7 @@
 //   fermentação = 19 colunas (cabeçalho linha 5, dados linha 6)
 //   refri e chá = 14 colunas (cabeçalho linha 2, dados linha 3)
 // ============================================================================
-import { getAccessToken, appendValues } from "./sheets.js";
+import { getAccessToken, appendValues, getValues } from "./sheets.js";
 
 export const TAB_FERMENTACAO = "Indicadores fermentação";
 export const TAB_REFRI_CHA = "Indicadores Refri e Chá";
@@ -125,12 +125,36 @@ export function montarLinhaIndicadores(f) {
   return { tab: TAB_REFRI_CHA, linha: montarLinhaRefriCha(f) };
 }
 
-/** Escreve a ficha na planilha de indicadores (no fechamento). Não-fatal no fluxo. */
+/** Escreve a ficha na planilha de indicadores (no fechamento). Não-fatal no fluxo.
+ *  Idempotente: usa o Lote (Refri/Chá) ou data+produto (fermentação) para não duplicar. */
 export async function registrarFichaNosIndicadores(env, f) {
   const id = env.INDICADORES_SPREADSHEET_ID;
   if (!id) return { ok: false, erro: "INDICADORES_SPREADSHEET_ID não configurado" };
   const { tab, linha } = montarLinhaIndicadores(f);
   const token = await getAccessToken(env);
+
+  // Chave de idempotência: Lote (número da OP) na Refri/Chá;
+  // fermentação não tem coluna de lote → usa data + produto.
+  const chave = tab === TAB_REFRI_CHA
+    ? String(linha[5] || "").trim()
+    : String(linha[3] || "") + "|" + String(linha[17] || "").trim();
+  if (chave) {
+    const colChave = tab === TAB_REFRI_CHA ? "F" : "D";
+    const rg = `${tab}!${colChave}:${colChave}`;
+    try {
+      const vals = await getValues(env, token, `${tab}!A2:N2000`, id);
+      const iChave = tab === TAB_REFRI_CHA ? 5 : (tab === TAB_FERMENTACAO ? 3 : 4);
+      for (const r of vals) {
+        const atual = String(r[iChave] || "").trim();
+        if (atual && atual === chave) {
+          return { ok: true, duplicado: true, tab, linha, motivo: "já existe (lote/data+produto)" };
+        }
+      }
+    } catch (e) {
+      console.warn(`[indicadores] checar duplicata: ${e.message}`);
+    }
+  }
+
   const r = await appendValues(env, token, id, tab, [linha]);
   const ups = r && r.updates;
   return { ok: true, tab, linha, atualizadas: ups ? ups.updatedRows : null };
