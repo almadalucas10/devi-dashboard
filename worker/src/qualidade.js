@@ -351,7 +351,18 @@ export async function salvarFicha(env, ficha) {
            nc.valor ?? null, (nc.spec && nc.spec.min) ?? null, (nc.spec && nc.spec.max) ?? null).run();
   }
 
-  return { ok: true, key, d1: "upsert", ncs: ncs.length };
+  // Gravação na planilha de indicadores quando a ficha está completa (idempotente, não-fatal).
+  // Antes a planilha só era alimentada no POST de fechamento; se o anexo Omie falhava, a
+  // ficha concluída ficava de fora das abas de indicadores (ex.: OP 529).
+  let sheets = null;
+  if (statusFinal === "completa") {
+    try {
+      const { registrarFichaNosIndicadores } = await import("./qualidade-sheets.js");
+      sheets = await registrarFichaNosIndicadores(env, { ...ficha, op });
+    } catch (e) { console.error(`[indicadores] gravar no PUT: ${e.message}`); }
+  }
+
+  return { ok: true, key, d1: "upsert", ncs: ncs.length, sheets };
 }
 
 /** Ficha salva (do R2) — para reabrir/editar */

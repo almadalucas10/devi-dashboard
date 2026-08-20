@@ -650,8 +650,15 @@ async function handle(request, env, ctx) {
       try {
         const { getAccessToken, appendValues, listSheets, formatRange } = await import("./sheets.js");
         const { montarLinhaIndicadores } = await import("./qualidade-sheets.js");
+        const { lerFichaSalva } = await import("./qualidade.js");
         const body = await request.json();
-        const ficha = body.ficha || body;
+        // backfill: se vier 'op' (sem ficha), lê a ficha salva no R2 e grava a linha correta
+        let ficha = body.ficha || body;
+        if (!Object.keys(ficha.blocos || {}).length && body.op) {
+          const r = await lerFichaSalva(env, body.op);
+          if (!r) return json({ erro: "ficha não encontrada no R2 para " + body.op }, 404);
+          ficha = r;
+        }
         if (!Object.keys(ficha.blocos || {}).length) return json({ erro: "envie { ficha } com blocos" }, 400);
         const id = env.INDICADORES_SPREADSHEET_ID;
         if (!id) return json({ erro: "INDICADORES_SPREADSHEET_ID não configurado" }, 500);
