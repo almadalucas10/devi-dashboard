@@ -279,7 +279,7 @@ export async function buscarRemessas(env) {
   // Mapa numérico (nCodProd) → SKU (CH001…) — cacheado em memória
   const codParaSku = await obterCodParaSku(env);
 
-  const nomesCache = await construirCacheClientes(env, 3);
+  const nomesCache = await construirCacheClientes(env, 2);
 
   const resultado = [];
   for (const rem of ativas) {
@@ -307,7 +307,18 @@ export async function buscarRemessas(env) {
     };
     if (cab.nCodCli) {
       rec.codigoCliente = cab.nCodCli;
-      rec.cliente = nomesCache[cab.nCodCli] || null;
+      // Nome do cliente: procura no cache; se não tiver, consulta individual (fallback)
+      let nomeCliente = nomesCache[cab.nCodCli];
+      if (!nomeCliente) {
+        try {
+          const cinfo = await chamarOmie(env, "/geral/clientes/", "ConsultarCliente", {
+            codigo_cliente_omie: Number(cab.nCodCli),
+          });
+          nomeCliente = cinfo.nome_fantasia || cinfo.razao_social || null;
+          nomesCache[cab.nCodCli] = nomeCliente;
+        } catch (e) { nomeCliente = null; }
+      }
+      rec.cliente = nomeCliente;
     }
     resultado.push(rec);
   }
