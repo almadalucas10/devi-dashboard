@@ -16,10 +16,10 @@ export async function onRequestGet({ request, env }) {
   cb = String(cb || "/");
 
   if (erro) {
-    return Response.redirect(("/oauth/login?cb=" + encodeURIComponent(cb) + "&erro=" + encodeURIComponent(erro)), 302);
+    return Response.redirect(new URL("/oauth/login?cb=" + encodeURIComponent(cb) + "&erro=" + encodeURIComponent(erro), request.url), 302);
   }
   if (!code) {
-    return Response.redirect(("/oauth/login?cb=" + encodeURIComponent(cb) + "&erro=" + encodeURIComponent("sem_code")), 302);
+    return Response.redirect(new URL("/oauth/login?cb=" + encodeURIComponent(cb) + "&erro=" + encodeURIComponent("sem_code"), request.url), 302);
   }
 
   try {
@@ -35,6 +35,6 @@ export async function onRequestGet({ request, env }) {
       },
     });
   } catch (e) {
-    return Response.redirect(("/oauth/login?cb=" + encodeURIComponent(cb) + "&erro=" + encodeURIComponent(e.message)), 302);
+    return Response.redirect(new URL("/oauth/login?cb=" + encodeURIComponent(cb) + "&erro=" + encodeURIComponent(e.message), request.url), 302);
   }
 }
