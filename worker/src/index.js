@@ -458,6 +458,12 @@ async function handle(request, env, ctx) {
       // a estrutura dos itens (nCodProd/nQtde) e exibir remessas na Fila/Reposição.
       try {
         const { chamarOmie } = await import("./omie.js");
+        // ?ativas=1 → roda o filter real (buscarRemessas) e mostra nomes de clientes
+        if (url.searchParams.get("ativas") === "1") {
+          const { buscarRemessas } = await import("./fila.js");
+          const remessas = await buscarRemessas(env);
+          return json({ nAtivas: remessas.length, remessas });
+        }
         const r = await chamarOmie(env, "/produtos/remessa/", "ListarRemessas", { nPagina: 1 });
         const itens = r.remessas || [];
         const prim = itens[0] || null;
