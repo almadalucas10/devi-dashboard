@@ -1188,10 +1188,10 @@ function renderFila(fila){
     const nSkus = agregarItens(p.itens).length;
     const ehRemessa = p.origem === 'remessa';
     const metaLinha = ehRemessa
-      ? 'Remessa · ' + (p.cliente || ('#' + p.numero)) + (p.dataPrevisao ? ' · prev. ' + p.dataPrevisao : '') + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '')
+      ? (p.cliente || ('#' + p.numero)) + (p.dataPrevisao ? ' · prev. ' + p.dataPrevisao : '') + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '')
       : etapaLabel + ' · #' + p.numero + ' · ' + nSkus + ' SKU' + (nSkus > 1 ? 's' : '');
     return '<div class="ped' + (ehRemessa ? ' ped-remessa' : '') + '">'
-      + '<div class="l1"><span class="cli">' + (p.cliente || ("Remessa #" + p.numero)) + '</span><span class="un">' + fmt(p.totalUnidades) + ' un</span></div>'
+      + '<div class="l1"><span class="cli">' + (p.cliente || ("#" + p.numero)) + '</span><span class="un">' + fmt(p.totalUnidades) + ' un</span></div>'
       + '<div class="meta">' + metaLinha + '</div>'
       + '<div class="ped-seg">' + segHtml(p.itens) + '</div>'
       + '<div class="ped-chips">' + chipsHtml(p.itens) + '</div>'
