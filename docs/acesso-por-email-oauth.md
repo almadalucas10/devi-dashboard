@@ -13,9 +13,15 @@ domínio `@devikombucha.com` (Google Workspace) e configurar a **tela de consent
 ### Passo 1 — Projeto e tela de consentimento
 1. Acesse https://console.cloud.google.com com a conta admin do Workspace.
 2. Crie/abra um projeto (ex.: `devi-auth`).
-3. **APIs & Serviços → Tela de consentimento OAuth** → External (ou Internal, se for Workspace admin).
-4. Marque `devikombucha.com` como **domínio verificado** (já é Workspace).
+3. **APIs & Serviços → Tela de consentimento OAuth**.
+   - > Se não pedir para escolher **External / Internal**: tudo bem — o Google simplificou e,
+   - > para contas de Workspace (domínio próprio), nem sempre aparece essa escolha.
+   - > O que importa mesmo é os 3 itens abaixo; **ignore o "External/Internal"**.
+4. Marque `devikombucha.com` como **domínio (autorizado) verificado** — já é Workspace.
 5. Escopos: `openid`, `email`, `profile` (não-sensíveis).
+6. Grave o **status**: se aparecer "Em teste" / "Publicar", deixe **em teste** — é suficiente
+   para usuários do próprio domínio acessarem (não precisa publicar para o "público geral").
+   - Se exigir, adicione o próprio e-mail `@devikombucha.com` como **usuário de teste**.
 
 ### Passo 2 — Criar o Client ID
 1. **APIs & Serviços → Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**.
