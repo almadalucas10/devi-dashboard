@@ -1,40 +1,22 @@
-const COOKIE = 'pcp_auth';
+// ============================================================================
+// Pages Functions middleware — proteção por OAuth Google (@devikombucha.com)
+// Substitui o antigo Basic Auth por senha. Ver: functions/_oauth.js
+// ============================================================================
+import { NOME_COOKIE, cookieValido } from "./_oauth.js";
 
 export async function onRequest({ request, env, next }) {
-  const senha = env.DASH_SENHA;
-
-  // sem senha configurada, o painel segue aberto —
-  // evita derrubar o dashboard se a variável faltar
-  if (!senha) return next();
-
   const url = new URL(request.url);
-  const cookies = request.headers.get('Cookie') || '';
 
-  if (cookies.includes(`${COOKIE}=${senha}`)) return next();
+  // Sem credenciais OAuth configuradas, o painel segue aberto (não derruba o site)
+  if (!env.GOOGLE_CLIENT_ID) return next();
 
-  const liberar = () => new Response(null, {
-    status: 302,
-    headers: {
-      'Location': url.pathname,
-      'Set-Cookie': `${COOKIE}=${senha}; Path=/; Max-Age=31536000; Secure; SameSite=Lax`
-    }
-  });
+  // Rotas de autenticação passam por fora do bloqueio (login/callback/logout)
+  if (url.pathname.startsWith("/oauth/")) return next();
 
-  // entrada da TV: ?k=SENHA
-  if (url.searchParams.get('k') === senha) return liberar();
+  // Já autenticado via cookie de sessão → segue
+  const sessao = await cookieValido(env, request.headers.get("Cookie") || "");
+  if (sessao) return next();
 
-  // entrada por navegador: Basic Auth
-  const auth = request.headers.get('Authorization') || '';
-  if (auth.startsWith('Basic ')) {
-    const [, valor] = atob(auth.slice(6)).split(':');
-    if (valor === senha) return liberar();
-  }
-
-  return new Response('Acesso restrito', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Dashboard PCP Dêvi"',
-      'Content-Type': 'text/plain; charset=utf-8'
-    }
-  });
+  // Não autenticado → redireciona para /oauth/login (mantém o caminho original)
+  return Response.redirect(("/oauth/login?cb=" + encodeURIComponent(url.pathname + url.search)), 302);
 }
