@@ -18,5 +18,5 @@ export async function onRequest({ request, env, next }) {
   if (sessao) return next();
 
   // Não autenticado → redireciona para /oauth/login (mantém o caminho original)
-  return Response.redirect(("/oauth/login?cb=" + encodeURIComponent(url.pathname + url.search)), 302);
+  return Response.redirect(new URL("/oauth/login?cb=" + encodeURIComponent(url.pathname + url.search), request.url), 302);
 }
